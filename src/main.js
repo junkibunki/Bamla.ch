@@ -19,6 +19,7 @@ import { buildStorchen } from './storchen.js';
 import { buildRathaus } from './rathaus.js';
 import { buildTennis } from './tennis.js';
 import { buildGrillplatz } from './grillplatz.js';
+import { buildWassertretanlage } from './wassertretanlage.js';
 import { ridingSwing, nearestSwing, swingHint, updateSwings } from './swing.js';
 import { Railway } from './train.js';
 import { BusLine } from './bus.js';
@@ -118,6 +119,7 @@ buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
 const tennis = buildTennis(scene, world, rng(77));
 const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feuerstelle, Bolzplatz, Beachvolleyball, Spielgeräten
+const kneipp = buildWassertretanlage(scene, world); // Kneipp-Wassertretanlage an der Belchenstraße: Becken zum Durchwaten, Armbad, Bank
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
@@ -487,7 +489,7 @@ const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -534,6 +536,7 @@ function frame() {
   camping.update(dt);
   tennis.update(dt);
   grillplatz.update(dt, player); // Volleyball, Bolzen
+  kneipp.update(dt, player); // Spritzer beim Wassertreten
   updateSwings(dt, editing ? IDLE : input); // Schaukeln, auf denen man sitzen kann
   golf.update(dt, player);
   kienzler.update(dt, player);
