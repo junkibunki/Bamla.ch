@@ -19,6 +19,7 @@ import { buildStorchen } from './storchen.js';
 import { buildRathaus } from './rathaus.js';
 import { buildTennis } from './tennis.js';
 import { buildGrillplatz } from './grillplatz.js';
+import { buildKuppelgarten } from './kuppelgarten.js';
 import { buildWassertretanlage } from './wassertretanlage.js';
 import { ridingSwing, nearestSwing, swingHint, updateSwings } from './swing.js';
 import { Railway } from './train.js';
@@ -119,6 +120,7 @@ buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
 const tennis = buildTennis(scene, world, rng(77));
 const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feuerstelle, Bolzplatz, Beachvolleyball, Spielgeräten
+buildKuppelgarten(scene, world); // Kuppel- und Glasgewächshaus im Garten an der Unteren Römerstraße (statt zweier OSM-Häuser)
 const kneipp = buildWassertretanlage(scene, world); // Kneipp-Wassertretanlage an der Belchenstraße: Becken zum Durchwaten, Armbad, Bank
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
