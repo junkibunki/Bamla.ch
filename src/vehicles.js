@@ -284,6 +284,7 @@ const TRAILER_HALF = 2.2;
 export class Vehicle {
   constructor(scene, kind, x, z, heading, color, { trailer = false } = {}) {
     this.kind = kind;
+    this.uid = Vehicle.count = (Vehicle.count || 0) + 1; // Vorfahrt bei gegenseitiger Blockade
     this.k = KINDS[kind];
     this.x = x; this.z = z;
     this.heading = heading; // Fahrtrichtung = (sin h, cos h)
@@ -467,14 +468,27 @@ export class Vehicle {
   // ---------- Verkehrs-KI ----------
 
   startNpc(graph, spot) {
-    this.npc = { graph, ...spot, wait: 0 };
+    this.npc = { graph, ...spot, wait: 0, slow: 0, ghost: 0, squeeze: 0, pass: null, check: { x: this.x, z: this.z, t: 0 } };
     this.setRider(true);
+  }
+
+  // Hindernisse für die Verkehrs-KI: Fahrzeuge, Anhänger und die Spielfigur zu Fuß.
+  obstacles(vehicles, player) {
+    const list = [];
+    for (const o of vehicles) {
+      if (o === this) continue;
+      list.push({ o, x: o.x, z: o.z, hw: o.k.halfW, hl: o.k.halfLen, h: o.heading, v: o.speed });
+      if (o.trailer) list.push({ o, x: o.trailer.x, z: o.trailer.z, hw: 1.05, hl: TRAILER_HALF, h: o.trailer.heading, v: o.speed });
+    }
+    if (player && !player.car) list.push({ o: player, x: player.pos.x, z: player.pos.z, hw: 0.4, hl: 0.4, h: this.heading, v: 0 });
+    return list;
   }
 
   npcUpdate(dt, world, vehicles, player) {
     const n = this.npc;
     if (n.update) return n.update(dt, vehicles, player); // eigene Steuerung (z. B. Gabelstapler auf dem Kienzler-Hof)
     if (n.path) return this.followPath(dt, vehicles, player);
+    if (this.rescue(dt, vehicles, player)) return;
     const road = n.graph.roads[n.road];
     const style = { w: 3, speed: 6, ...ROAD_STYLE[road.type] };
     const target = road.pts[n.idx];
@@ -482,28 +496,69 @@ export class Vehicle {
     let sx = target[0] - prev[0], sz = target[1] - prev[1];
     const sl = Math.hypot(sx, sz) || 1;
     sx /= sl; sz /= sl;
-    // Rechts fahren: Fahrräder ganz rechts, sonst Spurmitte.
-    const lane = this.kind === 'bike' ? Math.max(0.6, style.w / 2 - 0.7) : road.oneway ? 0 : style.w / 4;
-    const tx = target[0] - sz * lane, tz = target[1] + sx * lane;
+    const fx = this.fx, fz = this.fz, base = Math.min(style.speed, this.k.npcSpeed);
+
+    // Was liegt vor dem Fahrzeug? Gegenverkehr ist kein Hindernis (beide weichen nach rechts aus),
+    // bei gegenseitiger Blockade (Kreuzung) hat das ältere Fahrzeug Vorfahrt.
+    const obs = this.obstacles(vehicles, player);
+    const range = 6 + this.k.halfLen * 2 + Math.max(0, this.speed) * 1.2;
+    let blocker = null;
+    for (const b of obs) {
+      if (n.pass && b.o === n.pass.o) continue;
+      const dx = b.x - this.x, dz = b.z - this.z;
+      const ahead = dx * fx + dz * fz, side = -dx * fz + dz * fx;
+      if (ahead <= 0 || ahead > range + b.hl) continue;
+      const c = Math.cos(b.h - this.heading);
+      if (b.o !== player && c < -0.3) {
+        if (Math.abs(side) < this.k.halfW + b.hw + 1) n.squeeze = 2;
+        continue;
+      }
+      if (Math.abs(side) >= this.k.halfW + b.hw + 0.2) continue;
+      if (b.o !== player && (n.ghost > 0 || (b.o.npc?.blocker === this && this.uid < b.o.uid))) continue;
+      const gap = ahead - this.k.halfLen - b.hl;
+      if (!blocker || gap < blocker.gap) blocker = { ...b, gap, along: Math.max(0, b.v * c) };
+    }
+    n.blocker = blocker?.o ?? null;
+    n.squeeze -= dt;
+    n.ghost -= dt;
+
+    // Rechts fahren: Fahrräder ganz rechts, sonst Spurmitte; bei Gegenverkehr auf schmalen Wegen an den Rand.
+    let lane = this.kind === 'bike' ? Math.max(0.6, style.w / 2 - 0.7) : road.oneway ? 0 : style.w / 4;
+    const narrow = n.squeeze > 0 && !road.oneway && lane < this.k.halfW + 0.3;
+    if (narrow) lane = this.k.halfW + 0.3;
+
+    // Überholen: stehende oder langsame Hindernisse (Parker, Traktor, Spielfigur) links umfahren, wenn kein Gegenverkehr kommt.
+    n.slow = blocker && blocker.along < base * 0.6 && !blocker.o.npc?.blocker ? n.slow + dt : 0;
+    if (!n.pass && blocker && n.slow > (blocker.along < 0.5 ? 2 : 4) && this.oncomingClear(obs, style.w, player))
+      n.pass = { o: blocker.o, hw: blocker.hw, hl: blocker.hl, t: 0 };
+    let tx, tz;
+    if (n.pass) {
+      const p = n.pass, b = obs.find((e) => e.o === p.o) || { x: Infinity, z: Infinity };
+      const ahead = (b.x - this.x) * fx + (b.z - this.z) * fz;
+      p.t += dt;
+      if (ahead < -(this.k.halfLen + p.hl + 1) || p.t > 15 || !(Math.hypot(b.x - this.x, b.z - this.z) < 40)) n.pass = null;
+      else {
+        const oL = (b.x - target[0]) * -sz + (b.z - target[1]) * sx; // Querversatz des Hindernisses zur Straßenmitte
+        lane = Math.min(lane, oL - (this.k.halfW + p.hw + 0.7));
+        const along = Math.min(0, (this.x - target[0]) * sx + (this.z - target[1]) * sz + 6 + this.k.halfLen);
+        tx = target[0] + sx * along - sz * lane; tz = target[1] + sz * along + sx * lane; // kurzer Vorausblick zum Ausscheren
+      }
+    }
+    if (tx === undefined) { tx = target[0] - sz * lane; tz = target[1] + sx * lane; }
 
     const dx = tx - this.x, dz = tz - this.z;
     const dist = Math.hypot(dx, dz);
     let diff = Math.atan2(dx, dz) - this.heading;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
 
-    let targetSpeed = Math.min(style.speed, this.k.npcSpeed) * (1 - Math.min(0.7, Math.abs(diff)));
-    // Hinter anderen herfahren (z. B. hinter einem Traktor) – nicht hineinfahren.
-    let blocker = null;
-    const range = 6 + this.k.halfLen * 2;
-    for (const o of vehicles) {
-      if (o === this) continue;
-      if (this.blocks(o.x, o.z, range, o.k.halfW) || (o.trailer && this.blocks(o.trailer.x, o.trailer.z, range, 1))) { blocker = o; break; }
-    }
-    if (player && !player.car && this.blocks(player.pos.x, player.pos.z, range, 0.4)) blocker = player;
-    if (blocker) targetSpeed = Math.min(targetSpeed, blocker === player ? 0 : Math.max(0, blocker.speed - 1));
-    // Gegen Verkeilen an Kreuzungen: nach 5 s Stillstand trotzdem langsam losfahren.
-    n.wait = blocker && this.speed < 0.5 ? n.wait + dt : 0;
-    if (n.wait > 5 && blocker !== player) targetSpeed = 2;
+    let targetSpeed = base * (1 - Math.min(0.7, Math.abs(diff)));
+    if (narrow) targetSpeed = Math.min(targetSpeed, 5);
+    if (n.pass) targetSpeed = Math.min(targetSpeed, n.pass.o === player || !(n.pass.o.speed > 0.5) ? 6 : base);
+    // Hinterherfahren mit Abstand (statt immer langsamer zu werden): Tempo des Vordermanns plus Lückenausgleich.
+    if (blocker) targetSpeed = Math.min(targetSpeed, Math.max(0, blocker.along + (blocker.gap - 2) * 0.8));
+    // Letzter Ausweg gegen Verkeilen: nach 10 s Stillstand kurz „durch“ andere Fahrzeuge hindurch (die Trennung schiebt sie auseinander).
+    n.wait = blocker && blocker.o !== player && this.speed < 0.5 ? n.wait + dt : 0;
+    if (n.wait > 10) { n.ghost = 3; n.wait = 0; }
 
     this.speed += Math.sign(targetSpeed - this.speed) * Math.min(Math.abs(targetSpeed - this.speed), 6 * dt);
     this.steer = Math.max(-0.6, Math.min(0.6, diff * 1.5));
@@ -512,6 +567,41 @@ export class Vehicle {
     this.z += this.fz * this.speed * dt;
 
     if (dist < Math.max(2, this.k.halfLen + 1)) this.nextTarget();
+  }
+
+  // Frei zum Überholen? Kein Gegenverkehr auf den nächsten 70 m.
+  oncomingClear(obs, w, player) {
+    for (const b of obs) {
+      if (b.o === player || Math.cos(b.h - this.heading) > 0.3) continue;
+      const dx = b.x - this.x, dz = b.z - this.z;
+      const ahead = dx * this.fx + dz * this.fz, side = -dx * this.fz + dz * this.fx;
+      if (ahead > -2 && ahead < 70 && Math.abs(side) < w + 1.5) return false;
+    }
+    return true;
+  }
+
+  // Seit 30 s kaum bewegt und weit weg von der Spielfigur: unbemerkt an einer freien Stelle neu einsetzen.
+  rescue(dt, vehicles, player) {
+    const c = this.npc.check;
+    c.t += dt;
+    if (c.t < 30) return false;
+    const moved = Math.hypot(this.x - c.x, this.z - c.z);
+    c.t = 0; c.x = this.x; c.z = this.z;
+    const px = player?.pos.x ?? Infinity, pz = player?.pos.z ?? Infinity;
+    if (moved > 6 || Math.hypot(this.x - px, this.z - pz) < 150) return false;
+    const g = this.npc.graph;
+    for (let i = 0; i < 20; i++) {
+      const spot = g.randomSpot(Math.random), pts = g.roads[spot.road].pts;
+      const [ax, az] = pts[spot.idx - 1], [bx, bz] = pts[spot.idx];
+      if (Math.hypot(ax - px, az - pz) < 150 || vehicles.some((v) => v !== this && Math.hypot(v.x - ax, v.z - az) < 20)) continue;
+      Object.assign(this.npc, spot, { wait: 0, slow: 0, ghost: 0, squeeze: 0, pass: null, blocker: null });
+      this.x = c.x = ax; this.z = c.z = az; this.y = undefined;
+      this.heading = Math.atan2(bx - ax, bz - az);
+      this.speed = this.steer = 0;
+      if (this.trailer) this.placeTrailer(true);
+      return true;
+    }
+    return false;
   }
 
   // Querfeldein zu Wegpunkten fahren (z. B. Golfcarts über den Platz): npc.path = [[x, z], …], npc.speed.
