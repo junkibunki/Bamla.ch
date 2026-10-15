@@ -34,6 +34,183 @@ export function tileInstances(scene, size = 200, minCount = 256) {
   }
 }
 
+// Statische Kleinteile (Fassadendetails, Zäune, Schilder …) kosten je einen Draw-Call und jedes Bild eine
+// Matrixrechnung. Was sich in den ersten Sekunden nicht bewegt, wird je Kachel und Materialaussehen zu
+// einem Mesh zusammengefasst; die Originale bleiben im Szenengraph (ohne Layer, also unsichtbar) und
+// werden reihum (je Bild ein Drittel) verglichen. Bewegt sich eins doch noch, ändert es Sichtbarkeit, Elternteil oder
+// Materialfarbe, fällt es aus dem Verbund heraus und wird wieder einzeln gezeichnet.
+export class StaticBatcher {
+  constructor(scene, { tile = 150, maxVerts = 4000, settleFrames = 90 } = {}) {
+    this.scene = scene; this.tile = tile; this.maxVerts = maxVerts; this.wait = settleFrames;
+    this.first = new Map(); // Knoten → Zustand zu Beginn der Beobachtung
+    scene.traverse((o) => { if (o !== scene) { const n = { o, i: 0, num: new Float64Array(10) }; saveNode(n, n.num); this.first.set(o, n); } });
+    this.nodes = []; this.mats = []; this.batches = []; this.dirty = new Set(); this.cursor = 0;
+    this.merged = 0; this.dropped = 0;
+  }
+
+  update() {
+    if (this.wait > 0) { if (--this.wait === 0) this.build(); return; }
+    const ns = this.nodes, k = Math.ceil(ns.length / 3);
+    for (let i = 0; i < k; i++) {
+      const n = ns[this.cursor = (this.cursor + 1) % ns.length];
+      if (!n.gone && !sameNode(n, this.num)) this.release(n);
+    }
+    for (const m of this.mats) if (!m.gone && !sameMat(m.m, m.s)) { m.gone = true; for (const e of m.entries) this.drop(e); }
+    for (const b of this.dirty) b.mesh.geometry.attributes.position.needsUpdate = true;
+    this.dirty.clear();
+  }
+
+  // Knoten bewegt/versteckt/umgehängt: wieder selbst rechnen, alle verbundenen Meshes darunter einzeln zeichnen
+  release(n) {
+    n.gone = true;
+    n.o.matrixAutoUpdate = true;
+    for (const e of n.entries) this.drop(e);
+  }
+
+  drop(e) {
+    if (e.gone) return;
+    e.gone = true; this.dropped++;
+    e.mesh.layers.mask = e.layers;
+    const pos = e.batch.mesh.geometry.attributes.position.array;
+    pos.fill(0, e.start * 3, (e.start + e.count) * 3); // Dreiecke im Verbund zu Punkten zusammenfallen lassen
+    this.dirty.add(e.batch);
+  }
+
+  build() {
+    const scene = this.scene;
+    scene.updateMatrixWorld(true);
+    // Statisch = Knoten und alle Vorfahren seit Beobachtungsbeginn unverändert und sichtbar
+    const isStatic = new Map();
+    const check = (o) => {
+      if (o === scene) return true;
+      if (isStatic.has(o)) return isStatic.get(o);
+      const s0 = this.first.get(o);
+      const ok = !!s0 && o.matrixAutoUpdate && sameNode(s0, s0.num) && o.visible && check(o.parent);
+      isStatic.set(o, ok);
+      return ok;
+    };
+    const nodeOf = new Map();
+    const track = (o) => {
+      if (!nodeOf.has(o)) { const n = { o, i: this.nodes.length, entries: [] }; nodeOf.set(o, n); this.nodes.push(n); o.matrixAutoUpdate = false; }
+      return nodeOf.get(o);
+    };
+    const matOf = new Map(), groups = new Map(), c = new THREE.Vector3();
+    scene.traverse((o) => {
+      if (o === scene || !check(o)) return;
+      track(o);
+      if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material)) return;
+      const g = o.geometry, m = o.material, attrs = neededAttrs(m);
+      if (!g.attributes.position || g.attributes.position.count > this.maxVerts || g.drawRange.count !== Infinity) return;
+      if (!PLAIN_MATS.has(m.type) || m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) return;
+      if (m.transparent || !o.frustumCulled || o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender || g.morphAttributes.position) return;
+      if (!attrs.every((a) => plainAttr(g.attributes[a]))) return;
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      c.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld);
+      const key = [Math.floor(c.x / this.tile), Math.floor(c.z / this.tile), matKey(m), attrs.join(','),
+        o.layers.mask, o.castShadow, o.receiveShadow, o.renderOrder].join('|');
+      if (!groups.has(key)) groups.set(key, { material: m, attrs, layers: o.layers.mask, o, list: [] });
+      groups.get(key).list.push(o);
+    });
+    // Vorfahren mitverfolgen, damit eine Bewegung der Gruppe auch die Kinder freigibt
+    for (const grp of groups.values()) {
+      if (grp.list.length < 2) continue;
+      const batch = this.merge(grp);
+      for (const e of batch.entries) {
+        for (let p = e.mesh; p && p !== scene; p = p.parent) nodeOf.get(p).entries.push(e);
+        if (!matOf.has(e.mesh.material)) { const mm = { m: e.mesh.material, s: matState(e.mesh.material), entries: [] }; matOf.set(mm.m, mm); this.mats.push(mm); }
+        matOf.get(e.mesh.material).entries.push(e);
+        e.mesh.layers.mask = 0; // Original nicht mehr zeichnen
+        this.merged++;
+      }
+    }
+    this.num = new Float64Array(this.nodes.length * 10);
+    for (const n of this.nodes) saveNode(n, this.num); // Layer der Originale gehören jetzt zum Ausgangszustand
+    this.first = null;
+  }
+
+  merge({ material, attrs, layers, o: proto, list }) {
+    let verts = 0, idx = 0;
+    for (const o of list) { const g = o.geometry; verts += g.attributes.position.count; idx += g.index ? g.index.count : g.attributes.position.count; }
+    const out = Object.fromEntries(attrs.map((a) => [a, new Float32Array(verts * list[0].geometry.attributes[a].itemSize)]));
+    const index = verts > 65535 ? new Uint32Array(idx) : new Uint16Array(idx);
+    const batch = { entries: [] }, v = new THREE.Vector3(), nm = new THREE.Matrix3();
+    let vo = 0, io = 0;
+    for (const o of list) {
+      const g = o.geometry, n = g.attributes.position.count, mw = o.matrixWorld;
+      nm.getNormalMatrix(mw);
+      for (const a of attrs) {
+        const src = g.attributes[a], dst = out[a], k = src.itemSize;
+        for (let i = 0; i < n; i++) {
+          if (a === 'position' || a === 'normal') {
+            v.fromBufferAttribute(src, i);
+            if (a === 'position') v.applyMatrix4(mw); else v.applyMatrix3(nm).normalize();
+            v.toArray(dst, (vo + i) * 3);
+          } else for (let j = 0; j < k; j++) dst[(vo + i) * k + j] = src.getComponent(i, j);
+        }
+      }
+      const flip = mw.determinant() < 0; // gespiegelte Meshes: Umlaufsinn umdrehen, sonst zeigen sie die Rückseite
+      const ix = g.index ? g.index.array : null, cnt = ix ? ix.length : n;
+      for (let t = 0; t < cnt; t += 3) {
+        const a = ix ? ix[t] : t, b = ix ? ix[t + 1] : t + 1, d = ix ? ix[t + 2] : t + 2;
+        index[io++] = vo + a; index[io++] = vo + (flip ? d : b); index[io++] = vo + (flip ? b : d);
+      }
+      batch.entries.push({ mesh: o, batch, start: vo, count: n, layers: o.layers.mask });
+      vo += n;
+    }
+    const geo = new THREE.BufferGeometry();
+    for (const a of attrs) geo.setAttribute(a, new THREE.BufferAttribute(out[a], list[0].geometry.attributes[a].itemSize));
+    geo.setIndex(new THREE.BufferAttribute(index, 1));
+    geo.computeBoundingSphere(); geo.computeBoundingBox();
+    const mesh = new THREE.Mesh(geo, material.clone()); // eigene Kopie: Farbänderungen am Original lösen dieses aus dem Verbund
+    for (const p of ['castShadow', 'receiveShadow', 'renderOrder']) mesh[p] = proto[p];
+    mesh.layers.mask = layers;
+    mesh.matrixAutoUpdate = false;
+    mesh.raycast = () => {};
+    mesh.name = 'static-batch';
+    this.scene.add(mesh);
+    batch.mesh = mesh;
+    this.batches.push(batch);
+    return batch;
+  }
+}
+
+// Lage als Zahlen in einem gemeinsamen Float64Array (schnell zu vergleichen), Verweise direkt am Eintrag
+function saveNode(n, num) {
+  const o = n.o, p = o.position, q = o.quaternion, c = o.scale, j = n.i * 10;
+  num[j] = p.x; num[j + 1] = p.y; num[j + 2] = p.z; num[j + 3] = q.x; num[j + 4] = q.y; num[j + 5] = q.z; num[j + 6] = q.w;
+  num[j + 7] = c.x; num[j + 8] = c.y; num[j + 9] = c.z;
+  n.vis = o.visible; n.par = o.parent; n.mask = o.layers.mask; n.mat = o.material; n.geo = o.geometry;
+}
+function sameNode(n, num) {
+  const o = n.o, p = o.position, q = o.quaternion, c = o.scale, j = n.i * 10;
+  return p.x === num[j] && p.y === num[j + 1] && p.z === num[j + 2] && q.x === num[j + 3] && q.y === num[j + 4] && q.z === num[j + 5]
+    && q.w === num[j + 6] && c.x === num[j + 7] && c.y === num[j + 8] && c.z === num[j + 9]
+    && o.visible === n.vis && o.parent === n.par && o.layers.mask === n.mask && o.material === n.mat && o.geometry === n.geo;
+}
+function matState(m) {
+  return [m.color?.r, m.color?.g, m.color?.b, m.emissive?.r, m.emissive?.g, m.emissive?.b, m.emissiveIntensity, m.opacity, m.visible, m.map, m.transparent, m.version];
+}
+function sameMat(m, s) {
+  return m.color?.r === s[0] && m.color?.g === s[1] && m.color?.b === s[2] && m.emissive?.r === s[3] && m.emissive?.g === s[4]
+    && m.emissive?.b === s[5] && m.emissiveIntensity === s[6] && m.opacity === s[7] && m.visible === s[8] && m.map === s[9]
+    && m.transparent === s[10] && m.version === s[11];
+}
+function matKey(m) {
+  return [m.type, m.color?.getHex(), m.emissive?.getHex(), m.emissiveIntensity, m.opacity, m.map?.uuid, m.side, m.vertexColors,
+    m.flatShading, m.wireframe, m.fog, m.depthWrite, m.depthTest, m.alphaTest, m.polygonOffset, m.polygonOffsetFactor,
+    m.polygonOffsetUnits, m.colorWrite, m.shininess, m.specular?.getHex(), m.roughness, m.metalness, m.toneMapped].join('|');
+}
+const PLAIN_MATS = new Set(['MeshLambertMaterial', 'MeshBasicMaterial', 'MeshPhongMaterial', 'MeshStandardMaterial']);
+function neededAttrs(m) {
+  const a = ['position', 'normal'];
+  if (m.map || m.alphaMap || m.aoMap || m.lightMap || m.emissiveMap || m.specularMap || m.bumpMap || m.normalMap) a.push('uv');
+  if (m.vertexColors) a.push('color');
+  return a;
+}
+function plainAttr(a) {
+  return a && !a.isInterleavedBufferAttribute && !a.normalized && a.array instanceof Float32Array;
+}
+
 // Kleine Teile (Schrauben, Lampen, Schilderpfosten …) werfen auf der 2048er-Schattenkarte (~9 cm je Texel)
 // kaum sichtbare Schatten, kosten aber je einen Draw-Call im Schattenpass. Figuren bleiben drüber (Kopf ≈ 0,3 m, bei Kindern ≈ 0,22 m).
 export function pruneSmallShadows(scene, minRadius = 0.2) {
