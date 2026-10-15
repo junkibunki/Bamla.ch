@@ -457,13 +457,14 @@ export class Quests {
   renderTrack() {
     const t = this.track;
     t.replaceChildren();
-    for (const d of defs) {
+    const active = defs.filter((d) => this.state.quests[d.id]?.status === 'active');
+    for (const d of active.slice(0, 4)) { // höchstens vier, der Rest steht im Dorfpass
       const s = this.state.quests[d.id];
-      if (s?.status !== 'active') continue;
       const row = el('div');
       row.append(el('b', null, d.title), document.createTextNode(' – ' + (d.steps?.[s.step] ?? d.goal ?? d.text)));
       t.append(row);
     }
+    if (active.length > 4) t.append(el('div', null, `+ ${active.length - 4} weitere (J: Dorfpass)`));
   }
 
   toast(text, secs = 4) {
