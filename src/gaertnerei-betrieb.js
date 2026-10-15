@@ -180,7 +180,7 @@ function pose(ex) {
 }
 
 KINDS.excavator = { halfLen: 1.2, halfW: 0.72, wheelbase: 1.2, maxSpeed: 2.4, accel: 2, brake: 6, rev: 2, circles: [0.45, -0.45], r: 0.75, npcSpeed: 1.6, camDist: 7, mesh: excavatorMesh };
-export const EXCAVATOR_HINT = 'E: Aussteigen · R/Q: Ausleger · T/G: Stiel · C/V: Löffel · J/L: Oberwagen drehen · N: Schild';
+export const EXCAVATOR_HINT = 'E: Aussteigen · R/Q: Ausleger · T/G: Stiel · C/V: Löffel · U/O: Oberwagen drehen · N: Schild';
 
 // Grenzen und Geschwindigkeiten der Gelenke (rad, rad/s)
 const JOINTS = {
@@ -201,7 +201,7 @@ function makeExcavator(scene, x, z, heading) {
     j('boom', ['KeyQ', 'PageDown'], ['KeyR', 'PageUp']);
     j('stick', ['KeyT'], ['KeyG']);           // T: Stiel ausfahren, G: einziehen
     j('bucket', ['KeyV'], ['KeyC']);          // C: Löffel einrollen (graben), V: auskippen
-    j('swing', ['KeyL'], ['KeyJ']);           // J: links, L: rechts
+    j('swing', ['KeyO'], ['KeyU']);           // U: links, O: rechts (J öffnet den Pass)
     if (input.hit('KeyN')) this.bladeTarget = this.bladeTarget > 0.1 ? 0 : 0.25;
     this.integrate(dt, world);
   };
