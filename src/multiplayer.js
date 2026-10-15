@@ -2,8 +2,9 @@
 // andere Spieler als Figur bzw. Fahrzeug mit Namensschild in der Welt und auf der Minimap.
 // Mitfahren: zu Fuß an das Fahrzeug eines anderen Spielers, E steigt als Beifahrer zu. Der Beifahrer sendet die
 // Position des Fahrzeugs und ri = Id des Fahrers, die anderen zeigen ihn dann nur als Namensschild.
+// Dazu Kleidung und Lackierung (belohnungen.js) und weitere Nachrichten (Hupe, Bestenliste, Dorfziele) über on(t, fn).
 import * as THREE from 'three';
-import { buildPerson, animateWalk } from './person.js';
+import { buildPerson, animateWalk, dressPerson } from './person.js';
 import { Vehicle, KINDS } from './vehicles.js';
 import { rng } from './world.js';
 
@@ -37,8 +38,8 @@ export function askName() {
   });
 }
 
-// Namensschild über dem Kopf, immer zur Kamera gedreht.
-function nameSprite(text, color) {
+// Namensschild über dem Kopf, immer zur Kamera gedreht; Ehrenbürger mit goldenem Rand.
+function nameSprite(text, color, gold) {
   const c = document.createElement('canvas');
   const g = c.getContext('2d');
   const font = 'bold 44px system-ui, sans-serif';
@@ -46,8 +47,9 @@ function nameSprite(text, color) {
   c.width = Math.ceil(g.measureText(text).width) + 40;
   c.height = 64;
   g.font = font;
-  g.fillStyle = 'rgba(0,0,0,0.55)';
+  g.fillStyle = gold ? 'rgba(90,60,0,0.75)' : 'rgba(0,0,0,0.55)';
   g.beginPath(); g.roundRect(0, 0, c.width, c.height, 18); g.fill();
+  if (gold) { g.strokeStyle = '#ffd24a'; g.lineWidth = 6; g.beginPath(); g.roundRect(3, 3, c.width - 6, c.height - 6, 15); g.stroke(); }
   g.fillStyle = '#' + color.toString(16).padStart(6, '0');
   g.fillRect(12, 22, 10, 20);
   g.fillStyle = '#fff';
@@ -87,17 +89,19 @@ class RemotePlayer {
     if ((s.ti || '') !== (this.title || '')) { // Titel aus dem Dorfpass (quests.js) im Namensschild
       this.title = s.ti || '';
       const old = this.label;
-      this.label = nameSprite(this.title ? `${this.name} · ${this.title}` : this.name, this.color);
+      this.label = nameSprite(this.title ? `${this.name} · ${this.title}` : this.name, this.color, this.title === 'Ehrenbürger');
       this.label.position.copy(old.position);
       this.scene.remove(old);
       old.material.map.dispose();
       old.material.dispose();
       this.scene.add(this.label);
     }
-    if ((this.vehicle?.kind ?? null) !== kind) {
+    dressPerson(this.mesh, s.o); // Kleidung aus dem Dorfpass
+    const paint = s.lk ?? this.color; // Lackierung aus dem Dorfpass
+    if ((this.vehicle?.kind ?? null) !== kind || (kind && this.vehicle.color !== paint)) {
       this.disposeVehicle();
       if (kind) {
-        this.vehicle = new Vehicle(this.scene, kind, this.x, this.z, this.h, this.color);
+        this.vehicle = new Vehicle(this.scene, kind, this.x, this.z, this.h, paint);
         this.vehicle.setRider(true);
       }
     }
@@ -154,6 +158,8 @@ export class Multiplayer {
     this.name = name;
     this.remotes = new Map(); // id -> RemotePlayer
     this.sendTimer = 0;
+    this.look = {};           // { o: Kleidung, lk: Lackfarbe } – setzt belohnungen.js
+    this.handlers = new Map(); // weitere Nachrichten: welcome, dorf, feuerwerk, hupe
     this.status = document.getElementById('players');
     this.connect();
   }
@@ -172,11 +178,19 @@ export class Multiplayer {
     };
   }
 
+  on(t, fn) {
+    if (!this.handlers.has(t)) this.handlers.set(t, []);
+    this.handlers.get(t).push(fn);
+  }
+  send(msg) { if (this.online) this.ws.send(JSON.stringify(msg)); }
+
   receive(m) {
+    for (const fn of this.handlers.get(m.t) || []) fn(m);
     if (m.t === 'welcome') {
       this.online = true;
-      this.id = m.id;
+      this.id = this.myId = m.id;
       this.renderStatus();
+      for (const fn of this.handlers.get('online') || []) fn(m);
     } else if (m.t === 'leave') {
       this.remotes.get(m.id)?.dispose();
       this.remotes.delete(m.id);
@@ -265,7 +279,7 @@ export class Multiplayer {
       : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };
-    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined }));
+    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined, ...this.look }));
   }
 
   // Für die Minimap

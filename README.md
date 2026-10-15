@@ -45,6 +45,22 @@ systemctl --user daemon-reload && systemctl --user enable --now bamla-mp
 
 Im Caddyfile im Block der Seite `reverse_proxy /mp 127.0.0.1:8787` ergänzen (WebSockets leitet Caddy von selbst weiter).
 
+Belohnungen aus dem Dorfpass (`src/belohnungen.js`): Der Zustand trägt neben Titel (`ti`) auch Kleidung (`o`:
+`helm`, `schuerze`, `golfmuetze`, `motorradjacke`, `schaerpe`) und im Fahrzeug die Lackfarbe (`lk`, 0xRRGGBB);
+Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
+
+| Richtung | Nachricht | Bedeutung |
+|---|---|---|
+| Client → Server | `{ t: 'stand', n, voll }` | Zahl der erledigten Aufgaben, voller Dorfpass (nach dem Verbinden und jedem Abschluss) |
+| Client → Server | `{ t: 'lieferung' }` | eine Lieferung fürs Dorfziel (höchstens eine alle 10 s pro Name) |
+| Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` (höchstens alle 0,7 s) |
+| Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (10 Plätze), Ehrenbürger (Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
+| Server → Client | `{ t: 'feuerwerk', n, von }` | alle 50 Lieferungen: Feuerwerk über dem Rhein bei allen |
+| Server → Client | `{ t: 'hupe', id, k }` | ein Mitspieler hupt (leiser mit der Entfernung) |
+
+Bestenliste und Lieferzähler schreibt der eigenständige Server nach `~deploy/bamla-dorf.json` (anderer Pfad über
+`DORF_STATE`); im Dev-Server leben sie nur im Speicher und sind nach einem Neustart weg.
+
 Jede Anmeldung schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name` nach `~deploy/bamla-joins.log`
 (anderer Pfad über die Umgebungsvariable `JOIN_LOG`); im Spiel wird das nicht angezeigt. Ansehen: `cat ~/bamla-joins.log`.
 Auch ein Neuladen der Seite oder ein Wiederverbinden nach Verbindungsabbruch erzeugt eine Zeile.
@@ -124,6 +140,8 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 | Leertaste | springen / Handbremse |
 | E | ein-/aussteigen (auch Verkehrsfahrzeuge übernehmen); Zug in Rheinweiler: an offener Tür ein-/aussteigen; im Bus: Haltewunsch, bei offenen Türen aussteigen; Schaukeln (Grillplatz, Kindergarten, Campingplatz): auf-/absteigen (Leertaste: Schwung holen) |
 | R / Q | Gabel heben / senken (Gabelstapler) |
+| X | hupen (im Fahrzeug; Klang im Dorfpass wählbar, Mitspieler hören mit) |
+| J | Dorfpass: Stempel, Titel, Kleidung, Hupe, Lack, Postkarten, Bestenliste |
 | Mausrad | Kamera-Zoom |
 | H | Hilfe ein/aus |
 
@@ -160,7 +178,8 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 - `src/bus.js` – Linienbus Bad Bellingen – Bamlach – Rheinweiler (Alte Weinstraße, Bamlacher Straße, Burgunderstraße; Route per kürzestem Weg im Straßennetz): hält in beiden Richtungen an „Bamlach“ und „Rheinweiler Ort“ (Türen öffnen, wartender Fahrgast steigt ein), wartet auf Hindernisse in seiner Spur. Mitfahren: E bei offenen Türen, im Bus E = Haltewunsch; an der Haltestelle wird die Wartezeit angezeigt; an der Endhaltestelle muss man aussteigen
 - `src/swing.js` – Schaukeln, auf die sich der Spieler setzen kann (Pendel mit Schwungholen): Nestschaukel am Grillplatz, die beiden Kindergarten-Schaukeln (das Kind darauf steigt ab und wartet), Campingplatz-Schaukel
 - `src/vehicles.js` – Auto, Traktor (+ Anhänger), Fahrrad, Motorrad, Quad: Fahrphysik und Verkehrs-KI
-- `src/pedestrians.js`, `src/person.js` – Fußgänger und Figuren
+- `src/pedestrians.js`, `src/person.js` – Fußgänger und Figuren (mit Kleidung aus dem Dorfpass)
+- `src/belohnungen.js`, `src/ansehen.js`, `src/postkarten.js`, `src/feuerwerk.js`, `src/hupe.js` – Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Ehrentafel, Bestenliste und Dorfziel; Grüßen, Beschimpfen, Dorffest; Postkarten; Feuerwerk und Klänge
 - `src/player.js`, `src/input.js`, `src/minimap.js`, `src/main.js`
 
 Kartendaten © OpenStreetMap-Mitwirkende (ODbL). Gelände (DGM1), Rebflächen, befestigte Flächen und Golfplatz (abgeleitet aus DOP20): © LGL Baden-Württemberg, www.lgl-bw.de, [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0).
