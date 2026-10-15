@@ -1,9 +1,10 @@
 // Feuerwehrhaus Bad Bellingen und Tennisclub am Nordende der Alten Weinstraße (Einmündung K6347),
 // nach Street View (2022/2024) und Satellitenbild: weißer Kopfbau mit roten Fensterbändern,
 // Fahrzeughalle mit fünf roten Toren, weißer Übungsturm; Clubhaus beige mit braunem Satteldach.
-// Auf dem Hof steht ein fahrbares HLF 20 (Blaulicht blinkt während der Fahrt).
+// Auf dem Hof steht ein fahrbares HLF 20 (Blaulicht blinkt während der Fahrt) mit Wasserwerfer auf dem Fahrerhaus (R).
 import * as THREE from 'three';
 import { Vehicle, KINDS } from './vehicles.js';
+import { DROPS } from './wasser.js';
 
 // skip: Gebäude wird hier statt in buildings.js gebaut (Wert = Höhe für Kollision/Kamera)
 export const SITE_OVERRIDES = [
@@ -131,6 +132,7 @@ export function buildFeuerwehr(scene, world) {
   const [fx, fz] = world2(-3.5, 27);
   const truck = new Vehicle(scene, 'firetruck', fx, fz, Math.atan2(U[1], -U[0]), 0xc8102e);
   truck.mesh.userData.vehicle = truck;
+  addJet(scene, truck);
   return { trucks: [truck] };
 }
 
@@ -212,6 +214,17 @@ function fireTruckMesh(color) {
     beacon[1].color.setHex(on && phase === 1 ? 0x5a8cff : 0x1030a0);
   };
 
+  // Wasserwerfer auf dem Fahrerhausdach hinter dem Blaulichtbalken, Rohr nach vorn oben
+  b(0.5, 0.08, 0.5, dark, 0, 3.17, 2.35);
+  add(new THREE.CylinderGeometry(0.09, 0.12, 0.3, 10), alu, 0, 3.33, 2.35);
+  g.monitor = new THREE.Group(); // neigt sich mit T/G (rotation.x = −Neigung)
+  g.monitor.position.set(0, 3.48, 2.35);
+  g.monitor.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.075, 0.8, 10).rotateX(Math.PI / 2).translate(0, 0, 0.4), paint));
+  g.nozzle = new THREE.Object3D();
+  g.nozzle.position.z = 0.8;
+  g.monitor.add(g.nozzle);
+  g.add(g.monitor);
+
   const tire = mat(0x1b1b1b), rim = mat(0xc8ccd0);
   for (const x of [-1.02, 1.02]) for (const [z, front] of [[2.45, true], [-1.95, false]]) {
     const pivot = new THREE.Group();
@@ -227,3 +240,57 @@ function fireTruckMesh(color) {
 }
 KINDS.firetruck = { halfLen: 4.0, halfW: 1.25, wheelbase: 4.4, maxSpeed: 26, accel: 5, brake: 14, rev: 4,
   circles: [2.7, 0.9, -0.9, -2.7], r: 1.3, npcSpeed: 11, camDist: 13, mesh: fireTruckMesh };
+
+// ---------- Wasserwerfer: solange R gedrückt ist, spritzt ein Strahl nach vorn, T/G hebt und senkt das Rohr ----------
+// Reichweite je nach Neigung etwa 8 bis 30 m
+const JET_V = 17, JET_N = 260, JET_RATE = 150, EL_MIN = -0.25, EL_MAX = 0.55; // m/s, Tropfen, Tropfen/s, Neigung (rad)
+function addJet(scene, truck) {
+  const drops = Array.from({ length: JET_N }, () => ({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, live: false }));
+  DROPS.add(drops);
+  const pos = new Float32Array(JET_N * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xd8efff, size: 0.28, transparent: true, opacity: 0.8, depthWrite: false }));
+  pts.frustumCulled = false;
+  scene.add(pts);
+  const tip = new THREE.Vector3();
+  let next = 0, acc = 0;
+  // Fahrersteuerung um die Taste R ergänzen; sync() läuft für jedes Fahrzeug jeden Frame
+  const drive = truck.drive, sync = truck.sync;
+  truck.jetEl = 0.1;
+  truck.drive = function (dt, input, world) {
+    drive.call(this, dt, input, world);
+    this.sprayHeld = input.down('KeyR');
+    this.jetEl = Math.max(EL_MIN, Math.min(EL_MAX, this.jetEl + input.axis(['KeyG'], ['KeyT']) * 0.5 * dt));
+  };
+  truck.sync = function (dt = 0, world = null) {
+    sync.call(this, dt, world);
+    this.spraying = !!this.sprayHeld;
+    this.sprayHeld = false;
+    this.mesh.monitor.rotation.x = -this.jetEl;
+    if (!world) return;
+    if (this.spraying) {
+      this.mesh.nozzle.getWorldPosition(tip);
+      const el = this.jetEl, c = Math.cos(el);
+      for (acc += dt * JET_RATE; acc >= 1; acc--) {
+        const d = drops[next];
+        next = (next + 1) % JET_N;
+        const v = JET_V * (0.92 + Math.random() * 0.12), sx = (Math.random() - 0.5) * 0.06, sy = (Math.random() - 0.5) * 0.05;
+        const fx = Math.sin(this.heading + sx), fz = Math.cos(this.heading + sx);
+        Object.assign(d, { x: tip.x, y: tip.y, z: tip.z, vx: fx * v * c + this.fx * this.speed, vy: v * Math.sin(el + sy), vz: fz * v * c + this.fz * this.speed, live: true });
+        const pre = Math.random() * dt; // gleichmäßig über den Frame verteilen
+        d.x += d.vx * pre; d.y += d.vy * pre; d.z += d.vz * pre;
+      }
+    } else acc = 0;
+    drops.forEach((d, i) => {
+      if (d.live) {
+        d.vy -= 9.81 * dt;
+        d.x += d.vx * dt; d.y += d.vy * dt; d.z += d.vz * dt;
+        if (d.y < world.heightAt(d.x, d.z)) d.live = false;
+      }
+      if (d.live) pos.set([d.x, d.y, d.z], i * 3);
+      else pos[i * 3 + 1] = -1e4;
+    });
+    geo.attributes.position.needsUpdate = true;
+  };
+}

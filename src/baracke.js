@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildPerson } from './person.js';
+import { wetAt } from './wasser.js';
 import { F, A, P, toUV, HALL, REAR, ANNEX, CANOPY, EAVE, RIDGE, YARD, BARACKE_OVERRIDES } from './baracke-site.js';
 
 export const ROOF_LAYER = 2; // Hallendach: unsichtbar, solange der Spieler drin steht (wirft aber weiter Schatten)
@@ -576,6 +577,8 @@ class Drinker {
 }
 
 // ---------- Feuer: Flammen, Funken, Rauch ----------
+// Löschwasser (wasser.js) drückt das Feuer herunter (level 1 → 0), dann dampft es; nach zwei Minuten zünden es die Leute wieder an.
+const RELIGHT = 120;
 
 class Fire {
   constructor(scene, x, y, z) {
@@ -611,6 +614,8 @@ class Fire {
       return s;
     });
     this.t = 0;
+    this.level = 1;
+    this.outFor = 0;
   }
   spark(s, age = 0) {
     s.x = (Math.random() - 0.5) * 0.3; s.y = 0.2 + Math.random() * 0.2; s.z = (Math.random() - 0.5) * 0.3;
@@ -619,13 +624,20 @@ class Fire {
     return s;
   }
   update(dt) {
-    const t = (this.t += dt);
+    const t = (this.t += dt), p = this.g.position;
+    const wet = wetAt(p.x, p.y + 0.1, p.z, 1.2);
+    if (wet) { this.level = Math.max(0, this.level - wet * 0.02 * dt); this.outFor = 0; this.steam = 3; }
+    else if (this.level < 1 && (this.outFor += dt) > RELIGHT) this.level = Math.min(1, this.level + dt * 0.2);
+    this.steam = Math.max(0, (this.steam || 0) - dt);
+    const L = this.level;
+    this.points.visible = L > 0.3;
     this.flames.forEach((f, i) => {
       const n = Math.sin(t * (9 + i * 2.3) + i) * 0.5 + Math.sin(t * (14.7 + i) + i * 3) * 0.3;
-      f.scale.set(0.9 + n * 0.15, 0.85 + n * 0.35, 0.9 - n * 0.12);
+      f.visible = L > 0.02;
+      f.scale.set((0.9 + n * 0.15) * (0.4 + 0.6 * L), (0.85 + n * 0.35) * L, (0.9 - n * 0.12) * (0.4 + 0.6 * L));
       f.rotation.set(Math.sin(t * 3 + i) * 0.12, t * (0.8 + i * 0.3), Math.cos(t * 2.6 + i) * 0.12);
     });
-    this.glow.material.opacity = 0.38 + Math.sin(t * 11) * 0.06 + Math.sin(t * 17.3) * 0.04;
+    this.glow.material.opacity = (0.38 + Math.sin(t * 11) * 0.06 + Math.sin(t * 17.3) * 0.04) * L;
     this.sp.forEach((s, i) => {
       s.age += dt;
       if (s.age > s.life) this.spark(s);
@@ -639,7 +651,8 @@ class Fire {
       const a = s.age;
       s.position.set(Math.sin(a * 5 + t * 0.3) * 0.3 + a * 0.8, 0.6 + a * 4.5, a * 0.4);
       s.scale.setScalar(0.5 + a * 2.2);
-      s.material.opacity = 0.32 * Math.min(1, a * 6) * (1 - a);
+      s.material.opacity = (L > 0.02 || this.steam > 0 ? 0.32 : 0.08) * Math.min(1, a * 6) * (1 - a);
+      s.material.color.setHex(this.steam > 0 ? 0xe8ecef : 0x6a6a6a); // Wasserdampf beim Löschen
     }
   }
 }
