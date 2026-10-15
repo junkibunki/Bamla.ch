@@ -168,10 +168,10 @@ function segDist(px, pz, [ax, az], [bx, bz]) {
 export class Andacht {
   constructor(scene, world, kirche) {
     this.kirche = kirche; // Innenraum (kirche-innen.js): Bänke, Turmtreppe
-    const u = CHAPEL.u, door = [CHAPEL.c[0] + u[0] * 4.4, CHAPEL.c[1] + u[1] * 4.4]; // Holztür der Kapelle
+    const u = CHAPEL.u, door = [CHAPEL.c[0] + u[0] * 6.2, CHAPEL.c[1] + u[1] * 6.2]; // vor den Stufen der Kapellentür
     this.places = [
       { name: 'St. Peter und Paul', at: (x, z) => kirche.pewAt(x, z) }, // in der Bank, vom Mittelgang aus
-      { name: 'Kapelle auf dem Kapellenberg', facing: Math.atan2(-u[0], -u[1]),
+      { name: 'Kapelle auf dem Mariahügel', facing: Math.atan2(-u[0], -u[1]),
         near: (x, z) => Math.hypot(x - door[0], z - door[1]) < 2.6 },
     ];
     // Kapelle Rheinweiler: Grundriss aus OSM, beten rundherum an der Wand

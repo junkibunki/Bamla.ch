@@ -23,7 +23,7 @@ const LIE = { [CLS.ROUGH]: 0.8, [CLS.TREE]: 0.7, [CLS.BUNKER]: 0.5 };
 // Abschläge (zwischen den gelben Markierungen) mit Loch; Übungsgrüns mit ihrem Loch (Fahne wie in golf.js)
 const TEES = HOLES.map((h, i) => {
   const [tx, tz] = h.p[0], [nx, nz] = h.p[1], l = Math.hypot(nx - tx, nz - tz);
-  return { x: tx + ((nx - tx) / l) * 2, z: tz + ((nz - tz) / l) * 2, pin: i, name: `${h.c === 'K' ? 'Kapellenberg' : 'Quellenhof'}, Loch ${h.c === 'K' ? i + 1 : i - 17}` };
+  return { x: tx + ((nx - tx) / l) * 2, z: tz + ((nz - tz) / l) * 2, pin: i, name: `${h.c === 'K' ? 'Mariahügel' : 'Quellenhof'}, Loch ${h.c === 'K' ? i + 1 : i - 17}` };
 });
 const PRACTICE = PRACTICE_GREENS.map(([x, z]) => ({ x, z, cup: [x + 2, z - 1], name: 'Übungsgrün' }));
 

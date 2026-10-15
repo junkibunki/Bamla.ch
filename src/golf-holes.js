@@ -2,7 +2,7 @@
 // p = Abschlag, Knickpunkte, Grün. Nummerierung und Reihenfolge sind angenähert.
 // Wird vom Spiel (Golfer, Fahnen) und von scripts/build-golf.mjs (Grüns, Abschläge, Fairways) genutzt.
 export const HOLES = [
-  // Kapellenberg (Nordteil, hügelig, Blick über das Rheintal)
+  // Mariahügel (Nordteil, hügelig, Blick über das Rheintal)
   { c: 'K', p: [[1000, -719], [1000, -800], [1072, -932]] },
   { c: 'K', p: [[1090, -960], [1040, -1020], [967, -1062]] },
   { c: 'K', p: [[937, -1031], [900, -950], [830, -860], [782, -817]] },
@@ -48,7 +48,7 @@ export const RANGE = { dir: [0.42, -0.906] };
 export const CLUBHOUSE = { c: [413.1, -109.5], u: [-0.5, 0.866], hu: 14.1, hv: 8.5 };  // Restaurant mit Terrasse
 export const PROSHOP = { c: [428.9, -130.4], u: [0.866, 0.5], hu: 11.7, hv: 8.4 };     // Sekretariat, Shop, Cartgarage
 export const BAYS = [[492.7, -43.5, 5.75, 3.0], [479.8, -49.3, 5.75, 2.75], [467.0, -56.0, 5.45, 2.8], [460.1, -63.2, 1.95, 2.75]]; // x, z, halbe Länge, halbe Tiefe
-export const CHAPEL = { c: [534.3, -403.8], u: [-0.68, 0.73] };                          // Kapelle auf dem Kapellenberg
+export const CHAPEL = { c: [534.3, -403.8], u: [-0.68, 0.73] };                          // Kapelle auf dem Mariahügel
 // skip: Gebäude wird nicht in buildings.js gebaut (Wert = Höhe für Kollision/Kamera)
 export const GOLF_OVERRIDES = [
   { c: CLUBHOUSE.c, skip: 10 }, { c: PROSHOP.c, skip: 9 }, { c: CHAPEL.c, skip: 9 },

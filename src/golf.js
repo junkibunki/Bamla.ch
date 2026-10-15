@@ -1,10 +1,11 @@
-// Drei Thermen Golfresort Bamlach: zwei 18-Loch-Plätze (Kapellenberg im Norden, Quellenhof im Süden),
+// Drei Thermen Golfresort Bamlach: zwei 18-Loch-Plätze (Mariahügel im Norden, Quellenhof im Süden),
 // Driving Range und Clubhaus. Rasen, Bunker, Teiche und Bäume stammen aus dem Luftbild (scripts/build-golf.mjs),
 // die Bahnen aus src/golf-holes.js. Darauf spielen Golfer-Flights zu Fuß (mit Trolley) oder im Golfcart.
 import * as THREE from 'three';
 import { animateWalk } from './person.js';
 import { Vehicle } from './vehicles.js';
-import { HOLES, PRACTICE_GREENS, RANGE, CLUBHOUSE, PROSHOP, BAYS, CHAPEL } from './golf-holes.js';
+import { HOLES, PRACTICE_GREENS, RANGE, CLUBHOUSE, PROSHOP, BAYS } from './golf-holes.js';
+import { buildKapelle } from './kapelle-mariahuegel.js';
 import { CLS, classAt } from './golf-ground.js';
 
 const mat = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
@@ -686,25 +687,6 @@ function buildRangeBays(scene, world) {
   return spots;
 }
 
-// Kapelle auf dem Kapellenberg: weiß verputzt, steiles Ziegeldach, Dachreiter mit Glocke
-function buildChapel(scene, world) {
-  const C = { c: CHAPEL.c, u: CHAPEL.u, hu: 3.4, hv: 2.5 };
-  const A = addBuilding(scene, world, C, { wall: 0xf6f3ea, eave: 3.4 });
-  A.add(new THREE.Mesh(gableGeo(6.8, 5, 3.0, 0.35), mat(0x8a3e2c, { side: THREE.DoubleSide })), 0, 3.4, 0).castShadow = true;
-  for (const s of [-1, 1]) {
-    const tri = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-2.5, 0), new THREE.Vector2(2.5, 0), new THREE.Vector2(0, 3.0)])), mat(0xf6f3ea, { side: THREE.DoubleSide }));
-    tri.rotation.y = Math.PI / 2;
-    A.add(tri, s * 3.4, 3.4, 0);
-  }
-  A.box(0.1, 2.2, 1.2, mat(0x6b4a2e), 3.42, 1.1, 0);                   // Holztür
-  A.add(new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(Math.PI / 2), mat(0xf6f3ea)), 3.42, 2.2, 0);
-  for (const z of [-2.52, 2.52]) A.box(0.6, 1.1, 0.06, mat(0x3a4450), 0, 2.0, z);  // Rundbogenfenster (vereinfacht)
-  A.box(0.9, 1.1, 0.9, mat(0xf6f3ea), 2.4, 6.6, 0);                    // Dachreiter
-  A.add(new THREE.Mesh(new THREE.ConeGeometry(0.75, 1.6, 4).rotateY(Math.PI / 4), mat(0x4a5a58)), 2.4, 7.95, 0);
-  A.box(0.05, 0.6, 0.05, mat(0x222222), 2.4, 9.0, 0);                 // Kreuz
-  A.box(0.35, 0.05, 0.05, mat(0x222222), 2.4, 9.05, 0);
-}
-
 // Großer Golfball (Skulptur am Eingang)
 function buildBallSculpture(scene, world, x, z) {
   const c = document.createElement('canvas');
@@ -758,7 +740,7 @@ function buildFlags(scene, world, pins, holes) {
     const n = h.c === 'K' ? i + 1 : i - 17;
     const sx = tx - uz * 4 - ux * 3, sz = tz + ux * 4 - uz * 3, y = world.heightAt(sx, sz);
     const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.06), new THREE.MeshLambertMaterial({
-      map: signTexture([[`${h.c === 'K' ? 'Kapellenberg' : 'Quellenhof'}`, 26], [`Loch ${n}`, 46]], 256, 128, '#24452f', '#f4f0e0') }));
+      map: signTexture([[`${h.c === 'K' ? 'Mariahügel' : 'Quellenhof'}`, 26], [`Loch ${n}`, 46]], 256, 128, '#24452f', '#f4f0e0') }));
     sign.position.set(sx, y + 1.0, sz);
     sign.rotation.y = Math.atan2(ux, uz) + Math.PI;
     const sp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), post);
@@ -820,7 +802,7 @@ export class Golf {
     this.flags = buildFlags(scene, world, [...this.pins, ...PRACTICE_GREENS.map(([x, z]) => [x + 2, z - 1])], HOLES);
     buildClubhouse(scene, world);
     const bays = buildRangeBays(scene, world);
-    buildChapel(scene, world);
+    buildKapelle(scene, world);
     buildBallSculpture(scene, world, 452, -78);
 
     this.carts = [];
