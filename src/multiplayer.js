@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { buildPerson, animateWalk, dressPerson } from './person.js';
 import { Vehicle, KINDS } from './vehicles.js';
 import { rng } from './world.js';
+import { racket } from './tennis.js';
 
 const SEND_EVERY = 0.1; // s
 const COLORS = [0xe74c3c, 0x27ae60, 0xf39c12, 0x8e44ad, 0x16a085, 0xd35400, 0xc2185b, 0x00897b, 0x6d4c41, 0x3949ab];
@@ -97,6 +98,10 @@ class RemotePlayer {
       this.scene.add(this.label);
     }
     dressPerson(this.mesh, s.o); // Kleidung aus dem Dorfpass
+    if (!!s.tr !== !!this.racket) { // Tennisschläger (tennisspiel.js)
+      if (s.tr) this.mesh.armR.add(this.racket = racket());
+      else { this.racket.removeFromParent(); this.racket = null; }
+    }
     const paint = s.lk ?? this.color; // Lackierung aus dem Dorfpass
     if ((this.vehicle?.kind ?? null) !== kind || (kind && this.vehicle.color !== paint)) {
       this.disposeVehicle();
@@ -159,6 +164,7 @@ export class Multiplayer {
     this.remotes = new Map(); // id -> RemotePlayer
     this.sendTimer = 0;
     this.look = {};           // { o: Kleidung, lk: Lackfarbe } – setzt belohnungen.js
+    this.extra = {};          // { tr: Tennisschläger in der Hand } – setzt tennisspiel.js
     this.handlers = new Map(); // weitere Nachrichten: welcome, dorf, feuerwerk, hupe
     this.status = document.getElementById('players');
     this.connect();
@@ -279,7 +285,7 @@ export class Multiplayer {
       : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };
-    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined, ...this.look }));
+    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined, ...this.look, ...this.extra }));
   }
 
   // Für die Minimap

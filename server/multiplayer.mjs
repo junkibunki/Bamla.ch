@@ -85,6 +85,7 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
           ri: Number.isInteger(m.ri) && m.ri >= 0 ? m.ri : undefined, // fährt mit: Id des Fahrers, 0 = im Zug
           o: OUTFITS.includes(m.o) ? m.o : undefined,                                  // Kleidung
           lk: Number.isInteger(m.lk) && m.lk >= 0 && m.lk <= 0xffffff ? m.lk : undefined, // Lackierung
+          tr: m.tr === 1 ? 1 : undefined,                                               // Tennisschläger
         };
       } else if (m.t === 'stand' && p) {
         // Stand im Dorfpass: Zahl der erledigten Aufgaben, voller Pass = Ehrenbürger
@@ -110,6 +111,13 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
         if (now - p.lastHorn < 700 || !HORNS.includes(m.k)) return;
         p.lastHorn = now;
         for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'hupe', id: p.id, k: m.k });
+      } else if (m.t === 'tennis' && p) {
+        // Tennisschlag (src/tennisspiel.js): Ball in Platzkoordinaten [x, y, z, vx, vy, vz]
+        const now = Date.now(), b = m.b;
+        if (now - (p.lastTennis || 0) < 200 || !Array.isArray(b) || b.length !== 6) return;
+        if (!b.every((v, i) => typeof v === 'number' && Math.abs(v) <= (i < 3 ? 30 : 60))) return;
+        p.lastTennis = now;
+        for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'tennis', id: p.id, b });
       }
     });
     ws.on('close', () => {

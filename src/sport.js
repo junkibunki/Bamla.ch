@@ -14,6 +14,8 @@ export class Sport {
   }
 
   get busy() { return this.games.some((g) => g.busy); }
+  get noJump() { return this.tennis.noJump; } // Tennis: Leertaste schlägt
+  connect(mp) { this.tennis.connect(mp); }     // Tennis gegen andere Spieler
   hint(player) { for (const g of this.games) { const h = g.hint(player); if (h) return h; } return ''; }
   use(player) { return this.games.some((g) => g.use(player)); }
   update(dt, input, player) { for (const g of this.games) g.update(dt, input, player); }

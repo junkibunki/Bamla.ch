@@ -184,6 +184,8 @@ export function buildTennis(scene, world, r) {
       post.position.set(0, 0.535, s * 6.4);
       court.add(post);
     }
+    // Sandbelag begehbar: er liegt auf der höchsten Ecke, das Gelände darunter teils über einen halben Meter tiefer
+    world.addDeck(corners.map(([a, b]) => W(a, b)), () => y);
     if (i !== FREE) matches.push(new Match(court, r));
     // freier Platz: lokale Platzkoordinaten (x entlang der Länge, z quer, Netz bei x = 0) <-> Welt
     else practice = { y, toWorld: (x, z) => W(LEN / 2 + x, uc + z),

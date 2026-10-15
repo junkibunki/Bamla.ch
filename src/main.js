@@ -483,6 +483,8 @@ document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
 window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
+sport.connect(multiplayer);
+const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -544,7 +546,7 @@ function frame() {
 
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
   else if (riding()) player.pos.set(riding().car.x, 0, riding().car.z);
-  else if (!ridingSwing() && !andacht.active && !sport.busy) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
+  else if (!ridingSwing() && !andacht.active && !sport.busy) player.update(dt, editing ? IDLE : sport.noJump ? NOJUMP : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
   sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
