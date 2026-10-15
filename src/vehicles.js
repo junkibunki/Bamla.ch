@@ -270,7 +270,7 @@ export const KINDS = {
   tractor: { halfLen: 1.9, halfW: 1.1, wheelbase: 2.1, maxSpeed: 11, accel: 3.5, brake: 10, rev: 4, circles: [0.8, -0.9], r: 1.1, npcSpeed: 7, camDist: 9, mesh: tractorMesh },
   bike:    { halfLen: 0.9, halfW: 0.35, wheelbase: 1.1, maxSpeed: 9, accel: 3, brake: 8, rev: 0, circles: [0], r: 0.45, npcSpeed: 4.5, camDist: 5.5, mesh: bikeMesh },
   trike:   { halfLen: 0.45, halfW: 0.3, wheelbase: 0.54, maxSpeed: 4.5, accel: 2.5, brake: 6, rev: 0, circles: [0.1], r: 0.35, npcSpeed: 1.1, camDist: 4, mesh: trikeMesh },
-  moto:    { halfLen: 1.05, halfW: 0.4, wheelbase: 1.44, maxSpeed: 50, accel: 14, brake: 20, rev: 0, circles: [0], r: 0.5, npcSpeed: 15, camDist: 6, mesh: motoMesh },
+  moto:    { halfLen: 1.05, halfW: 0.4, wheelbase: 1.44, maxSpeed: 50, accel: 14, brake: 20, rev: 1.3, revAccel: 2.5, circles: [0], r: 0.5, npcSpeed: 15, camDist: 6, mesh: motoMesh },
   quad:    { halfLen: 0.95, halfW: 0.65, wheelbase: 1.2, maxSpeed: 22, accel: 9, brake: 14, rev: 3, circles: [0.35, -0.35], r: 0.65, npcSpeed: 9, camDist: 6, mesh: quadMesh },
   golfcart: { halfLen: 1.25, halfW: 0.65, wheelbase: 1.6, maxSpeed: 7, accel: 3, brake: 8, rev: 3, circles: [0.6, -0.6], r: 0.65, npcSpeed: 5.5, camDist: 6, mesh: golfcartMesh },
   // lift: maximale Hubhöhe der Gabel (m), forkOff: Abstand Fahrzeugmitte – Mitte der aufgenommenen Palette
@@ -351,7 +351,7 @@ export class Vehicle {
     const handbrake = input.down('Space');
 
     if (throttle > 0) this.speed += (this.speed < 0 ? k.brake : k.accel * Math.max(0, 1 - this.speed / k.maxSpeed)) * dt;
-    else if (throttle < 0) this.speed -= (this.speed > 0.5 ? k.brake : k.accel) * dt;
+    else if (throttle < 0) this.speed -= (this.speed > 0.5 ? k.brake : k.revAccel ?? k.accel) * dt;
     this.speed = Math.max(-k.rev, this.speed);
     const drag = (throttle === 0 ? 2 : 0.2) + (0.15 / k.maxSpeed) * this.speed * this.speed + (handbrake ? 14 : 0);
     this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), drag * dt);
@@ -429,6 +429,17 @@ export class Vehicle {
     if (this.kind === 'bike') {
       this.pedal += this.speed * dt * 1.6;
       animatePedal(this.mesh.rider, this.pedal);
+    } else if (this.kind === 'moto') { // rückwärts schiebt der Fahrer mit den Füßen am Boden
+      const r = this.mesh.rider;
+      if (this.speed < -0.05) {
+        this.pedal += this.speed * dt * 4;
+        const s = Math.sin(this.pedal);
+        r.legL.rotation.x = -0.45 + s * 0.35; r.legR.rotation.x = -0.45 - s * 0.35;
+        r.legL.rotation.z = -0.3; r.legR.rotation.z = 0.3;
+      } else if (r.legL.rotation.x !== -1.25) {
+        r.legL.rotation.x = r.legR.rotation.x = -1.25;
+        r.legL.rotation.z = -0.2; r.legR.rotation.z = 0.2;
+      }
     } else if (this.kind === 'trike') { // Pedale am kleinen Vorderrad: wild strampeln, Beine fast waagrecht
       const r = this.mesh.rider, s = Math.sin(this.mesh.wheels[0].wheel.rotation.x);
       r.legL.rotation.x = -1.4 + s * 0.25; r.legR.rotation.x = -1.4 - s * 0.25;
