@@ -231,8 +231,8 @@ export function kitaPeople({ A, P, toUV, dirUV }) {
       const cycle = this.t % 14;
       if (cycle < 10.5) this.theta += dt * 0.55;
       const sitting = cycle > 10.8 && cycle < 13.3;
-      if (cycle < 0.05 + dt) this.bubble.say('Ringel, Rangel, Reihe, sind der Kinder dreie …');
-      if (Math.abs(cycle - 10.5) < dt) this.bubble.say('… und alle machen husch, husch, husch!');
+      if (cycle < 0.05 + dt) this.bubble.say('Ringel, Rangel, Reihe, mir sin d Kinder dreie …');
+      if (Math.abs(cycle - 10.5) < dt) this.bubble.say('… un alli mache husch, husch, husch!');
       if (Math.abs(cycle - 13.3) < dt) this.bubble.sprite.visible = false;
       this.kids.forEach((k, i) => {
         const a = this.theta + (i / this.kids.length) * Math.PI * 2;
@@ -312,7 +312,7 @@ export function kitaPeople({ A, P, toUV, dirUV }) {
       const k = this.kid, b = this.trike;
       k.abs = null; k.y = 0;
       if (off) { const [du, dv] = dirUV(b.fz * 0.8, -b.fx * 0.8); k.u += du; k.v += dv; } // springt seitlich ab
-      this.bubble.say(['Hey! Das ist mein Dreirad!', 'Gib das zurück! Das ist meins!', 'Das sag ich der Erzieherin!'][this.say++ % 3]);
+      this.bubble.say(['Hey! Des isch mi Dreirad!', 'Gib des zruck! Des isch mis!', 'Des sag i de Erzieherin!'][this.say++ % 3]);
       this.sayT = 0;
     }
 
@@ -344,7 +344,7 @@ export function kitaPeople({ A, P, toUV, dirUV }) {
         if (this.bubble.sprite.visible && (this.sayT += dt) > 3) this.bubble.sprite.visible = false;
         if (d > 0.35) return;
         // wieder aufsteigen und von der nächsten Ecke der Runde weiterfahren
-        this.bubble.say('Meins!');
+        this.bubble.say('Mis!');
         this.sayT = 0;
         k.u = bu; k.v = bv; k.facing = b.heading + A;
         b.speed = 0;

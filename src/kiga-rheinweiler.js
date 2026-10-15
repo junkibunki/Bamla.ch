@@ -466,18 +466,18 @@ function buildGarden(root, tx, world, hAt) {
 // ---------- Aufbau ----------
 
 const SAY_A = [
-  'Hallo! Das ist der Kindergarten Rheinweiler – die Schule ist gleich nebenan.',
-  'Wer hier groß wird, geht später rüber in die Sonnenrainschule.',
-  'Die Anmeldung läuft über das Rathaus in Bad Bellingen.',
-  'Bitte das Gartentor immer zumachen!',
-  'Wer hat noch nicht geschaukelt? Immer abwechseln!',
+  'Solli! Des isch de Kindergarte Riiwiiler – d Schuel isch grad nebedra.',
+  'Wer do groß wird, goht spöter nüber in d Sonnenrainschule.',
+  'D Amäldig lauft übers Rothus z Bellge.',
+  'Bitte s Gartetor immer zuemache!',
+  'Wer het no nit gigampft? Immer abwechsle!',
 ];
 const SAY_B = [
-  'Von hier unten sieht man die Züge vorbeifahren – das finden die Kinder toll.',
-  'Unten im Garten haben wir Kunstrasen, da kann man auch nach dem Regen spielen.',
-  'Auf dem Dach haben wir eine Solaranlage.',
-  'Nicht so wild auf der Röhrenrutsche, Anton!',
-  'Gleich gibt es Mittagessen, dann geht es rein zum Händewaschen.',
+  'Vo do unte sieht mer d Züg verbifahre – des finde d Kinder toll.',
+  'Unte im Garte hän mir Kunstrase, do ka mer au nochem Rege spiele.',
+  'Uf em Dach hän mir e Solaranlag.',
+  'Nit so wild uf de Röhrerutsche, Anton!',
+  'Glii gits Zmittag, denn gohts ine go Händ wäsche.',
 ];
 
 export function buildKigaRheinweiler(scene, world, player) {

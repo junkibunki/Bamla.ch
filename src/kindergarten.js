@@ -522,18 +522,18 @@ function buildGarden(root, tx, world, hAt) {
 const { Swinger, Seesaw, Scripted, Ring, Digger, Cook, Rider, TagGame, Teacher } = kitaPeople({ A, P, toUV, dirUV });
 
 const SAY_WEST = [
-  'Hallo! Möchtest du dein Kind anmelden? Dann einfach im Rathaus Bad Bellingen melden.',
-  'Das ist der Gemeindekindergarten Bamlach – einer von vier kommunalen Kindergärten in Bad Bellingen.',
-  'Der Kindergarten wurde in den letzten Jahren umfassend saniert und erweitert.',
-  'Vorsicht am Spielturm – nicht vom Kletterstamm springen!',
-  'Die bunten Stifte haben die Kinder selbst angemalt.',
+  'Solli! Witt du di Kind amelde? Denn eifach im Rothus z Bellge melde.',
+  'Des isch de Gmeindekindergarte Bamlach – eine vo vier Kindergärte vo de Gmeind Bellge.',
+  'De Kindergarte isch die letschte Johr ganz saniert un vergrößert wore.',
+  'Obacht am Spielturm – nit vom Kletterstamm abegumpe!',
+  'Die bunte Stifte hän d Kinder selber agmolt.',
 ];
 const SAY_EAST = [
-  'Wir haben eine Krippengruppe und drei offene Gruppen für die Großen ab drei.',
-  'In der verlängerten Öffnungszeit sind wir bis 14 Uhr da.',
-  'Nebenan ist die Gemeindehalle – da ist am Wochenende oft ein Fest.',
-  'Nicht so hoch schaukeln, Mats!',
-  'Gleich gibt es Mittagessen, dann geht es rein zum Händewaschen.',
+  'Mir hän e Krippegruppe un drei offeni Gruppe für d Große ab drei.',
+  'In de verlängerte Öffnigszit sin mir bis am zwei do.',
+  'Nebedra isch d Gmeindehalle – do isch am Wuchenend oft e Fescht.',
+  'Nit so hoch gigampfe, Mats!',
+  'Glii gits Zmittag, denn gohts ine go Händ wäsche.',
 ];
 
 // ---------- Aufbau ----------

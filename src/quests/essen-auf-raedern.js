@@ -15,8 +15,8 @@ const Dw = (s, o = 0) => [GC[0] + DIR[0] * s + M[0] * o, GC[1] + DIR[1] * s + M[
 const PORTAL = Dw(23.6); // vor dem Turmportal (Eingang des Heims)
 const [bx, bz] = W(3.4, -0.6);
 
-const SAYINGS = ['Danke fürs Essen auf Rädern!', 'Der Braten war prima, junger Mensch!', 'Hallo! Kommst du morgen wieder?',
-  'Grüß Gott! Schön, dass du vorbeischaust.'];
+const SAYINGS = ['Merci fürs Esse uf Räder!', 'De Brote isch prima gsi!', 'Solli! Kunnsch morn wieder?',
+  'Solli! Schön, dass d verbiluegsch.'];
 
 // Sitzende Seniorin bzw. Senior auf einem Gartenstuhl, winkt dem Spieler
 function senior(scene, world, x, z, seed) {
@@ -79,7 +79,7 @@ export default {
       x: PORTAL[0], z: PORTAL[1], r: 2.6,
       hint: () => (q.active && carry.has('fleisch') ? 'E: Fleischpaket abgeben' : ''),
       act: () => {
-        carry.give('fleisch', 'Pflegerin: „Vielen Dank! Heut gibt’s Braten für alle.“');
+        carry.give('fleisch', 'Pflegerin: „Vergelt’s Gott! Hüt gits Brote für alli.“');
         carry.earn(15, 'Geld zurück und Trinkgeld vom Heim');
         q.complete();
       },

@@ -868,12 +868,12 @@ const ROUTE = [
 ];
 
 const SAYINGS = [
-  'Grüß Gott! Schön, dass Sie in St. Peter und Paul vorbeischauen.',
-  'Haben Sie schon die Krippe oben auf der Wiese gesehen? Die baut die Kolpingsfamilie auf.',
-  'Alle fünf Jahre wird ganz Bamlach zum Krippendorf – mit Krippen aus aller Welt.',
-  'Unseren Turm mit dem Satteldach sieht man bis hinunter zum Rhein.',
-  'Bitte fahren Sie langsam durchs Dorf – hier spielen Kinder.',
-  'Gott befohlen – und einen gesegneten Tag noch!',
+  'Solli! Schön, dass Ihr in St. Peter und Paul verbiluege.',
+  'Hän Ihr d Krippe obe uf de Wiese scho gsehne? Die baut d Kolpingsfamilie uf.',
+  'Alli fünf Johr wird ganz Bamlach zum Krippedorf – mit Krippe us aller Welt.',
+  'Unsere Turm mit em Satteldach sieht mer bis abe an de Rhi.',
+  'Fahre Ihr bitte langsam durchs Dorf – do spiele Kinder.',
+  'Bhüet Euch Gott – un e gsegnete Dag no!',
 ];
 
 class Pfarrer {

@@ -10,9 +10,9 @@ import { rng } from './world.js';
 const GREET_FROM = 30, FEST_FROM = 150;
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const GRUSS = ['Grüß Gott!', 'Salü!', 'Morge!', 'Hoi!', 'Grüeß di!'];
-const GRUSS_NAME = ['Salü {n}!', 'Grüß di, {n}!', 'Hoi {n}, alles guet?'];
-const GRUSS_FREUND = ['{n}! Wie goht\'s?', '{n}! Schön di z\'seh!', 'Salü {n}, au wieder do?'];
+const GRUSS = ['Solli!', 'Solli!', 'Salü!', 'Morge!'];
+const GRUSS_NAME = ['Solli {n}!', 'Salü {n}!', 'Solli {n}, alles guet?'];
+const GRUSS_FREUND = ['{n}! Wie goht\'s?', '{n}! Schön di z\'sehne!', 'Solli {n}, au wieder do?'];
 const MURREN = ['Ah, du schu widder …', 'Hmpf.', 'Mit dir schwätz i nit.', 'Bisch hüt wenigstens nüechter?'];
 const SCHIMPF = ['Bisch bsoffe?! Lass s Auto stoh!', 'Schäm di, bsoffe fahre!', 'Fahr heim un schlof di us!',
   'Du Lump, du!', 'Langsam, do sin Kinder!', 'Hesch e Schuss?!', 'So öbbis, am helllichte Dag!'];
@@ -112,7 +112,7 @@ export class Ansehen {
           const title = this.q.title;
           const lines = a >= FEST_FROM ? GRUSS_FREUND : a >= 80 ? GRUSS_NAME : GRUSS;
           let line = pick(lines).replace('{n}', this.name);
-          if (title && Math.random() < 0.3) line = `Grüß Gott, ${title}!`;
+          if (title && Math.random() < 0.3) line = `Solli, ${title}!`;
           this.say(p, line);
         }
       }

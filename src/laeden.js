@@ -40,14 +40,14 @@ export function buildLaeden(scene, world, carry, { camping }) {
     hint: () => 'E: Fleischpaket kaufen (12 €) · R: Bratwürste (4 €)' + (v.freiessen ? ' · V: Freiessen einlösen' : ''),
     act: () => carry.buy('fleisch', 12, 'Metzgerin'),
     alt: () => carry.buy('wurst', 4, 'Metzgerin'),
-    voucher: () => { if (carry.useVoucher('freiessen')) carry.add('weckle', '🥪 Freiessen: ein warmes Fleischkäsweckle – „Lass es dir schmecke!“'); },
+    voucher: () => { if (carry.useVoucher('freiessen')) carry.add('weckle', '🥪 Freiessen: ein warmes Fleischkäsweckle – „Lon’s dir schmecke!“'); },
   });
 
   // Storchen: Freibier zum Mitnehmen (sonst schenkt der Storchen wie gehabt an der Theke aus, main.js)
   carry.spot({
     x: STORCHEN[0], z: STORCHEN[1], r: 2.6,
     hint: () => (v.freibier ? 'V: Freibier-Gutschein einlösen' : ''),
-    voucher: () => { if (carry.useVoucher('freibier')) carry.add('bier', '🍺 Der Wirt: „Freibier, aufs Haus – zum Mitnehmen!“'); },
+    voucher: () => { if (carry.useVoucher('freibier')) carry.add('bier', '🍺 Der Wirt: „Freibier, ufs Huus – zum Mitnäh!“'); },
   });
 
   // Campingplatz: Eistruhe links neben der Glastür des Kiosks

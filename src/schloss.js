@@ -535,12 +535,12 @@ function buildZoo(scene, world) {
 // ---------- Bewohnerin mit Rollator ----------
 
 const SAYINGS = [
-  'Grüß Gott! Schöner Tag für einen Spaziergang, gell?',
-  'Das Schloss haben die Herren von Rotberg um 1715 gebaut. Seit 1928 ist es ein Heim – ich bin aber erst seit 2019 da.',
-  'Die Zwergziegen kriegen nachher Löwenzahn. Pst, nicht verraten!',
-  'Langsam, junger Mensch! Mit dem Rollator bin ich auch nicht schneller.',
-  'Vom Garten aus hört man bei Westwind den Rhein rauschen.',
-  'Die Hühner legen jeden Tag. Die Eier gibt es sonntags zum Frühstück.',
+  'Solli! Schöne Dag für e Spaziergang, gell?',
+  'S Schloss hän d Herre vo Rotberg um 1715 baut. Sit 1928 isch\'s e Heim – i bi aber ersch sit 2019 do.',
+  'D Zwergziege kriege nochher Löwezahn. Pst, nit verrote!',
+  'Langsam, langsam! Mit em Rollator bi i au nit schneller.',
+  'Vom Garte us hört mer bi Weschtwind de Rhi rusche.',
+  'D Hüehner leije jede Dag. D Eier gits sunntigs zum Zmorge.',
 ];
 
 export function speechBubble(parent, name) {

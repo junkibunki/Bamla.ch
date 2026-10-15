@@ -68,7 +68,7 @@ export default {
       x: STORCHEN[0], z: STORCHEN[1], r: 2.6,
       hint: () => (q.active && carry.has('trauben') ? 'E: Trauben abgeben' : ''),
       act: () => {
-        carry.give('trauben', 'Wirt: „Prächtige Trauben! Komm, ich zeig dir unseren Keller.“');
+        carry.give('trauben', 'Wirt: „Prächtigi Trübel! Kumm, i zeig dir unsre Keller.“');
         carry.earn(10, 'Lesegeld vom Storchen-Wirt');
         q.complete();
       },

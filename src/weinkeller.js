@@ -134,7 +134,7 @@ export function buildWeinkeller({ scene, world, carry, player }) {
     x: px, z: pz, r: 1.4, when: () => open.now,
     hint: () => 'R: Wein probieren · E: Flasche Gutedel mitnehmen',
     alt: (pl) => pl.drink('schorle'),
-    act: () => (carry.has('wein') ? carry.toast('Eine Flasche reicht – erst austrinken!') : carry.add('wein', '🍾 Der Wirt: „Gutedel vom eigenen Rebberg – zum Wohl!“')),
+    act: () => (carry.has('wein') ? carry.toast('Eine Flasche reicht – erst austrinken!') : carry.add('wein', '🍾 Der Wirt: „Gutedel vom eigene Räbberg – zum Wohl!“')),
   });
   carry.every((dt) => {
     roof.visible = !inside(player.pos.x, player.pos.z);

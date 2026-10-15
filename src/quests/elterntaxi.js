@@ -9,8 +9,8 @@ import { P as schule } from '../schule-site.js';
 const WAIT = kiga(10, 3.5);       // Vorplatz vor dem Eingang mit Kastenvordach
 const [zx, zz] = kiga(-5, 5.4);   // Zettel außen am Zaun des Westhofs, zum Brückleweg
 const ZIELE = {
-  schule: { name: 'Sonnenrainschule', at: schule(42, -9.5), r: 28, say: 'Heute ist Schnuppertag in der Sonnenrainschule! Fährst du mich nach Rheinweiler?' },
-  haus: { name: 'Belchenstraße 6', at: [-52, -198], r: 18, say: 'Bring mich bitte heim, in die Belchenstraße 6!' },
+  schule: { name: 'Sonnenrainschule', at: schule(42, -9.5), r: 28, say: 'Hüt isch Schnuppertag in de Sonnenrainschule! Fahrsch mi uf Riiwiiler?' },
+  haus: { name: 'Belchenstraße 6', at: [-52, -198], r: 18, say: 'Bring mi bitte heim, in d Belchenstraße 6!' },
 };
 const CARS = ['car', 'ecar'];
 const GLASS = 0x24313d; // Scheibenfarbe von Auto und Elektroauto
@@ -81,8 +81,8 @@ export default {
           stand(player.pos.x, player.pos.z);
           if (Math.hypot(player.pos.x - x, player.pos.z - z) < 30) kid.armR.rotation.x = -2.6 + Math.sin(t * 8) * 0.4; // winkt
         }
-        if (v && dv < 14 && !CARS.includes(v.kind)) say('auto', 'Damit darf ich nicht mitfahren – nur im Auto mit Kindersitz!');
-        else if (!v && Math.hypot(player.pos.x - x, player.pos.z - z) < 4) say('fuss', 'Wo ist denn dein Auto? Zu Fuß ist es zu weit!');
+        if (v && dv < 14 && !CARS.includes(v.kind)) say('auto', 'Mit dem derf i nit mitfahre – nur im Auto mit Kindersitz!');
+        else if (!v && Math.hypot(player.pos.x - x, player.pos.z - z) < 4) say('fuss', 'Wo isch denn di Auto? Z Fueß isch\'s z wit!');
         if (phase === 'wait' && v && CARS.includes(v.kind) && dv < 14 && Math.abs(v.speed) < 0.8) { car = v; phase = 'walkin'; }
       } else if (phase === 'walkin') {
         if (car !== player.car || Math.abs(car.speed) > 1.5 || Math.hypot(car.x - x, car.z - z) > 20) { phase = 'back'; return; }
@@ -115,7 +115,7 @@ export default {
         if (walkTo(...ziel().at, dt)) {
           phase = 'bye';
           t = 0;
-          say('danke', 'Danke fürs Fahren! Tschüss!');
+          say('danke', 'Merci fürs Fahre! Ade!');
         }
       } else if (phase === 'bye') {
         stand(player.pos.x, player.pos.z);

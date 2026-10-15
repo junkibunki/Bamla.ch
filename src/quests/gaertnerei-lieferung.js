@@ -50,7 +50,7 @@ export default {
     carry.spot({
       x: PICKUP[0], z: PICKUP[1], r: 2.4,
       hint: () => (q.active && !carry.has('pflanzen') ? 'E: Pflanzkiste abholen' : ''),
-      act: () => carry.add('pflanzen', '🌷 Gärtner: „Vorsichtig, die sind frisch getopft!“'),
+      act: () => carry.add('pflanzen', '🌷 Gärtner: „Obacht, die sin frisch topft!“'),
     });
     for (const [ziel, z] of Object.entries(ZIELE)) {
       carry.spot({

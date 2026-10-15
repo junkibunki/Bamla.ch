@@ -1147,19 +1147,19 @@ class Teacher {
 }
 
 const SAY_NORTH = [
-  'Hallo! Du gehörst aber nicht in die 3b, oder?',
-  'Die Sonnenrainschule hat 187 Kinder in acht Klassen – in der großen Pause sind alle draußen.',
-  'Wir sind Grundschule mit Sport- und Bewegungsschwerpunkt. Seilspringen üben wir fast jeden Tag!',
-  'Seit 2014 sind wir offene Ganztagsschule: Montag bis Mittwoch gibt es Mittagessen in der Mensa.',
-  'Unsere Kinder kommen aus Bad Bellingen, Bamlach, Hertingen und Rheinweiler.',
-  'Gleich klingelt es – dann geht es zurück in die Klassen.',
+  'Solli! Du ghörsch aber nit in d 3b, oder?',
+  'D Sonnenrainschule het 187 Kinder in acht Klasse – in de große Pause sin alli dusse.',
+  'Mir sin e Grundschuel mit Sport- un Bewegigsschwerpunkt. Seilgumpe üebe mir fascht jede Dag!',
+  'Sit 2014 sin mir offeni Ganztagsschuel: Mändig bis Mittwuch gits Zmittag in de Mensa.',
+  'Unseri Kinder kumme us Bellge, Bamlach, Hertige un Riiwiiler.',
+  'Glii lüütet\'s – denn gohts zruck in d Klasse.',
 ];
 const SAY_SOUTH = [
-  'Vorsicht, hier wird Fußball gespielt!',
-  'Im Holzbau sind die neuen Klassenzimmer, unten drunter parken wir.',
-  'Mit unseren Partnerschulen in Petit-Landau, Hegenheim und Altkirch schreiben wir uns Briefe.',
-  'Die Juniorhelfer vom DRK sind zur Stelle, wenn sich jemand das Knie aufschlägt.',
-  'Wer hangelt als Erstes ganz rüber?',
+  'Obacht, do wird Fueßball gspielt!',
+  'Im Holzbau sin d neue Klassezimmer, unte drunter parke mir.',
+  'Mit unsere Partnerschuele in Petit-Landau, Hegenheim un Altkirch schriebe mir is Brief.',
+  'D Juniorhelfer vom DRK sin do, wenn sich eins s Knie ufschlogt.',
+  'Wer hangelt als Erschts ganz nüber?',
 ];
 
 // ---------- Aufbau ----------

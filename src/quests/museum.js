@@ -10,7 +10,7 @@ export default {
     q.target(...museum.door, 'Museum');
     return () => {
       if (museum.inside(player.pos.x, player.pos.z)) {
-        q.toast('Willkommen im Bäder- und Heimatmuseum!');
+        q.toast('Solli un willkumme im Bäder- un Heimatmuseum!');
         q.complete();
       }
     };
