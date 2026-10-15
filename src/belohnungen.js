@@ -104,7 +104,7 @@ export class Belohnungen {
   // ---------- Lackierung des gefahrenen Fahrzeugs ----------
   paint(v) {
     const l = LACKE[this.st.lack];
-    if (!l || !this.has(l) || v.color == null) return;
+    if (!l || !this.has(l) || v.color == null || v.kind === 'horse') return; // Pferde bleiben ungefärbt
     v.mesh.traverse((o) => {
       if (!o.isMesh || o.material.color?.getHex() !== v.color) return;
       o.material.userData.lack = v.color;

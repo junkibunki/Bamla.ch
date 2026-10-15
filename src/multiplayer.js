@@ -129,7 +129,7 @@ class RemotePlayer {
       v.speed = speed;
       v.x = this.x; v.z = this.z; v.heading = this.h; v.y = this.y;
       v.sync(dt, world);
-      this.label.position.set(this.x, v.y + (v.mesh.rider ? 2.7 : 3.2), this.z);
+      this.label.position.set(this.x, v.y + (v.k.labelY ?? (v.mesh.rider ? 2.7 : 3.2)), this.z);
       return;
     }
     const moving = speed > 0.5;
