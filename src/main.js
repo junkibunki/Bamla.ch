@@ -6,7 +6,7 @@ import { Vehicle, separateVehicles } from './vehicles.js';
 import { Player } from './player.js';
 import { Pedestrian } from './pedestrians.js';
 import { Input } from './input.js';
-import { Minimap } from './minimap.js';
+import { Minimap, BigMap } from './minimap.js';
 import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
 import { buildFeuerwehr } from './feuerwehr.js';
@@ -109,6 +109,8 @@ const bus = new BusLine(scene, world, data, rng(123)); // Linienbus, hält an de
 const input = new Input(renderer.domElement);
 const player = new Player(scene);
 const minimap = new Minimap(document.getElementById('minimap'), world);
+const bigmap = new BigMap(minimap); // Vollbildkarte: Taste M oder Klick auf die Minimap
+minimap.canvas.addEventListener('click', () => bigmap.show(player.pos.x, player.pos.z));
 const vehicles = [];
 const pedestrians = [];
 const rand = rng(1234);
@@ -434,6 +436,14 @@ let helpAt = 0; // Zeitpunkt (ms) zum Ausblenden der Steuerung, gesetzt beim ers
 const editor = new Editor({ world, camera, cam, canvas: renderer.domElement, input, minimap, sheds, player });
 const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielsteuerung ruht, solange der Editor offen ist
 
+// Vollbildkarte öffnen/schließen; solange sie offen ist, ruht die Spielsteuerung
+function mapKeys() {
+  if (input.hit('KeyM')) bigmap.open ? bigmap.close() : bigmap.show(player.pos.x, player.pos.z);
+  else if (bigmap.open && input.hit('Escape')) bigmap.close();
+  else if (bigmap.open && input.hit('Space')) { bigmap.cx = player.pos.x; bigmap.cz = player.pos.z; }
+  return bigmap.open;
+}
+
 tileInstances(scene); // Reben, Bäume, Büsche in 200-m-Kacheln, damit Culling greift
 pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 
@@ -447,7 +457,7 @@ const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  const editing = editor.update(dt);
+  const editing = editor.update(dt) || mapKeys(); // Editor oder Vollbildkarte offen: Spielsteuerung ruht
   if (!editing && (input.hit('KeyE') || input.hit('KeyF'))) {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
     else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
@@ -505,6 +515,7 @@ function frame() {
   updateHud(dt);
   multiplayer.update(dt, player, bus);
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others);
+  if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, multiplayer.others);
 
   renderer.render(scene, camera);
   drunk.afterRender();

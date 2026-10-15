@@ -61,7 +61,28 @@ body.editing #players { display: none; }
   position: fixed; left: 16px; bottom: 16px;
   border-radius: 50%; border: 3px solid #fffc;
   box-shadow: 0 4px 16px #0006;
+  cursor: pointer;
 }
+
+/* Vollbildkarte (src/minimap.js, Taste M) */
+#bigmap { position: fixed; inset: 0; z-index: 15; display: none; background: #7fae55; }
+#bigmap.open { display: block; }
+#bigmap canvas { width: 100%; height: 100%; cursor: grab; touch-action: none; }
+#bigmap canvas:active { cursor: grabbing; }
+#bigmap .bm-side {
+  position: absolute; top: 12px; left: 12px; max-height: calc(100% - 24px); overflow-y: auto;
+  background: #000a; padding: 10px 12px; border-radius: 8px; font-size: 13px; width: 210px; box-sizing: border-box;
+}
+#bigmap ul { list-style: none; margin: 6px 0 8px; padding: 0; }
+#bigmap li { padding: 3px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#bigmap li:hover { background: #fff3; }
+#bigmap li span { display: inline-block; width: 22px; }
+#bigmap .bm-keys { opacity: .75; font-size: 12px; line-height: 1.5; }
+#bigmap .bm-close {
+  position: absolute; top: 12px; right: 72px; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: #000a; color: #fff; font-size: 18px; cursor: pointer;
+}
+@media (max-width: 600px) { #bigmap .bm-side { width: 160px; max-height: 40%; } }
 
 #help {
   position: fixed; top: 12px; left: 12px;
