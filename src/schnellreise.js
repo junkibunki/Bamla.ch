@@ -45,7 +45,7 @@ export class Schnellreise {
   // Tasten (main.js); true, solange die Zielauswahl offen ist (Spielsteuerung ruht)
   keys(input, player) {
     if (!this.open) {
-      if (input.hit('KeyG') && this.near(player)) this.show(player);
+      if (input.hit('KeyG') && this.near(player) && !window.game?.carry?.edible) this.show(player); // G mit Essen in der Hand: essen (carry.js)
       return this.open;
     }
     if (this.justOpened) this.justOpened = false;

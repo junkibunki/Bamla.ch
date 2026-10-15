@@ -217,6 +217,7 @@ export class Camping {
     this.waterTex = [];
     this.walkers = [];
     this.platforms = [];
+    this.beds = []; // Schlafplätze (Zelteingänge, Schlaffässer) für Aufgaben: { x, z }
 
     this.roads = world.data.roads.filter((r) => ['service', 'track', 'path', 'footway', 'residential', 'unclassified'].includes(r.type)
       && r.pts.some(([x, z]) => x > -480 && x < 0 && z > 240 && z < 780));
@@ -487,6 +488,7 @@ export class Camping {
       k.box(0.7, 0.9, 0.05, 0x2a2a2a, 0, 0.45, 2.08);
     }
     this.obstacle(wx, wz, heading, 1.4, 2.0, 1.4);
+    { const [bx, bz] = toWorld(wx, wz, heading, 0, 2.7); this.beds.push({ x: bx, z: bz }); }
     if (hw > 2.6 && r() < 0.6) { // Zweitzelt
       const c2 = pick(r, TENTS), [x2, z2] = toWorld(cx, cz, heading, hw - 1.2, oz - 0.5);
       k.at(x2, this.ground(x2, z2), z2, heading + 0.3).part(GEO.dome, c2, 0, 0, 0, 1.0, 1.0, 1.2);
@@ -541,6 +543,7 @@ export class Camping {
       for (const zz of [-0.7, 0.7]) k.part(GEO.cyl, 0x3a3a3a, 0, 1.45, zz, 1.215, 0.07, 1.215, Math.PI / 2, 0, 0);
       k.box(0.6, 0.15, 0.4, 0x9a9a9a, 0.15, 0.08, 2.35);                       // Trittstein
       this.obstacle(x, z, h, 1.25, 1.9, 2.8);
+      { const [bx, bz] = toWorld(x, z, h, 0.15, 2.9); this.beds.push({ x: bx, z: bz }); }
     }
   }
 
@@ -815,6 +818,7 @@ export class Camping {
       const dx0 = -ho * 0.35;
       this.kiosk = {
         wine: true,
+        front: { x: fx, z: fz, h, door: dx0 }, // für die Eistruhe (laeden.js)
         canDrink(pl) {
           if (pl.car || pl.sip > 0) return false;
           const dx = pl.pos.x - fx, dz = pl.pos.z - fz;

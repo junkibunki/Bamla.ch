@@ -45,6 +45,8 @@ import { tileInstances, pruneSmallShadows } from './tiles.js';
 import { ElectricCar } from './ecar.js';
 import { Quests } from './quests.js';
 import { Schnellreise } from './schnellreise.js';
+import { Carry } from './carry.js';
+import { buildLaeden } from './laeden.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -162,6 +164,8 @@ const ecar = new ElectricCar(scene, world);
 vehicles.push(ecar.car);
 const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/), Dorfpass mit Taste J
 const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffis“: G an Haltestellen und Bahnhof
+const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
+buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
@@ -424,6 +428,7 @@ function updateHud(dt) {
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (riding()) hud.hint.textContent = riding().riderHint();
   else if (quests.hint(player)) hud.hint.textContent = quests.hint(player); // Schwarzes Brett, Aushänge
+  else if (carry.hint(player)) hud.hint.textContent = carry.hint(player) + (nearBar() && !carry.takesE(player) ? ' · ' + barHint(nearBar()) : ''); // Läden, Abgabeorte
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
@@ -468,7 +473,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const clock = new THREE.Clock();
 
@@ -482,6 +487,7 @@ function frame() {
     else if (multiplayer.rider) multiplayer.riderAction();                 // Beifahrer: im Stand aussteigen
     else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
     else if (quests.nearBoard(player)) quests.read(player);                // Schwarzes Brett, Aushang
+    else if (carry.action(player)) { /* Laden, Abgabe, Aufgabenort */ }
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (railway.canBoard(player)) railway.board(player);              // Zug am Bahnsteig Rheinweiler
     else if (multiplayer.canBoard(player)) multiplayer.board(player);      // bei einem anderen Spieler mitfahren
@@ -530,6 +536,7 @@ function frame() {
   else if (!ridingSwing() && !andacht.active) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
+  carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
 
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);

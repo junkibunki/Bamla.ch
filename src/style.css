@@ -201,3 +201,12 @@ body.editing #quest-track, body.editing #quest-toast { display: none; }
 #travel-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 10; }
 #travel-fade.on { animation: travel-fade 0.9s ease-out; }
 @keyframes travel-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+/* Geldbeutel, Gutscheine und Getragenes (carry.js) */
+#carry {
+  position: fixed; right: 12px; bottom: 26px; max-width: 260px;
+  background: #0008; padding: 6px 10px; border-radius: 8px;
+  font-size: 13px; line-height: 1.55; pointer-events: none; text-align: right;
+}
+#carry .money { font-weight: 700; }
+#carry .voucher { color: #ffe27a; }
+body.editing #carry { display: none; }
