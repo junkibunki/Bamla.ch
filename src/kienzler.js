@@ -5,6 +5,7 @@
 // dunkelgrüner Pfosten-Riegel-Glasfront, Büro und Garage in Trapezblech, dazwischen der Asphalthof mit Paletten.
 // Ein Gabelstapler fährt Paletten zwischen Ladezone, Werkstatt und Hof umher; mit E übernehmen, R/Q hebt/senkt die
 // Gabel. Paletten werden aufgenommen, wenn die Zinken beim Anheben darunter stehen, und am Boden wieder abgesetzt.
+// Aufgaben legen eigene Paletten mit addPallet() hin; nach „Man hilft sich aus“ gibt es einen eigenen Stapler (ownForklift).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Vehicle, KINDS } from './vehicles.js';
@@ -478,6 +479,7 @@ export class Kienzler {
 
     const palletGeo = palletGeometry(), wood = mat(0xc19a63), grating = gratingTexture();
     grating.repeat.set(2, 2);
+    Object.assign(this, { palletGeo, wood, grating });
     const W = WORKSHOP, wp = (t, out) => [W.a[0] + (W.b[0] - W.a[0]) * t + W.n[0] * out, W.a[1] + (W.b[1] - W.a[1]) * t + W.n[1] * out];
     const facing = (dx, dz) => Math.atan2(dx, dz);
     const hIn = facing(-HALL.u[1], HALL.u[0]), hWs = facing(-W.n[0], -W.n[1]);
@@ -518,27 +520,52 @@ export class Kienzler {
       const fx = Math.sin(s.h), fz = Math.cos(s.h), at = (d) => [s.p[0] - fx * d, s.p[1] - fz * d];
       return { ...s, e: at(off), a: at(off + 3), a2: at(off + 6.5) };
     });
-    this.pallets = [0, 2, 3, 4].map((si, i) => {
-      const s = this.spots[si], m = new THREE.Group();
-      const p = new THREE.Mesh(palletGeo, wood);
-      p.castShadow = p.receiveShadow = true;
-      m.add(p, loadMesh(LOADS[i], grating));
-      m.position.set(s.p[0], world.heightAt(...s.p), s.p[1]);
-      m.rotation.y = s.h;
-      scene.add(m);
-      return { mesh: m };
-    });
+    this.pallets = [];
+    [0, 2, 3, 4].forEach((si, i) => this.addPallet(...this.spots[si].p, this.spots[si].h, LOADS[i]));
 
     // Gabelstapler (gelb) startet vor der Ladezone
     const st = this.spots[1].a;
     this.forklift = new Vehicle(scene, 'forklift', st[0], st[1], hIn, 0xf2b31b);
-    this.carried = null;
-    this.prevLift = 0;
+    this.forklifts = [this.forklift];
+    for (const f of this.forklifts) { f.carried = null; f.prevLift = 0; }
     this.worker = buildPerson(rand, 0xf07c1e); // Fahrer, der absteigt, wenn der Spieler den Stapler übernimmt
     this.worker.visible = false;
     scene.add(this.worker);
     this.driver = new ForkliftDriver(this);
     this.resume();
+  }
+
+  // Bewegliche Palette mit Ladung ('grating', 'profiles', 'crate') hinstellen; Mitte (x, z), Längsrichtung h
+  addPallet(x, z, h, load) {
+    const m = new THREE.Group(), p = new THREE.Mesh(this.palletGeo, this.wood);
+    p.castShadow = p.receiveShadow = true;
+    m.add(p, loadMesh(load, this.grating));
+    m.position.set(x, this.world.heightAt(x, z), z);
+    m.rotation.y = h;
+    this.scene.add(m);
+    const q = { mesh: m, load };
+    this.pallets.push(q);
+    return q;
+  }
+
+  removePallet(q) {
+    for (const f of this.forklifts) if (f.carried === q) f.carried = null;
+    q.mesh.removeFromParent();
+    this.pallets = this.pallets.filter((p) => p !== q);
+  }
+
+  // Wird die Palette gerade von einem Stapler getragen?
+  isCarried(q) { return this.forklifts.some((f) => f.carried === q); }
+  get carried() { return this.forklift.carried; }
+
+  // Eigener Stapler (Belohnung): ohne Fahrer, etwas flotter, bleibt stehen, wo man ihn abstellt (kein Stammplatz)
+  ownForklift(x, z, h) {
+    const f = new Vehicle(this.scene, 'forklift', x, z, h, 0xe8781e);
+    f.k = { ...f.k, maxSpeed: 7.5, accel: 4 };
+    f.carried = null;
+    f.prevLift = 0;
+    this.forklifts.push(f);
+    return f;
   }
 
   inYard(x, z) {
@@ -552,12 +579,12 @@ export class Kienzler {
   }
 
   palletAt(s) {
-    return this.pallets.find((q) => q !== this.carried && Math.hypot(q.mesh.position.x - s.p[0], q.mesh.position.z - s.p[1]) < 0.5
+    return this.pallets.find((q) => !this.isCarried(q) && Math.hypot(q.mesh.position.x - s.p[0], q.mesh.position.z - s.p[1]) < 0.5
       && Math.abs(wrap(2 * (q.mesh.rotation.y - s.h))) < 0.4);
   }
 
   spotFree(s) {
-    return !this.pallets.some((q) => q !== this.carried && Math.hypot(q.mesh.position.x - s.p[0], q.mesh.position.z - s.p[1]) < 1.4);
+    return !this.pallets.some((q) => !this.isCarried(q) && Math.hypot(q.mesh.position.x - s.p[0], q.mesh.position.z - s.p[1]) < 1.4);
   }
 
   // Fahrer steigt wieder auf und setzt die Hofrunde fort
@@ -578,36 +605,41 @@ export class Kienzler {
   }
 
   update(dt, player) {
-    const f = this.forklift, k = f.k;
-    // Paletten aufnehmen (Zinken unter der Palette, Gabel wird über 10 cm gehoben) und am Boden absetzen
-    if (this.carried) {
-      if (f.lift <= 0.1) this.drop();
-    } else if (this.prevLift <= 0.1 && f.lift > 0.1) {
+    for (const f of this.forklifts) this.forks(f);
+    // Spieler weg, Stapler steht auf dem Hof: Fahrer übernimmt wieder
+    const f = this.forklift;
+    if (!f.npc && player.car !== f && Math.abs(f.speed) < 0.1 && this.inYard(f.x, f.z)
+      && Math.hypot(player.pos.x - f.x, player.pos.z - f.z) > 30) this.resume();
+  }
+
+  // Paletten aufnehmen (Zinken unter der Palette, Gabel wird über 10 cm gehoben) und am Boden absetzen
+  forks(f) {
+    const k = f.k;
+    if (f.carried) {
+      if (f.lift <= 0.1) this.drop(f);
+    } else if (f.prevLift <= 0.1 && f.lift > 0.1) {
       const q = this.pallets.find((q) => {
+        if (this.isCarried(q)) return false;
         const dx = q.mesh.position.x - f.x, dz = q.mesh.position.z - f.z;
         const along = dx * f.fx + dz * f.fz, side = -dx * f.fz + dz * f.fx;
         return along > k.forkOff - 0.4 && along < k.forkOff + 0.4 && Math.abs(side) < 0.3
           && Math.abs(wrap(4 * (q.mesh.rotation.y - f.heading))) < 1.2 && Math.abs(q.mesh.position.y - (f.y ?? 0)) < 0.6;
       });
-      if (q) { f.mesh.updateMatrixWorld(true); f.mesh.carriage.attach(q.mesh); this.carried = q; }
+      if (q) { f.mesh.updateMatrixWorld(true); f.mesh.carriage.attach(q.mesh); f.carried = q; }
     }
-    this.prevLift = f.lift;
-
-    // Spieler weg, Stapler steht auf dem Hof: Fahrer übernimmt wieder
-    if (!f.npc && player.car !== f && Math.abs(f.speed) < 0.1 && this.inYard(f.x, f.z)
-      && Math.hypot(player.pos.x - f.x, player.pos.z - f.z) > 30) this.resume();
+    f.prevLift = f.lift;
   }
 
-  drop() {
-    const q = this.carried, m = q.mesh;
+  drop(f) {
+    const q = f.carried, m = q.mesh;
     this.scene.attach(m);
     const yaw = new THREE.Euler().setFromQuaternion(m.quaternion, 'YXZ').y;
     m.rotation.set(0, yaw, 0);
     // Der Hof-Fahrer stellt genau auf den Platz (sonst wandern die Paletten mit jeder Fuhre ein Stück)
-    const s = this.forklift.npc && this.spots.find((s) => Math.hypot(m.position.x - s.p[0], m.position.z - s.p[1]) < 0.8);
+    const s = f === this.forklift && f.npc && this.spots.find((s) => Math.hypot(m.position.x - s.p[0], m.position.z - s.p[1]) < 0.8);
     if (s) { m.position.x = s.p[0]; m.position.z = s.p[1]; m.rotation.y = s.h; }
     m.position.y = this.world.heightAt(m.position.x, m.position.z);
-    this.carried = null;
+    f.carried = null;
   }
 }
 

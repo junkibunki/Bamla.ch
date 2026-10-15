@@ -412,6 +412,7 @@ function updateHud(dt) {
   hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' + (v === ecar.car ? ` · 🔋 ${ecar.percent()} %` : '') : riding() ? Math.round(riding().speed * 3.6) + ' km/h' : '';
   if (v?.kind === 'forklift') hud.hint.textContent = 'E: Aussteigen · R/Q: Gabel heben/senken';
   else if (v?.kind === 'excavator') hud.hint.textContent = EXCAVATOR_HINT;
+  else if (v?.kind === 'firetruck') hud.hint.textContent = (Math.abs(v.speed) > 6 ? '' : 'E: Aussteigen · ') + 'R: Wasser marsch · T/G: Rohr heben/senken'; // Wasserwerfer
   else if (v === ecar.car && ecar.driveHint()) hud.hint.textContent = ecar.driveHint();
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (riding()) hud.hint.textContent = riding().riderHint();
