@@ -41,6 +41,7 @@ import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows } from './tiles.js';
 import { ElectricCar } from './ecar.js';
 import { Quests } from './quests.js';
+import { Sport } from './sport.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -255,6 +256,7 @@ if (dStart(startCar) < 15) {
 const cam = { yaw: player.facing + Math.PI, pitch: 0.32, zoom: 1 };
 addEventListener('wheel', (e) => { cam.zoom = Math.max(0.5, Math.min(8, cam.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12))); });
 const camTarget = new THREE.Vector3();
+const sport = new Sport(scene, world, { golf, tennis, cam, quests }); // Golf und Tennis zum Selberspielen
 const camPos = new THREE.Vector3();
 
 function updateCamera(dt) {
@@ -411,6 +413,7 @@ function updateHud(dt) {
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
   else if (quests.hint(player)) hud.hint.textContent = quests.hint(player); // Schwarzes Brett, Aushänge
+  else if (sport.hint(player)) hud.hint.textContent = sport.hint(player); // Golfschläger, Tennisschläger, Schlagen
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
@@ -454,7 +457,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, sport, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const clock = new THREE.Clock();
 
@@ -466,6 +469,7 @@ function frame() {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
     else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
     else if (quests.nearBoard(player)) quests.read(player);                // Schwarzes Brett, Aushang
+    else if (sport.hint(player)) sport.use(player);                        // Golf, Tennis
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
@@ -509,8 +513,9 @@ function frame() {
 
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
   else if (bus.rider) player.pos.set(bus.car.x, 0, bus.car.z);
-  else if (!ridingSwing() && !andacht.active) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
+  else if (!ridingSwing() && !andacht.active && !sport.busy) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
+  sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
 
   drunk.update(dt);

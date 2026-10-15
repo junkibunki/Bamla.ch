@@ -184,3 +184,15 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
   font-size: 15px; text-align: center; transition: opacity .2s;
 }
 body.editing #quest-track, body.editing #quest-toast { display: none; }
+
+/* Golf/Tennis (sport.js) und Countdown (Aufgabe „Zu spät!“) */
+#sport-hud, #quest-timer {
+  position: fixed; left: 50%; transform: translateX(-50%); background: #1d2633d0; border-radius: 8px;
+  padding: 8px 14px; font-size: 14px; text-align: center; pointer-events: none; text-shadow: 0 1px 2px #000a;
+}
+#sport-hud { bottom: 150px; min-width: min(320px, calc(100% - 32px)); }
+#sport-hud b { color: #ffe27a; }
+#sport-hud .bar { margin-top: 6px; height: 10px; border-radius: 5px; background: #fff3; overflow: hidden; }
+#sport-hud .bar i { display: block; height: 100%; background: linear-gradient(90deg, #7fe07f, #ffd400 70%, #ff6b4a); }
+#quest-timer { top: 64px; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#quest-timer.urgent { color: #ff6b4a; }

@@ -1,5 +1,5 @@
 // Tennisclub neben dem Feuerwehrhaus: vier Sandplätze in zwei eingezäunten Doppelanlagen
-// (Satellitenbild), darauf NPCs, die Ballwechsel spielen.
+// (Satellitenbild), darauf NPCs, die Ballwechsel spielen. Ein Platz bleibt frei zum Selberspielen (tennisspiel.js).
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 
@@ -8,12 +8,13 @@ const A = [-338.9, -582.2];
 const U = [-0.6421, 0.7666], V = [0.7665, 0.6422];
 const LEN = 38.6;                        // Platzlänge inkl. Auslauf (entlang v)
 const COURTS = [9.5, 28.5, 51.9, 70.9];  // Platzmitten entlang u, je 19 m breit
+const FREE = 2;                          // dieser Platz bleibt für den Spieler frei (tennisspiel.js)
 const BLOCKS = [[0, 38], [42.4, 80.4]];  // eingezäunte Doppelanlagen entlang u
 const ROT = Math.atan2(-V[1], V[0]);     // lokale x-Achse = v (Platzlänge), lokale z-Achse = u
 const W = (lx, lz) => [A[0] + V[0] * lx + U[0] * lz, A[1] + V[1] * lx + U[1] * lz];
 
 // Linienmaße (m): Grundlinie, Doppel-/Einzelseitenlinie, Aufschlaglinie
-const BASE = 11.885, DOUBLES = 5.485, SINGLES = 4.115, SERVICE = 6.4;
+export const BASE = 11.885, DOUBLES = 5.485, SINGLES = 4.115, SERVICE = 6.4;
 
 function courtTexture() {
   const ppm = 32, w = LEN * ppm, h = 19 * ppm;
@@ -47,7 +48,7 @@ function courtTexture() {
 
 const mat = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
 
-function racket() {
+export function racket() {
   const g = new THREE.Group();
   const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.32, 0.04), mat(0x222222));
   handle.position.y = -0.82;
@@ -159,8 +160,9 @@ export function buildTennis(scene, world, r) {
   const fenceMat = mat(0x2f5a3a, { transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false });
   const postMat = mat(0x2a4a32);
   const matches = [];
+  let practice = null;
 
-  for (const uc of COURTS) {
+  COURTS.forEach((uc, i) => {
     const corners = [[0, uc - 9.5], [LEN, uc - 9.5], [LEN, uc + 9.5], [0, uc + 9.5]];
     const y = Math.max(...corners.map(([a, b]) => heightAt(a, b))) + 0.04;
     const [cx, cz] = W(LEN / 2, uc);
@@ -182,9 +184,12 @@ export function buildTennis(scene, world, r) {
       post.position.set(0, 0.535, s * 6.4);
       court.add(post);
     }
-    matches.push(new Match(court, r));
+    if (i !== FREE) matches.push(new Match(court, r));
+    // freier Platz: lokale Platzkoordinaten (x entlang der Länge, z quer, Netz bei x = 0) <-> Welt
+    else practice = { y, toWorld: (x, z) => W(LEN / 2 + x, uc + z),
+      toLocal: (wx, wz) => { const dx = wx - A[0], dz = wz - A[1]; return [dx * V[0] + dz * V[1] - LEN / 2, dx * U[0] + dz * U[1] - uc]; } };
     scene.add(court);
-  }
+  });
 
   // Weg zwischen den beiden Anlagen
   {
@@ -227,5 +232,5 @@ export function buildTennis(scene, world, r) {
     fence(LEN, zm + 0.7, LEN, z1);
   }
 
-  return { update: (dt) => { for (const m of matches) m.update(dt); } };
+  return { practice, update: (dt) => { for (const m of matches) m.update(dt); } };
 }
