@@ -1,7 +1,7 @@
 // Andacht: in St. Peter und Paul in einer Bank (vom Mittelgang aus) und an den Kapellen beten (E, kniend,
 // Vaterunser mit Orgel) oder singen (R, Choral mit Orgelbegleitung). Am Fuß der Treppe in der Turmhalle geht es
 // hinauf in die Glockenstube (T): Blick durch die vier Schallöffnungen, Mausrad als Fernglas.
-// Haken für Aufgaben und Belohnungen (IDEEN.md): onPray, onSing, onTower; towerOpen sperrt später den Turm.
+// Haken für Aufgaben und Belohnungen (IDEEN.md): onPray, onSing, onTower; towerOpen: Turm erst nach der Aufgabe „Andacht“.
 import * as THREE from 'three';
 import { KIRCHE } from './kirche.js';
 import { CHAPEL } from './golf-holes.js';
@@ -186,7 +186,7 @@ export class Andacht {
     }
 
     this.mode = null;       // 'pray' | 'sing' | 'climb' | 'tower' | 'descend'
-    this.towerOpen = true;  // später: erst nach der Aufgabe „Andacht“ offen
+    this.towerOpen = true;  // quests/andacht.js schließt ab, bis die Aufgabe erledigt ist
     this.onPray = this.onSing = this.onTower = null;
     this.sound = new Sound();
     this.t = 0;
@@ -238,6 +238,7 @@ export class Andacht {
       case 'tower': return `Glockenstube, Blick nach ${OPENINGS[this.view].name} · Maus: umsehen · A/D: andere Öffnung · Mausrad: Fernglas · E: hinunter`;
     }
     if (this.canClimb(player)) return 'T: Turmtreppe hinauf zur Glockenstube';
+    if (!player.car && !this.towerOpen && this.kirche.stairAt(player.pos.x, player.pos.z)) return 'Der Turm ist abgeschlossen – den Schlüssel gibt es für die Aufgabe „Andacht“ (Schwarzes Brett)';
     const p = this.spot(player);
     if (!p) return '';
     return p.pew ? 'E: In der Bank beten · R: Singen' : `${p.name}: E beten · R singen`;

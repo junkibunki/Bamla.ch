@@ -26,6 +26,10 @@ const EAVE = -11.7, EAVE_W = -10.7;             // Traufe Ost / Westwand (dort s
 const RIDGE_S = -5.4, RIDGE_N = -6.5;           // First Süd- und Nordteil (LoD2)
 const FLOOR = -14.6;                            // Erdgeschoss: Hochparterre über dem Kellersockel
 const LEAN = { a0: -14.1, b1: 13.2, top: -10.6, slope: 0.62 }; // Pultdachanbau im Westen
+// Begehbarer Eingangsbereich hinter der Haustür: Mauerstärke, Nordwand des Raums, Decke; Tür (Mitte a, Breite)
+const T = 0.4, RB = 6.0, CEIL = FLOOR + 2.75, DOOR = { a: -5.9, w: 1.0, h: 2.2 };
+const toLocal = (x, z) => { const dx = x - O[0], dz = z - O[1]; return [dx * E[0] + dz * E[1], dx * N[0] + dz * N[1]]; };
+const inRoom = (a, b) => a > -W + T && a < -T && b > T && b < RB;
 
 const WALL = 0xf2ead6, STONE = 0xc49c68, SHUTTER = 0xa3b2b8, GLASS = 0x2f3a44, FRAME = 0xf0f0ec;
 const ROOF = 0x84483a, CAP = 0x6e3628, WOOD = 0x6a4a34;
@@ -42,9 +46,11 @@ function box(g, w, h, d, material, x, y, z, rz = 0, ry = 0) {
   return m;
 }
 
-// Prisma aus einem Profil (a, y), entlang b von b0 bis b1 extrudiert
-function prism(g, pts, b0, b1, material) {
-  const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([a, y]) => new THREE.Vector2(a, y))), { depth: b1 - b0, bevelEnabled: false });
+// Prisma aus einem Profil (a, y), entlang b von b0 bis b1 extrudiert; holes: Öffnungen [a0, y0, a1, y1]
+function prism(g, pts, b0, b1, material, holes = []) {
+  const shape = new THREE.Shape(pts.map(([a, y]) => new THREE.Vector2(a, y)));
+  for (const [a0, y0, a1, y1] of holes) shape.holes.push(new THREE.Path([[a0, y0], [a1, y0], [a1, y1], [a0, y1]].map(([a, y]) => new THREE.Vector2(a, y))));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: b1 - b0, bevelEnabled: false });
   geo.translate(0, 0, -b1);
   const m = new THREE.Mesh(geo, material);
   m.castShadow = m.receiveShadow = true;
@@ -154,8 +160,12 @@ export function buildMuseum(scene, world) {
   const base = Math.min(...corners.map(([a, b]) => ground(a, b))) - 0.3;
   const wall = mat(WALL);
 
-  // Baukörper: Hauptbau (Westwand höher, dort setzt das Pultdach an) und Anbau
-  prism(g, [[0, base], [0, EAVE], [-W, EAVE_W], [-W, base]], 0, L, wall);
+  // Baukörper: Hauptbau (Westwand höher, dort setzt das Pultdach an) und Anbau; im Süden hohl (Eingangsbereich)
+  prism(g, [[0, base], [0, EAVE], [-W, EAVE_W], [-W, base]], RB, L, wall);
+  prism(g, [[0, CEIL], [0, EAVE], [-W, EAVE_W], [-W, CEIL]], 0, RB, wall);
+  prism(g, [[0, base], [0, CEIL], [-W, CEIL], [-W, base]], 0, T, wall, [[DOOR.a - DOOR.w / 2, FLOOR, DOOR.a + DOOR.w / 2, FLOOR + DOOR.h]]);
+  prism(g, [[0, base], [0, CEIL], [-T, CEIL], [-T, base]], T, RB, wall);
+  prism(g, [[-W + T, base], [-W + T, CEIL], [-W, CEIL], [-W, base]], T, RB, wall);
   const leanLow = LEAN.top - (-LEAN.a0 - W) * LEAN.slope;
   prism(g, [[-W + 0.01, base], [-W + 0.01, LEAN.top - 0.1], [LEAN.a0, leanLow - 0.1], [LEAN.a0, base]], 0, LEAN.b1, wall);
 
@@ -193,10 +203,16 @@ export function buildMuseum(scene, world) {
   windowAt(south, -5.6, -8.1, 0.6, 0.95);
   box(south, 0.35, 0.5, 0.05, mat(0x5a5048), -4.9, -6.3, 0.05);                    // Lüftungsöffnung im Giebel
   windowAt(south, -12.0, ground(-12, 0) + 1.2, 0.8, 1.0, { shutters: false });     // Anbau
-  const dx = -5.9;
-  box(south, 1.35, 2.5, 0.06, mat(STONE), dx, FLOOR + 1.22, 0.04);                 // Türgewände
-  box(south, 0.95, 2.2, 0.08, mat(0x4a3426), dx, FLOOR + 1.1, 0.05);              // Holztür
-  box(south, 0.55, 0.7, 0.09, mat(GLASS), dx, FLOOR + 1.55, 0.06);                 // Rautenglas
+  const dx = DOOR.a, dw = DOOR.w / 2;
+  for (const s of [-1, 1]) box(south, 0.18, 2.5, 0.06, mat(STONE), dx + s * (dw + 0.09), FLOOR + 1.22, 0.04); // Türgewände
+  box(south, DOOR.w + 0.36, 0.3, 0.06, mat(STONE), dx, FLOOR + DOOR.h + 0.15, 0.04);
+  // Holztür mit Rautenglas, an der Westseite angeschlagen, geht nach innen auf
+  const leaf = new THREE.Group();
+  leaf.position.set(dx - dw, FLOOR, -0.12);
+  box(leaf, DOOR.w, DOOR.h, 0.06, mat(0x4a3426), dw, DOOR.h / 2, 0);
+  for (const s of [-1, 1]) box(leaf, 0.55, 0.7, 0.07, mat(GLASS), dw, 1.55, s * 0.003);
+  box(leaf, 0.05, 0.05, 0.16, mat(0xc9a640), DOOR.w - 0.12, 1.05, 0);              // Klinke
+  south.add(leaf);
   const canopy = box(south, 2.5, 0.1, 1.35, roofMat, dx, FLOOR + 2.75, 0.68);      // Ziegelvordach
   canopy.rotation.x = 0.32;
   box(south, 2.6, 0.08, 0.1, mat(WOOD), dx, FLOOR + 2.55, 1.3);
@@ -224,7 +240,14 @@ export function buildMuseum(scene, world) {
   const hr = box(south, stairEnd - dx - 0.8, 0.04, 0.05, rail, (dx + 0.8 + stairEnd) / 2, FLOOR - rise * steps / 2 + 0.98, 1.12);
   hr.rotation.z = -Math.atan2(rise * steps, stairEnd - dx - 0.8);
   box(south, 1.6, 0.04, 0.05, rail, dx, FLOOR + 0.98, 1.12);
-  world.addObstacle([P(dx - 0.8, 0), P(stairEnd, 0), P(stairEnd, -1.2), P(dx - 0.8, -1.2)], 1.2);
+  for (let z = 0.1; z < 1.12; z += 0.12) box(south, 0.02, 0.95, 0.02, rail, dx - 0.8, FLOOR + 0.48, z); // Geländer an der Podestseite
+  box(south, 0.05, 0.04, 1.1, rail, dx - 0.8, FLOOR + 0.98, 0.57);
+  // Begehbar: Podest und Stufen, Geländer als schmale Hindernisse
+  const rect = (a0, a1, b0, b1) => [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)];
+  world.addDeck(rect(dx - 0.8, dx + 0.8, -1.2, 0.01), () => FLOOR);
+  world.addDeck(rect(dx + 0.8, stairEnd, -1.15, 0.01), (x, z) => FLOOR - rise * (Math.floor((toLocal(x, z)[0] - dx - 0.8) / 0.3) + 1));
+  world.addObstacle(rect(dx - 0.85, stairEnd, -1.22, -1.08), 1.6);
+  world.addObstacle(rect(dx - 0.94, dx - 0.8, -1.22, 0), 1.6);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshLambertMaterial({ map: signTexture(), transparent: true }));
   sign.position.set(-2.5, FLOOR + 2.75, 0.04);
   south.add(sign);
@@ -249,9 +272,129 @@ export function buildMuseum(scene, world) {
   box(west, 0.95, 2.1, 0.08, mat(0x5a4030), -5.5, gw + 1.05, 0.05);
   for (const b of [2.2, 9.0, 11.6]) windowAt(west, -b, ground(LEAN.a0, b) + 1.1, 0.7, 0.9, { shutters: false });
 
+  buildEntrance(g, world, rect);
+
   g.position.set(O[0], 0, O[1]);
   g.rotation.y = Math.atan2(-E[1], E[0]); // lokales +x = E, lokales +z = -N (Süden)
   scene.add(g);
+
+  // Tür öffnet sich, wenn jemand davorsteht oder im Eingang ist
+  const doorAt = P(dx, 0);
+  let open = 0;
+  return {
+    door: P(dx, -2.2),     // vor der Treppe (Aufgabenziel)
+    inside(x, z) { return inRoom(...toLocal(x, z)); },
+    // Kamera im Raum nicht durch die Decke
+    ceilingAt(x, z) { const [a, b] = toLocal(x, z); return inRoom(a, b) || (b > -0.2 && b < T + 0.2 && Math.abs(a - dx) < dw) ? CEIL - 0.25 : null; },
+    update(dt, player) {
+      const near = !player.car && Math.hypot(player.pos.x - doorAt[0], player.pos.z - doorAt[1]) < 2.6;
+      open += ((near ? 1 : 0) - open) * Math.min(1, dt * 4);
+      leaf.rotation.y = open * 1.45;
+    },
+  };
+}
+
+// ---------- Eingangsbereich (Hochparterre) ----------
+// Innen fällt kaum Sonne hin: Eigenleuchten wie in der Kirche (kirche-innen.js)
+const glow = (color, k = 0.45) => new THREE.MeshLambertMaterial({ color, emissive: new THREE.Color(color).multiplyScalar(k) });
+
+function panelTexture(title, lines, sub) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 384;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f4efe2'; g.fillRect(0, 0, 512, 384);
+  g.fillStyle = '#7a3b2a'; g.fillRect(0, 0, 512, 70);
+  g.fillStyle = '#fff'; g.font = 'bold 34px Georgia, serif'; g.textAlign = 'center';
+  g.fillText(title, 256, 48);
+  g.fillStyle = '#3a2e26'; g.font = '24px Georgia, serif';
+  lines.forEach((l, i) => g.fillText(l, 256, 120 + i * 34));
+  if (sub) { g.fillStyle = '#6a5a4e'; g.font = 'italic 22px Georgia, serif'; sub.forEach((l, i) => g.fillText(l, 256, 120 + (lines.length + 0.6 + i) * 34)); }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function panel(g, tex, w, h, a, y, b, ry) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex, emissive: 0x888888, emissiveMap: tex }));
+  m.position.set(a, y, -b);
+  m.rotation.y = ry;
+  g.add(m);
+  return m;
+}
+
+function buildEntrance(g, world, rect) {
+  const plaster = glow(0xf3eee2, 0.55), wood = glow(0x8a5a36), dark = glow(0x5a3a24), floor = glow(0xa47a50, 0.5);
+  const a0 = -W + T, a1 = -T, aw = a1 - a0, am = (a0 + a1) / 2, bm = (T + RB) / 2, h = CEIL - FLOOR;
+  // Dielenboden, Putz innen, Balkendecke
+  box(g, aw, 0.1, RB - T, floor, am, FLOOR - 0.05, -bm);
+  for (let b = T + 0.6; b < RB; b += 0.6) box(g, aw, 0.012, 0.02, dark, am, FLOOR + 0.006, -b);
+  box(g, 0.02, h, RB - T, plaster, a0 + 0.01, FLOOR + h / 2, -bm);
+  box(g, 0.02, h, RB - T, plaster, a1 - 0.01, FLOOR + h / 2, -bm);
+  box(g, aw, h, 0.02, plaster, am, FLOOR + h / 2, -(RB - 0.01));
+  const dl = DOOR.a - DOOR.w / 2 - a0, dr = a1 - DOOR.a - DOOR.w / 2;                // Südwand links/rechts der Tür
+  box(g, dl, h, 0.02, plaster, a0 + dl / 2, FLOOR + h / 2, -(T + 0.01));
+  box(g, dr, h, 0.02, plaster, a1 - dr / 2, FLOOR + h / 2, -(T + 0.01));
+  box(g, DOOR.w, h - DOOR.h, 0.02, plaster, DOOR.a, FLOOR + (DOOR.h + h) / 2, -(T + 0.01));
+  box(g, aw, 0.02, RB - T, glow(0xe8dcc4, 0.5), am, CEIL - 0.01, -bm);
+  for (let a = a0 + 0.9; a < a1; a += 1.4) box(g, 0.18, 0.2, RB - T, wood, a, CEIL - 0.1, -bm);
+  // Fenster von innen (Läden außen), hell
+  const pane = new THREE.MeshBasicMaterial({ color: 0xcfe3ee });
+  for (const a of [-8.2, -2.4]) box(g, 0.85, 1.25, 0.02, pane, a, FLOOR + 1.33, -(T + 0.03));
+  for (const b of [1.8, 5.0]) box(g, 0.02, 1.25, 0.85, pane, a1 - 0.03, FLOOR + 1.33, -b);
+
+  // Der Bottich, in den im November 1956 das erste Bellinger Thermalwasser floss
+  const vat = new THREE.Group();
+  vat.position.set(-7.3, FLOOR, -3.7);
+  const staves = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.85, 1.05, 24, 1, true), new THREE.MeshLambertMaterial({ color: 0x8a5a36, emissive: 0x3a2616, side: THREE.DoubleSide }));
+  staves.position.y = 0.53;
+  vat.add(staves);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), glow(0x6aa8b8, 0.5));
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = 0.8;
+  vat.add(water);
+  for (const y of [0.15, 0.55, 0.95]) {
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.86 + y * 0.09, 0.025, 6, 32), glow(0x3a3a3c, 0.3));
+    hoop.rotation.x = Math.PI / 2;
+    hoop.position.y = y;
+    vat.add(hoop);
+  }
+  g.add(vat);
+  const sign = new THREE.Group();                                                     // Schildchen auf einem Pult
+  sign.position.set(-7.3, FLOOR, -2.35);
+  box(sign, 0.06, 0.9, 0.06, dark, 0, 0.45, 0);
+  const plate = panel(sign, panelTexture('Der Bottich', ['In diesen Bottich floss', 'im November 1956 das erste', 'Bellinger Thermalwasser.'], ['Vom Weindorf zum Heilbad']), 0.5, 0.38, 0, 1.0, 0, 0);
+  plate.rotation.x = -0.5;
+  g.add(sign);
+  world.addObstacle([[-8.3, 2.7], [-6.3, 2.7], [-6.3, 4.7], [-8.3, 4.7]].map(([a, b]) => P(a, b)), 1.1);
+
+  // Kasse mit Prospekten an der Ostwand
+  box(g, 0.7, 1.0, 2.0, wood, -1.15, FLOOR + 0.5, -3.3);
+  box(g, 0.8, 0.05, 2.1, dark, -1.15, FLOOR + 1.02, -3.3);
+  const cols = [0xd8402c, 0x2f6fd0, 0xf2c230, 0x3cb371];
+  cols.forEach((c, i) => { const f = box(g, 0.2, 0.01, 0.28, glow(c, 0.4), -1.25, FLOOR + 1.05, -2.6 - i * 0.35); f.rotation.y = 0.2 * (i - 1.5); });
+  world.addObstacle(rect(-1.55, -T, 2.25, 4.35), 1.1);
+
+  // Tafeln: Willkommen (zweisprachig wie im Museum), Badekultur, Durchgang zur Ausstellung
+  panel(g, panelTexture('Willkommen', ['Oberrheinisches Bäder- und', 'Heimatmuseum Bad Bellingen'], ['Bienvenue au musée', 'Sonntags 14–17 Uhr']), 1.6, 1.2, a0 + 0.03, FLOOR + 1.6, 3.4, Math.PI / 2);
+  panel(g, panelTexture('Badekultur am Oberrhein', ['Römische Bäder, Badstuben', 'des Mittelalters, Kurleben', 'im 19. Jahrhundert'], ['Culture balnéaire du Rhin supérieur']), 1.6, 1.2, -6.9, FLOOR + 1.6, RB - 0.03, 0);
+  box(g, 1.0, 2.1, 0.06, dark, -3.2, FLOOR + 1.05, -(RB - 0.04));
+  box(g, 1.2, 2.25, 0.04, glow(0xc49c68, 0.4), -3.2, FLOOR + 1.12, -(RB - 0.015));
+  panel(g, panelTexture('Ausstellung', ['Weinbau · Fischerei', 'Dorfleben · Bäder'], ['Exposition']), 0.5, 0.38, -3.2, FLOOR + 1.6, RB - 0.08, 0);
+
+  // Böden und Kollision: OSM-Umriss ohne den Raum, Mauern als eigene Hindernisse
+  world.addDeck(rect(a0, a1, T - 0.01, RB), () => FLOOR);
+  world.addDeck(rect(DOOR.a - DOOR.w / 2, DOOR.a + DOOR.w / 2, -0.01, T + 0.01), () => FLOOR);
+  const ci = world.buildings.findIndex((r) => r.length && Math.hypot(r.reduce((s, p) => s + p[0], 0) / r.length - MUSEUM_OVERRIDES[0].c[0],
+    r.reduce((s, p) => s + p[1], 0) / r.length - MUSEUM_OVERRIDES[0].c[1]) < 3);
+  if (ci >= 0) {
+    world.buildings[ci] = [P(0, RB), P(0, L), P(-W, L), P(-W, LEAN.b1), P(LEAN.a0, LEAN.b1), P(LEAN.a0, 0), P(a0, 0), P(a0, RB)];
+    world.addToGrid(world.buildings[ci], ci);
+  }
+  world.addObstacle(rect(a1, 0.05, -0.05, RB), 12);
+  world.addObstacle(rect(a0, DOOR.a - DOOR.w / 2, -0.05, T), 12);
+  world.addObstacle(rect(DOOR.a + DOOR.w / 2, a1, -0.05, T), 12);
+  // Türöffnung: Füße auf Bodenhöhe gehen durch (walkTop), der Kamerastrahl nicht (bleibt im Raum)
+  world.addObstacle(rect(DOOR.a - DOOR.w / 2, DOOR.a + DOOR.w / 2, 0.15, 0.25), 12, FLOOR - 0.5);
 }
 
 // ---------- Bushaltestelle „Bamlach“ (RVL, Linie Richtung Schliengen/Bad Bellingen) ----------

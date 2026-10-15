@@ -99,7 +99,7 @@ const camping = new Camping(scene, world, camp, rng);
 buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
-buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus)
+const museum = buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus), Eingangsbereich begehbar
 const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang)
 buildRathaus(scene, world); // ehemaliges Rathaus gegenüber, Brunnen davor
 buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
@@ -315,7 +315,7 @@ function updateCamera(dt) {
   const px = camTarget.x + (cx - camTarget.x) * k, pz = camTarget.z + (cz - camTarget.z) * k;
   // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt), in der Kirche nicht durch die Decke
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
-  const ceil = kirche.innen.ceilingAt(px, pz);
+  const ceil = kirche.innen.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz);
   if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
   camera.position.lerp(camPos, Math.min(1, dt * 12));
   camera.lookAt(camTarget);
@@ -459,7 +459,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, input, kirche, museum, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const clock = new THREE.Clock();
 
@@ -519,6 +519,7 @@ function frame() {
   else if (!ridingSwing() && !andacht.active) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
+  museum.update(dt, player); // Museumstür
 
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);

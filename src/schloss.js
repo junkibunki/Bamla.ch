@@ -407,6 +407,52 @@ function buildGarden(root, world) {
   bench(root, world, ...Dw(23.5, 4.6), M[0], M[1]);
 }
 
+// ---------- Aussichtspunkt ----------
+// Plattenweg vor dem Gartensaal (Luftbild) an der Kante des Hochgestades: unter den Bäumen am Hang hindurch
+// über die A5 auf den Rhein und das Elsass. look = Blickrichtung zum Rhein.
+export const VIEWPOINT = { x: -1440, z: 621, look: [-0.64, -0.77] };
+
+function viewTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f2efe6'; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#2f5f63'; g.font = 'bold 40px serif'; g.textAlign = 'center';
+  g.fillText('Rheinblick', 256, 50);
+  g.fillStyle = '#8fa8c8'; g.beginPath(); g.moveTo(0, 150); g.lineTo(512, 110); g.lineTo(512, 140); g.lineTo(0, 185); g.fill(); // Rhein
+  g.fillStyle = '#7a8a9a'; g.beginPath(); g.moveTo(0, 105); g.quadraticCurveTo(140, 62, 260, 92); g.quadraticCurveTo(380, 60, 512, 88); g.lineTo(512, 108); g.lineTo(0, 130); g.fill(); // Vogesen
+  g.fillStyle = '#333'; g.font = '20px sans-serif';
+  g.fillText('Vogesen · Elsass (Frankreich)', 256, 84);
+  g.fillText('Rhein', 256, 168);
+  g.fillText('Isteiner Klotz ←   → Neuenburg', 256, 222);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function buildViewpoint(root, world) {
+  const { x, z, look: [lx, lz] } = VIEWPOINT;
+  bench(root, world, x - lx * 1.4, z - lz * 1.4, lx, lz);
+  // Fernrohr auf einer Säule, etwas abwärts zum Rhein geneigt
+  const fx = x + lx * 0.7, fz = z + lz * 0.7, fy = world.heightAt(fx, fz);
+  const scope = facing(fx, fy, fz, lx, lz);
+  mesh(new THREE.CylinderGeometry(0.07, 0.1, 1.1, 8), COLORS.iron, 0, 0.55, 0, scope);
+  const tube = mesh(new THREE.CylinderGeometry(0.09, 0.07, 0.55, 10), 0x3d6e72, 0, 1.25, 0.05, scope);
+  tube.rotation.x = Math.PI / 2 + 0.12;
+  root.add(scope);
+  world.addObstacle([[fx - 0.15, fz - 0.15], [fx + 0.15, fz - 0.15], [fx + 0.15, fz + 0.15], [fx - 0.15, fz + 0.15]], 1.4);
+  // Panoramatafel daneben, schräg wie ein Pult
+  const px = x + lz * 1.3, pz = z - lx * 1.3, py = world.heightAt(px, pz);
+  const stand = facing(px, py, pz, lx, lz);
+  for (const s of [-0.3, 0.3]) box(stand, 0.05, 0.9, 0.05, COLORS.iron, s, 0.45, 0);
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.4), new THREE.MeshLambertMaterial({ map: viewTexture() }));
+  plate.position.set(0, 0.95, 0);
+  plate.rotation.set(-Math.PI / 2 + 0.6, Math.PI, 0, 'YXZ'); // Schrift lesbar für wen zum Rhein schaut
+  stand.add(plate);
+  root.add(stand);
+  world.addObstacle([[px - 0.35, pz - 0.35], [px + 0.35, pz - 0.35], [px + 0.35, pz + 0.35], [px - 0.35, pz + 0.35]], 1.0);
+}
+
 // ---------- Streichelzoo ----------
 
 function goat(color, dark) {
@@ -696,6 +742,7 @@ export function buildSchloss(scene, world, player) {
   parasolTable(root, world, ...Dw(21, -5));
   parasolTable(root, world, ...Dw(17.5, -6.5));
   buildGarden(root, world);
+  buildViewpoint(root, world);
   bake(scene, root);
   buildSign(scene, world);
 
