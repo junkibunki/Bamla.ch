@@ -264,6 +264,7 @@ export class Vehicle {
     this.pedal = 0;
     this.lift = 0; // Gabelhöhe (nur Gabelstapler)
     this.npc = null;
+    this.color = color; // Lackfarbe (Lackierungen aus dem Dorfpass suchen danach)
     this.mesh = this.k.mesh(color);
     this.mesh.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(this.mesh);

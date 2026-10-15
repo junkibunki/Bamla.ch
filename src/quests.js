@@ -11,8 +11,16 @@
 //   toast(text), save()
 // Andere Module fragen Belohnungen über ctx.quests.unlocked(id) / onUnlock(id, fn) ab und können mit
 // quests.emit(name, data) Ereignisse melden, auf die Aufgaben mit quests.on(name, fn) hören.
+// Belohnungen für alle Aufgaben (belohnungen.js, ansehen.js, postkarten.js) hängen an den erledigten Ids und an:
+// - quests.emit('lieferung'): eine Lieferung fürs gemeinsame Dorfziel (Feuerwerk). Nur für Lieferungen, die nicht
+//   mit dem Abschluss zusammenfallen – der Abschluss der Lieferaufgaben (LIEFER_QUESTS in belohnungen.js) zählt selbst.
+// - quests.addAnsehen(n, grund): Ansehen ändern, auch ins Minus (Betrunken fahren kostet von selbst).
+// - quests.passSections: weitere Abschnitte im Dorfpass, fn(panel) hängt Elemente an.
 import * as THREE from 'three';
 import { BUS_STOP } from './museum.js';
+import { Belohnungen } from './belohnungen.js';
+import { Ansehen } from './ansehen.js';
+import { Postkarten } from './postkarten.js';
 
 const STORE = 'bamla.quests';
 const READ_DIST = 2.4;
@@ -30,8 +38,9 @@ export const BOARDS = [
 ];
 function xz([x, z]) { return { x, z }; }
 
-// Dorf-Ansehen: Stufen
-const LEVELS = [[0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar'], [150, 'Bamlacher'], [250, 'Ehrenbürger']];
+// Dorf-Ansehen: Stufen (ab 30 grüßen Fußgänger, ab 150 Dorffest, siehe ansehen.js)
+export const LEVELS = [[-Infinity, 'Dorfschreck'], [0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar'], [150, 'Bamlacher'], [250, 'Ehrenbürger']];
+const EHREN = 250;
 
 const defs = Object.values(import.meta.glob('./quests/*.js', { eager: true }))
   .map((m) => m.default).filter(Boolean).sort((a, b) => a.nr - b.nr);
@@ -138,6 +147,8 @@ export class Quests {
     this.unlockFns = new Map();
     this.open = null; // geöffneter Aushang oder 'pass'
     this.toasts = [];
+    this.passSections = []; // weitere Abschnitte im Dorfpass (Kleidung, Postkarten, Bestenliste …)
+    this.extraMarkers = []; // weitere Ziele auf der Minimap (z. B. Dorffest)
 
     // Aushänge: feste und von Aufgaben mitgebrachte, nur wenn eine Aufgabe dort hängt
     const boards = new Map(BOARDS.map((b) => [b.id, b]));
@@ -166,6 +177,10 @@ export class Quests {
       if (typeof upd === 'function') this.updates.set(d.id, upd);
     }
     for (const id of this.state.unlocks) this.fireUnlock(id);
+    // Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Multiplayer; Grüßen und Dorffest; Postkarten
+    this.belohnungen = new Belohnungen(this.ctx);
+    this.ansehen = new Ansehen(this.ctx);
+    this.postkarten = new Postkarten(this.ctx);
     this.renderTrack();
   }
 
@@ -216,7 +231,7 @@ export class Quests {
     s.at = Date.now();
     const r = d.reward || {};
     const before = this.level();
-    this.state.ansehen += r.ansehen ?? 10;
+    this.state.ansehen = Math.max(-100, this.state.ansehen + (r.ansehen ?? 10));
     const parts = ['Stempel im Dorfpass', `+${r.ansehen ?? 10} Ansehen`];
     if (r.title) parts.push(`Titel „${r.title}“`);
     if (r.unlock) { this.unlock(r.unlock.id); parts.push(r.unlock.text); }
@@ -251,16 +266,22 @@ export class Quests {
   // Wählbare Titel: aus erledigten Aufgaben, Ansehen-Stufe und vollem Dorfpass
   titles() {
     const t = defs.filter((d) => this.state.quests[d.id]?.status === 'done' && d.reward?.title).map((d) => d.reward.title);
-    if (this.unlocked('dorfpass-voll') || this.state.ansehen >= LEVELS[4][0]) t.push('Ehrenbürger');
+    if (this.unlocked('dorfpass-voll') || this.state.ansehen >= EHREN) t.push('Ehrenbürger');
+    if (this.postkarten?.complete) t.push('Heimatkundler');
     return [...new Set(t)];
   }
   get title() { return this.titles().includes(this.state.title) ? this.state.title : ''; }
   setTitle(t) { this.state.title = t; this.save(); this.renderPass(); }
   level() { return LEVELS.filter(([n]) => this.state.ansehen >= n).pop()[1]; }
+  doneCount() { return defs.filter((d) => this.state.quests[d.id]?.status === 'done').length; }
+  isDone(id) { return this.state.quests[id]?.status === 'done'; }
   addAnsehen(n, why) {
-    this.state.ansehen = Math.max(0, this.state.ansehen + n);
+    const before = this.level();
+    this.state.ansehen = Math.max(-100, this.state.ansehen + n);
     if (why) this.toast(`${why} (${n > 0 ? '+' : ''}${n} Ansehen)`);
+    if (this.level() !== before) this.toast(`Dein Ansehen im Dorf: ${this.level()}`, 6);
     this.save();
+    this.renderPass();
   }
 
   // Ereignisse
@@ -299,7 +320,7 @@ export class Quests {
     if (what === 'pass') this.renderPass(); else this.renderBoard(what);
     this.panel.hidden = false;
   }
-  close() { this.open = null; this.panel.hidden = true; }
+  close() { this.open = null; this.panel.hidden = true; document.querySelector('.qzoom')?.remove(); }
 
   // ---------- Jeden Frame ----------
   update(dt, input, player, camera) {
@@ -314,6 +335,9 @@ export class Quests {
     } else if (input.hit('KeyJ')) this.show('pass');
 
     for (const [id, upd] of this.updates) if (this.state.quests[id]?.status === 'active') upd(dt);
+    this.belohnungen?.update(dt, input);
+    this.ansehen?.update(dt);
+    this.postkarten?.update(dt);
 
     // Marker: wippen, mit Abstand mitwachsen (bleiben von weitem sichtbar)
     const t = performance.now() / 1000;
@@ -347,6 +371,7 @@ export class Quests {
   // Für die Minimap: Aushänge mit neuen Aufgaben, Ziele angenommener Aufgaben
   get markers() {
     const m = this.boards.filter((b) => b.marker.visible).map((b) => ({ x: b.x, z: b.z, glyph: '!', color: '#ffd400' }));
+    m.push(...this.extraMarkers);
     for (const q of this.handles.values()) if (q.active && q.targetPos) m.push({ ...q.targetPos, glyph: '▼', color: '#7fe07f' });
     return m;
   }
@@ -397,8 +422,9 @@ export class Quests {
 
   renderPass() {
     if (this.open !== 'pass') return;
-    const p = this.panel;
+    const p = this.panel, scroll = p.scrollTop;
     p.replaceChildren();
+    requestAnimationFrame(() => { p.scrollTop = scroll; }); // Neuzeichnen (Auswahl, Bestenliste) springt nicht nach oben
     const head = el('div', 'qhead');
     head.append(el('b', null, 'Dorfpass Bamlach'), el('button', 'qclose', '✕'));
     head.lastChild.dataset.close = '';
@@ -424,6 +450,7 @@ export class Quests {
       }
       p.append(row);
     }
+    for (const fn of this.passSections) fn(p, el);
     p.append(el('div', 'qfoot', 'J / Esc: schließen'));
   }
 

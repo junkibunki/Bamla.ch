@@ -169,6 +169,21 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
 #quest-panel .qtitles { color: #fff; font-size: 13px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 10px; }
 #quest-panel .qtitles button { background: #0005; color: #fff; padding: 4px 8px; }
 #quest-panel .qtitles button.on { background: #ffd400; color: #1d2633; }
+#quest-panel .qtitles button:disabled { opacity: .55; cursor: default; }
+#quest-panel .qcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; margin-bottom: 10px; }
+#quest-panel .qcard { background: #f6f2e4; border-radius: 4px; padding: 3px; font-size: 11px; text-align: center; cursor: zoom-in; }
+#quest-panel .qcard.neu { opacity: .55; cursor: default; }
+#quest-panel .qcard img { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 2px; }
+#quest-panel .qcard i { display: grid; place-items: center; aspect-ratio: 3 / 2; font-style: normal; font-size: 20px; color: #7a6a50; background: #e6dfca; }
+#quest-panel .qcard span { display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#quest-panel .qdorf { background: #0004; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
+#quest-panel .qdorf ol { margin: 4px 0 0; padding-left: 22px; }
+#quest-panel .qdorf li.me { color: #ffd400; font-weight: 700; }
+#quest-panel .qbar { height: 10px; background: #0006; border-radius: 5px; margin: 5px 0 3px; overflow: hidden; }
+#quest-panel .qbar i { display: block; height: 100%; background: linear-gradient(90deg, #ff7a30, #ffd400); }
+#quest-panel .qsmall { font-size: 11.5px; opacity: .8; margin-bottom: 6px; }
+.qzoom { position: fixed; inset: 0; z-index: 13; display: grid; place-items: center; background: #000a; cursor: zoom-out; }
+.qzoom img { width: min(720px, calc(100% - 32px)); box-shadow: 0 8px 32px #000; transform: rotate(-1.5deg); }
 
 #quest-track {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); max-width: min(520px, calc(100% - 32px));
