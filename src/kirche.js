@@ -56,7 +56,8 @@ const COLORS = {
   robeBlue: 0x2f4f9a, robeBrown: 0x7a5232, robeGreen: 0x5f6a3e, white: 0xf2f0ea, skin: 0xe2b98f,
   hair: 0x4a3322, ox: 0x7a4a2a, donkey: 0x8a8580, sheep: 0xece6d8, black: 0x1e1e1e,
   hedge: 0x2f5426, thuja: 0x274a22, trunk: 0x5a4030, leaves: 0x4c7a36, wall: 0xa89a80,
-  bronze: 0x5b5048,
+  bronze: 0x5b5048, plaster: 0xd8c18e, cap: 0x9b968c, concrete: 0xb4b1a9, steel: 0xa4a8ab, red: 0xc0392b,
+  lamp: 0x3a3f3c, glow: 0xfff1c8, rubble: 0x948b7c,
 };
 
 const rand = (seed) => {
@@ -427,6 +428,7 @@ function buildCemetery(scene, world, mats) {
         const ca = a + w / 2;
         a += w + 0.35;
         if (r() < 0.12) continue; // aufgelassenes Grab: Rasen
+        if (!graveFits(...toWorld(ca, b + d / 2))) continue;
         put('frame', ca, b + d / 2, 0.05, w, 0.16, d, 0x8e8c88);
         put('bed', ca, b + d / 2 + 0.05, 0.1, w - 0.16, 0.14, d - 0.25, BEDS[Math.floor(r() * BEDS.length)]);
         if (r() < 0.1) put('cross', ca, b + 0.12, 0, 1, 1, 1, r() < 0.5 ? 0x4a3020 : 0x2a2a2c);
@@ -474,33 +476,234 @@ function buildCemetery(scene, world, mats) {
     add('iron', new THREE.BoxGeometry(0.5, 0.05, 0.6).rotateZ(0.5).translate(-0.2, 4.95, 0));  // Wetterdach
     add('iron', new THREE.BoxGeometry(0.5, 0.05, 0.6).rotateZ(-0.5).translate(0.2, 4.95, 0));
   }
-  // Westmauer über der Kirchstraße und Hecke am Südrand
-  const wallLine = [[-59.4, 37.4], [-61.2, 65.2]], hedgeLine = [toWorld(-31, 32), toWorld(34, 32)];
-  for (const [line, key, top, w, hgt] of [[wallLine, 'wall', 0.9, 0.5, 2.6], [hedgeLine, 'hedge', 1.7, 1.0, 1.7]]) {
-    const [[x0, z0], [x1, z1]] = line, n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 3);
-    for (let i = 0; i < n; i++) {
-      const xa = x0 + ((x1 - x0) * i) / n, za = z0 + ((z1 - z0) * i) / n;
-      const xb = x0 + ((x1 - x0) * (i + 1)) / n, zb = z0 + ((z1 - z0) * (i + 1)) / n;
-      const y = (world.heightAt(xa, za) + world.heightAt(xb, zb)) / 2 + top - hgt / 2;
-      P.beam(key, [xa, y, za], [xb, y, zb], w, hgt);
-    }
-    const nx = -(z1 - z0), nz = x1 - x0, l = Math.hypot(nx, nz) / (w / 2);
-    world.addObstacle([[x0 + nx / l, z0 + nz / l], [x1 + nx / l, z1 + nz / l], [x1 - nx / l, z1 - nz / l], [x0 - nx / l, z0 - nz / l]], top);
-  }
-  for (const a of [-24, -12, -2, 9, 20]) { // Lebensbäume vor der Hecke
+  buildEntrances(P, world);
+  for (const a of [-20, -12, -2, 9, 20]) { // Lebensbäume vor der Hecke
     const [x, z] = toWorld(a, 31);
     P.add('thuja', new THREE.ConeGeometry(1.1, 6.5, 7).translate(x, world.heightAt(x, z) + 3.1, z));
   }
   // Laubbäume am Weg zur Krippe (Linde direkt neben dem Stall)
-  for (const [x, z, s] of [[37.2, 41.0, 1.3], [26.0, 43.0, 0.9], [21.0, 46.5, 0.85], [27.6, 35.0, 0.8]]) {
-    const y = world.heightAt(x, z);
-    P.add('trunk', new THREE.CylinderGeometry(0.22 * s, 0.32 * s, 4 * s, 7).translate(x, y + 2 * s, z));
-    for (const [dx, dy, dz, rr] of [[0, 5.4, 0, 2.9], [1.3, 4.6, 0.6, 2.0], [-1.1, 4.8, -0.8, 2.1]]) {
-      P.add('leaves', new THREE.IcosahedronGeometry(rr * s, 1).translate(x + dx * s, y + dy * s, z + dz * s));
-    }
-    world.addObstacle([[x - 0.4, z - 0.4], [x + 0.4, z - 0.4], [x + 0.4, z + 0.4], [x - 0.4, z + 0.4]], 6 * s);
-  }
+  for (const [x, z, s] of [[37.2, 41.0, 1.3], [26.0, 43.0, 0.9], [21.0, 46.5, 0.85], [27.6, 35.0, 0.8]]) leafTree(P, world, x, z, s);
   P.build(scene, mats);
+}
+
+function leafTree(P, world, x, z, s) {
+  const y = world.heightAt(x, z);
+  P.add('trunk', new THREE.CylinderGeometry(0.22 * s, 0.32 * s, 4 * s, 7).translate(x, y + 2 * s, z));
+  for (const [dx, dy, dz, rr] of [[0, 5.4, 0, 2.9], [1.3, 4.6, 0.6, 2.0], [-1.1, 4.8, -0.8, 2.1]]) {
+    P.add('leaves', new THREE.IcosahedronGeometry(rr * s, 1).translate(x + dx * s, y + dy * s, z + dz * s));
+  }
+  const r = 0.3 * s;
+  world.addObstacle([[x - r, z - r], [x + r, z - r], [x + r, z + r], [x - r, z + r]], 6 * s);
+}
+
+// ---------- Ein- und Ausgänge des Friedhofs ----------
+// Nach Luftbild (DOP20) und Photo Spheres von der Kirchstraße (N., Dez. 2024):
+// - Westtor (Hauptzugang): Asphaltrampe vom Platz an der Kirchstraße, Stahlgeländer an der Nordseite, zwei ockergelbe
+//   Putzpfeiler mit schmiedeeisernem Flügeltor. Nördlich davon die ockergelbe Putzmauer über dem Kastanienweg,
+//   südlich eine abgetreppte Betonmauer mit Hecke, die schräg zur Südhecke läuft.
+// - Nordtreppe: zwei Läufe (6 + 5 Stufen) mit Handlauf von der Kirchstraße hinauf zum Treppenweg, runder Pflanzkübel
+//   am Fuß. Oben führt der Weg auf die Kirche durch eine Maueröffnung mit zweiter Treppe (11 Stufen), Laterne und
+//   Schaukasten; nördlich davon läuft die Bruchsteinmauer weiter bis an das Haus. Davor Rosskastanien, Bank, Poller.
+// - Ostausgang: der Hauptweg läuft offen auf die Wiese am Chor aus, die Hecke im Südosten endet am Weg.
+// - Süden: durchgehende Hecke, kein Ausgang.
+const GATE = [[-60.25, 51.6], [-60.5, 55.8]]; // Westtor: Außenkanten der beiden Pfeiler (Nord, Süd)
+const STAIRS = { a: [-73.1, 32.6], b: [-60.2, 33.9], s0: 3.3, w: 2.0 }; // Nordtreppe entlang des OSM-Wegs
+// Zweite Treppe in der Maueröffnung am Westende des Treppenwegs (Luftbild: Stufen bei x ≈ −57…−54, 2 m Höhenunterschied)
+const UPPER = { a: [-60.2, 33.9], b: [-31.2, 36.5], s0: 2.31, w: 2.2 };
+const WEST_CORNER = [-59.3, 37.6]; // hier knickt die Putzmauer von der Öffnung nach Süden zum Westtor ab
+// Bruchsteinmauer von der Südwestecke des Hauses nördlich vom Friedhof bis zur Öffnung (die letzte Ecke setzt die Treppe)
+const NORTH_WALL = [[-44.4, 20.0], [-50.4, 20.3], [-53.8, 28.0]];
+const SW_END = [-54.2, 66.3]; // schräge Mauer vom südlichen Torpfeiler bis zur Südhecke
+// Abstand von (x, z) zur Strecke p0–p1
+const segDist = (x, z, [x0, z0], [x1, z1]) => {
+  const dx = x1 - x0, dz = z1 - z0, t = Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - x0 - dx * t, z - z0 - dz * t);
+};
+// Darf an (x, z) ein Grab liegen? Innerhalb der schrägen Südwestmauer (mit Platz für die Hecke) und nicht an der Nordmauer.
+const graveFits = (x, z) => {
+  const [x0, z0] = GATE[1], dx = SW_END[0] - x0, dz = SW_END[1] - z0, L = Math.hypot(dx, dz);
+  if (((x - x0) * dz - (z - z0) * dx) / L <= 2.0) return false;
+  const nw = [...NORTH_WALL, [-57.8, 32.8]];
+  return nw.every((p, i) => i === 0 || segDist(x, z, nw[i - 1], p) > 1.4);
+};
+
+function buildEntrances(P, world) {
+  const H = (x, z) => world.heightAt(x, z);
+  const dir = (p0, p1) => { const dx = p1[0] - p0[0], dz = p1[1] - p0[1], L = Math.hypot(dx, dz); return [dx / L, dz / L, L]; };
+  const box = (key, x, y, z, sx, sy, sz, rot = 0) => P.add(key, new THREE.BoxGeometry(sx, sy, sz).rotateY(rot).translate(x, y, z));
+  const obstacle = (p0, p1, w, h) => {
+    const [tx, tz] = dir(p0, p1), nx = -tz * w / 2, nz = tx * w / 2;
+    world.addObstacle([[p0[0] + nx, p0[1] + nz], [p1[0] + nx, p1[1] + nz], [p1[0] - nx, p1[1] - nz], [p0[0] - nx, p0[1] - nz]], h);
+  };
+
+  // Mauer von p0 nach p1, links der Laufrichtung liegt der Friedhof (innen). Abgetreppt in ≤ 2,5-m-Stücken,
+  // Oberkante top über dem Gelände innen, Fuß unter dem tieferen Gelände außen.
+  const wallRun = (p0, p1, { key = 'plaster', cap = 'cap', w = 0.35, top = 1.5, hedge = 0 } = {}) => {
+    const [tx, tz, L] = dir(p0, p1), n = Math.ceil(L / 2.5), nx = tz, nz = -tx; // n = Normale nach innen
+    for (let i = 0; i < n; i++) {
+      const xa = p0[0] + (tx * L * i) / n, za = p0[1] + (tz * L * i) / n;
+      const xb = p0[0] + (tx * L * (i + 1)) / n, zb = p0[1] + (tz * L * (i + 1)) / n;
+      const xm = (xa + xb) / 2, zm = (za + zb) / 2;
+      const hin = H(xm + nx * 1.2, zm + nz * 1.2), hout = H(xm - nx * 1.2, zm - nz * 1.2);
+      const yT = Math.max(hin, H(xm, zm)) + top, yB = Math.min(hout, H(xm, zm)) - 0.4;
+      P.beam(key, [xa, (yT + yB) / 2, za], [xb, (yT + yB) / 2, zb], w, yT - yB);
+      if (cap) P.beam(cap, [xa, yT + 0.04, za], [xb, yT + 0.04, zb], w + 0.1, 0.08);
+      if (hedge) { // Hecke innen hinter der Mauer
+        const hy = hin + hedge / 2;
+        P.beam('hedge', [xa + nx * 0.75, hy, za + nz * 0.75], [xb + nx * 0.75, hy, zb + nz * 0.75], 1.0, hedge);
+      }
+    }
+    obstacle(p0, p1, w + (hedge ? 2.2 : 0.1), top);
+  };
+  const hedgeRun = (p0, p1, h = 1.7) => {
+    const [, , L] = dir(p0, p1), n = Math.ceil(L / 3);
+    for (let i = 0; i < n; i++) {
+      const a = i / n, b = (i + 1) / n;
+      const xa = p0[0] + (p1[0] - p0[0]) * a, za = p0[1] + (p1[1] - p0[1]) * a;
+      const xb = p0[0] + (p1[0] - p0[0]) * b, zb = p0[1] + (p1[1] - p0[1]) * b;
+      const y = (H(xa, za) + H(xb, zb)) / 2 + h / 2 - 0.15;
+      P.beam('hedge', [xa, y, za], [xb, y, zb], 1.0, h + 0.3);
+    }
+    obstacle(p0, p1, 1.0, h);
+  };
+  // Putzpfeiler mit Abdeckplatte und Pyramide; rot = Drehung um y
+  const pillar = (x, z, h, rot, key = 'plaster') => {
+    const y = Math.min(H(x - 0.4, z), H(x + 0.4, z)) - 0.3, top = Math.max(H(x - 0.4, z), H(x + 0.4, z)) + h;
+    box(key, x, (y + top) / 2, z, 0.6, top - y, 0.6, rot);
+    box('cap', x, top + 0.05, z, 0.72, 0.1, 0.72, rot);
+    P.add('cap', new THREE.ConeGeometry(0.46, 0.28, 4).rotateY(rot + Math.PI / 4).translate(x, top + 0.24, z));
+    world.addObstacle([[x - 0.32, z - 0.32], [x + 0.32, z - 0.32], [x + 0.32, z + 0.32], [x - 0.32, z + 0.32]], h + 0.4);
+    return top;
+  };
+  // Geländer: Pfosten an den Punkten [x, y, z] (y = Boden), Handlauf in Höhe h, Knieleiste darunter
+  const railing = (pts, h = 1.0, key = 'steel') => {
+    for (const [x, y, z] of pts) P.add(key, new THREE.CylinderGeometry(0.03, 0.03, h, 6).translate(x, y + h / 2, z));
+    for (let i = 1; i < pts.length; i++) {
+      const [xa, ya, za] = pts[i - 1], [xb, yb, zb] = pts[i];
+      P.beam(key, [xa, ya + h, za], [xb, yb + h, zb], 0.05, 0.05);
+      P.beam(key, [xa, ya + h * 0.5, za], [xb, yb + h * 0.5, zb], 0.035, 0.035);
+    }
+  };
+
+  // ----- Westtor -----
+  const [g0, g1] = GATE, [gx, gz, gL] = dir(g0, g1), rot = Math.atan2(-gz, gx);
+  const inX = gz, inZ = -gx; // Richtung in den Friedhof (Osten)
+  wallRun(WEST_CORNER, g0);                                                              // Putzmauer nördlich vom Tor
+  wallRun(g1, SW_END, { key: 'concrete', top: 0.7, hedge: 1.5 });              // Betonmauer mit Hecke, schräg nach SO
+  const pN = [g0[0] + gx * 0.3, g0[1] + gz * 0.3], pS = [g1[0] - gx * 0.3, g1[1] - gz * 0.3];
+  const topN = pillar(...pN, 1.9, rot), topS = pillar(...pS, 1.9, rot);
+  // Schmiedeeiserne Torflügel (je 1,5 m), nach innen aufgeschlagen
+  const OPEN = (100 * Math.PI) / 180, leafW = (gL - 1.2) / 2;
+  for (const [hx, hz, cx, cz] of [[pN[0] + gx * 0.3, pN[1] + gz * 0.3, gx, gz], [pS[0] - gx * 0.3, pS[1] - gz * 0.3, -gx, -gz]]) {
+    const ux = Math.cos(OPEN) * cx + Math.sin(OPEN) * inX, uz = Math.cos(OPEN) * cz + Math.sin(OPEN) * inZ;
+    const y0 = H(hx, hz), at = (u, y) => [hx + ux * u, y0 + y, hz + uz * u];
+    const topAt = (u) => 1.45 + 0.25 * Math.sin((u / leafW) * Math.PI / 2); // steigt zur Tormitte hin an
+    for (let u = 0.05; u <= leafW; u += 0.12) {
+      const [x, y, z] = at(u, 0.08), h = topAt(u) - 0.08;
+      P.add('iron', new THREE.BoxGeometry(0.025, h, 0.025).translate(x, y + h / 2, z));
+      P.add('iron', new THREE.ConeGeometry(0.035, 0.1, 4).translate(x, y + h + 0.05, z));
+    }
+    for (const y of [0.1, 1.2]) P.beam('iron', at(0, y), at(leafW, y), 0.05, 0.05);
+    for (let k = 0; k < 6; k++) P.beam('iron', at((leafW * k) / 6, topAt((leafW * k) / 6) - 0.12), at((leafW * (k + 1)) / 6, topAt((leafW * (k + 1)) / 6) - 0.12), 0.04, 0.04);
+    P.beam('iron', at(0, 0.05), at(0, 1.6), 0.06, 0.06); // Rahmen an der Angel
+  }
+  // Rampe: Bordstein mit Stahlgeländer an der Nordseite, vom Platz an der Kirchstraße bis zum Torpfeiler
+  const rampRail = [];
+  for (let i = 0; i <= 4; i++) {
+    const x = -68.4 + (pN[0] - 0.5 + 68.4) * (i / 4), z = 51.3 + (pN[1] - 0.2 - 51.3) * (i / 4);
+    rampRail.push([x, H(x, z) + 0.2, z]);
+  }
+  for (let i = 1; i < rampRail.length; i++) {
+    const [xa, ya, za] = rampRail[i - 1], [xb, yb, zb] = rampRail[i];
+    P.beam('concrete', [xa, (ya + yb) / 2 - 0.25, za], [xb, (ya + yb) / 2 - 0.25, zb], 0.25, 0.6);
+  }
+  railing(rampRail);
+  obstacle([rampRail[0][0], rampRail[0][2]], [rampRail[4][0], rampRail[4][2]], 0.3, 1.2);
+  // Poller am Beginn des Kastanienwegs (rot-weiß) und Bank unter der Kastanie
+  {
+    const [x, z] = [-70.1, 51.6], y = H(x, z);
+    for (let k = 0; k < 4; k++) P.add(k % 2 ? 'white' : 'red', new THREE.CylinderGeometry(0.06, 0.06, 0.25, 8).translate(x, y + 0.125 + k * 0.25, z));
+    world.addObstacle([[x - 0.1, z - 0.1], [x + 0.1, z - 0.1], [x + 0.1, z + 0.1], [x - 0.1, z + 0.1]], 1.0);
+  }
+
+  // Treppe entlang der Linie a → b, Antritt bei s0 m hinter a, Breite w; runs = [[Anzahl, Auftritt], …] (Podest = 1 langer Auftritt).
+  // Die Trittstufen folgen dem Hang: jede so hoch wie das Gelände unter ihr (nie eingegraben), mindestens 8 cm Steigung.
+  const stairs = ({ a, b, s0, w }, runs) => {
+    const [sx, sz] = dir(a, b), qx = -sz, qz = sx, hw = w / 2; // q = quer (nach rechts)
+    const S0 = [a[0] + sx * s0, a[1] + sz * s0];
+    const W = (s, q) => [S0[0] + sx * s + qx * q, S0[1] + sz * s + qz * q];
+    const treads = [];
+    let s = 0;
+    for (const [n, run] of runs) for (let i = 0; i < n; i++, s += run) treads.push([s, s + run]);
+    let prev = H(...W(0, 0));
+    for (const t of treads) {
+      const hs = [0, 0.5, 1].flatMap((f) => [-hw, 0, hw].map((q) => H(...W(t[0] + (t[1] - t[0]) * f, q))));
+      t.y = Math.max(Math.max(...hs) + 0.03, prev + 0.08);
+      t.low = Math.min(...hs) - 0.3;
+      prev = t.y;
+    }
+    for (const t of treads) {
+      const [x, z] = W((t[0] + t[1]) / 2, 0);
+      box('concrete', x, (t.y + t.low) / 2, z, t[1] - t[0] + 0.02, t.y - t.low, w, Math.atan2(-sz, sx));
+    }
+    const toS = (x, z) => (x - S0[0]) * sx + (z - S0[1]) * sz;
+    world.addDeck([W(-0.05, -hw), W(s, -hw), W(s, hw), W(-0.05, hw)], (x, z) => {
+      const v = toS(x, z);
+      return (treads.find((t) => v < t[1]) || treads[treads.length - 1]).y;
+    });
+    return { treads, W, hw, len: s };
+  };
+
+  // ----- Nordtreppe von der Kirchstraße -----
+  const { treads, W, hw } = stairs(STAIRS, [[6, 0.33], [1, 1.4], [5, 0.33]]);
+  // Handlauf an der Nordseite: Pfosten an Anfang und Ende beider Läufe
+  const rail = [treads[0], treads[5], treads[7], treads[11]].map((t, i) => {
+    const [x, z] = W(i % 2 ? t[1] - 0.15 : t[0] + 0.15, -hw + 0.12);
+    return [x, t.y, z];
+  });
+  railing(rail, 0.9);
+  // Runder Pflanzkübel am Fuß der Treppe (südlich) mit Buchskugel
+  {
+    const [x, z] = W(0.4, hw + 1.1), y = H(x, z);
+    P.add('concrete', new THREE.CylinderGeometry(0.62, 0.55, 0.55, 14).translate(x, y + 0.25, z));
+    P.add('hedge', new THREE.IcosahedronGeometry(0.5, 1).translate(x, y + 0.75, z));
+    world.addObstacle([[x - 0.6, z - 0.6], [x + 0.6, z - 0.6], [x + 0.6, z + 0.6], [x - 0.6, z + 0.6]], 0.6);
+  }
+  // ----- Maueröffnung am Treppenweg: zweite Treppe (11 Stufen) durch die Mauer hinauf zum Weg auf die Kirche -----
+  const up = stairs(UPPER, [[11, 0.32]]), cw = up.hw + 0.18;
+  const [D, E] = [up.W(0, -cw), up.W(0, cw)];         // Mauerenden links (Nord) und rechts (Süd) der Öffnung
+  for (const q of [-cw, cw]) wallRun(up.W(up.len, q), up.W(0, q), { key: 'rubble', cap: null, w: 0.3, top: 0.5 }); // Treppenwangen
+  // Bruchsteinmauer nördlich der Öffnung bis an die Südwestecke des Hauses (Friedhof liegt südlich bzw. östlich)
+  for (let i = 1; i < NORTH_WALL.length; i++) wallRun(NORTH_WALL[i - 1], NORTH_WALL[i], { key: 'rubble', cap: null, top: 1.1 });
+  wallRun(NORTH_WALL[NORTH_WALL.length - 1], D, { key: 'rubble', cap: null, top: 1.1 });
+  // Südlich der Öffnung knickt die Putzmauer zur Westmauer ab
+  wallRun(E, WEST_CORNER, { top: 1.1 });
+  {
+    const [x, z] = [-58.7, 35.9], y = H(x, z); // Laterne vor der Öffnung
+    P.add('lamp', new THREE.CylinderGeometry(0.05, 0.07, 3.6, 8).translate(x, y + 1.8, z));
+    P.add('lamp', new THREE.BoxGeometry(0.34, 0.08, 0.34).translate(x, y + 3.66, z));
+    P.add('glow', new THREE.BoxGeometry(0.26, 0.32, 0.26).translate(x, y + 3.46, z));
+    P.add('lamp', new THREE.ConeGeometry(0.26, 0.18, 4).rotateY(Math.PI / 4).translate(x, y + 3.79, z));
+    world.addObstacle([[x - 0.1, z - 0.1], [x + 0.1, z - 0.1], [x + 0.1, z + 0.1], [x - 0.1, z + 0.1]], 3.8);
+    // Schaukasten außen an der Putzmauer rechts der Öffnung
+    const [tx, tz] = dir(E, WEST_CORNER), ox = -tz, oz = tx; // Normale nach außen
+    const bx = (E[0] + WEST_CORNER[0]) / 2, bz = (E[1] + WEST_CORNER[1]) / 2, by = H(bx + ox, bz + oz), br = Math.atan2(-tz, tx);
+    box('wood', bx + ox * 0.21, by + 1.45, bz + oz * 0.21, 1.2, 0.9, 0.08, br);
+    box('glass', bx + ox * 0.26, by + 1.45, bz + oz * 0.26, 1.06, 0.76, 0.02, br);
+  }
+  // Bank unter der Kastanie am Kastanienweg, Blick zur Straße
+  {
+    const [x, z] = [-66.4, 38.0], y = H(x, z);
+    box('wood', x, y + 0.45, z, 0.45, 0.06, 1.8);
+    box('wood', x + 0.22, y + 0.75, z, 0.05, 0.3, 1.8);
+    for (const dz of [-0.75, 0.75]) box('wood', x, y + 0.22, z + dz, 0.45, 0.45, 0.08);
+  }
+  // Rosskastanien zwischen Kirchstraße und Mauer
+  for (const [x, z, sc] of [[-65.2, 30.4, 1.6], [-64.6, 38.9, 1.75], [-67.6, 45.4, 1.6]]) leafTree(P, world, x, z, sc);
+
+  // ----- Südhecke und Hecke im Südosten bis zum Ostausgang -----
+  hedgeRun([-54.2, 66.4], [12.6, 66.6]);
+  hedgeRun([12.6, 66.6], [15.1, 58.2]);
 }
 
 // ---------- Krippe ----------
