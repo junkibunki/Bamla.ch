@@ -27,7 +27,7 @@ for (let round = 0; round < 3 && !osm; round++) {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'mini-gta-prototype' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'bamla.ch' },
         body: 'data=' + encodeURIComponent(query),
       });
       if (res.ok) { osm = await res.json(); break; }
