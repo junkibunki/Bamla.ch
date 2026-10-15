@@ -8,11 +8,11 @@ const SLEEP = 4; // Sekunden schwarz
 export default {
   id: 'kater', nr: 25, title: 'Kater',
   board: { id: 'baracke-hof', name: 'Zettel an der Baracke', x: bx, z: bz, heading: Math.atan2(-Math.cos(A), -Math.sin(A)), style: 'zettel' },
-  text: 'Zu tief ins Glas geschaut? Lass das Auto stehen und schlaf deinen Rausch aus – auf dem Campingplatz „Lug ins Land“ findest du Zelte und Schlaffässer.',
+  text: 'Zu tief ins Glas geschaut? Lass das Auto stehen und schlaf deinen Rausch aus – am Kiosk vom Campingplatz „Lug ins Land“ gibt’s Bier, und gleich dahinter Zelte und Schlaffässer. Der Rausch hält nur eine halbe Minute, also nicht trödeln!',
   goal: 'Betrunken schlafen und nüchtern aufwachen',
-  steps: ['Ein Bier oder eine Weinschorle trinken', 'Schnell zum Campingplatz und im Zelt oder Schlaffass ausschlafen (E)'],
+  steps: ['Am Kiosk vom Campingplatz ein Bier trinken', 'Schnell ins nächste Zelt oder Schlaffass und ausschlafen (E)'],
   reward: { ansehen: 5, title: 'Langschläfer' },
-  setup({ camping, drunk, carry }, q) {
+  setup({ camping, drunk, carry, player }, q) {
     const night = document.createElement('div');
     Object.assign(night.style, { position: 'fixed', inset: '0', background: '#000', opacity: '0', pointerEvents: 'none',
       transition: 'opacity 1s', display: 'grid', placeItems: 'center', color: '#fff', font: '700 42px system-ui', zIndex: '9' });
@@ -38,9 +38,18 @@ export default {
       carry.toast('☀️ Guten Morgen! Du bist wieder nüchtern.');
       if (q.active) q.complete();
     });
+    // Der Rausch hält 30 s, die Baracke liegt 500 m weg: getrunken wird am Campingkiosk, dann zum nächsten Schlafplatz
+    const kiosk = camping.kiosk?.front ? [camping.kiosk.front.x, camping.kiosk.front.z] : [-322.8, 526.4];
+    const nearestBed = () => {
+      let best = null, bd = Infinity;
+      for (const b of camping.beds || []) { const d = Math.hypot(b.x - player.pos.x, b.z - player.pos.z); if (d < bd) { bd = d; best = b; } }
+      return best;
+    };
     return () => {
       q.advance(drunk.left > 0 ? 1 : 0);
-      q.target(...(camping.kiosk?.front ? [camping.kiosk.front.x, camping.kiosk.front.z] : [-322.8, 526.4]), 'Campingplatz');
+      const bed = drunk.left > 0 && nearestBed();
+      if (bed) q.target(bed.x, bed.z, 'Zelt');
+      else q.target(...kiosk, 'Campingkiosk');
     };
   },
 };
