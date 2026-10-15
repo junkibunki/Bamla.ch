@@ -37,6 +37,7 @@ import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
+import { tileInstances, pruneSmallShadows } from './tiles.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -57,9 +58,11 @@ document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
-scene.fog = new THREE.Fog(SKY, 250, 1100);
+const FOG_FAR = 1100;
+scene.fog = new THREE.Fog(SKY, 250, FOG_FAR);
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.3, 2500);
+// Hinter dem Nebelende ist alles Himmelfarbe – dort muss nichts mehr gezeichnet werden.
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.3, FOG_FAR + 50);
 camera.layers.enable(ROOF_LAYER); // Hallendach der Baracke (ausgeblendet, solange man drin steht)
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -370,11 +373,14 @@ let helpAt = 0; // Zeitpunkt (ms) zum Ausblenden der Steuerung, gesetzt beim ers
 const editor = new Editor({ world, camera, cam, canvas: renderer.domElement, input, minimap, sheds, player });
 const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielsteuerung ruht, solange der Editor offen ist
 
+tileInstances(scene); // Reben, Bäume, Büsche in 200-m-Kacheln, damit Culling greift
+pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
+
 // ---------- Hauptschleife ----------
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
 const clock = new THREE.Clock();
 
 function frame() {

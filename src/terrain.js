@@ -34,7 +34,9 @@ export class Terrain {
   }
 
   // Dreiecksnetz mit jedem `every`-ten Rasterpunkt; UVs für die Bodentextur.
-  buildMesh(texture, every = MESH_EVERY) {
+  // In Kacheln zu `chunk` Zellen aufgeteilt, damit Frustum-Culling greift; die Kacheln teilen sich
+  // Positionen und Normalen, dadurch gibt es an den Kachelrändern keine Lichtkanten.
+  buildMesh(texture, every = MESH_EVERY, chunk = 64) {
     const cols = Math.floor((this.cols - 1) / every) + 1, rows = Math.floor((this.rows - 1) / every) + 1;
     const pos = new Float32Array(cols * rows * 3), uv = new Float32Array(cols * rows * 2);
     const w = this.maxX - this.minX, d = this.maxZ - this.minZ;
@@ -48,21 +50,43 @@ export class Terrain {
         uv[k * 2] = (x - this.minX) / w;
         uv[k * 2 + 1] = 1 - (z - this.minZ) / d;
       }
-    const idx = new Uint32Array((cols - 1) * (rows - 1) * 6);
-    let p = 0;
-    for (let r = 0; r < rows - 1; r++)
-      for (let c = 0; c < cols - 1; c++) {
-        const a = r * cols + c, b = a + 1, e = a + cols, f = e + 1;
-        idx[p++] = a; idx[p++] = e; idx[p++] = b;
-        idx[p++] = b; idx[p++] = e; idx[p++] = f;
+    const quads = (r0, r1, c0, c1) => {
+      const idx = new Uint32Array((r1 - r0) * (c1 - c0) * 6);
+      let p = 0;
+      for (let r = r0; r < r1; r++)
+        for (let c = c0; c < c1; c++) {
+          const a = r * cols + c, b = a + 1, e = a + cols, f = e + 1;
+          idx[p++] = a; idx[p++] = e; idx[p++] = b;
+          idx[p++] = b; idx[p++] = e; idx[p++] = f;
+        }
+      return new THREE.BufferAttribute(idx, 1);
+    };
+    const full = new THREE.BufferGeometry();
+    full.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    full.setIndex(quads(0, rows - 1, 0, cols - 1));
+    full.computeVertexNormals();
+    const normal = full.getAttribute('normal'), position = full.getAttribute('position'), uvAttr = new THREE.BufferAttribute(uv, 2);
+    full.dispose();
+
+    const group = new THREE.Group(), mat = new THREE.MeshLambertMaterial({ map: texture });
+    const box = new THREE.Box3(), v = new THREE.Vector3();
+    for (let r0 = 0; r0 < rows - 1; r0 += chunk)
+      for (let c0 = 0; c0 < cols - 1; c0 += chunk) {
+        const r1 = Math.min(rows - 1, r0 + chunk), c1 = Math.min(cols - 1, c0 + chunk);
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', position);
+        g.setAttribute('normal', normal);
+        g.setAttribute('uv', uvAttr);
+        g.setIndex(quads(r0, r1, c0, c1));
+        // Bounding-Volumen nur über die Punkte der Kachel (sonst gälte das ganze Gelände)
+        box.makeEmpty();
+        for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) box.expandByPoint(v.fromArray(pos, (r * cols + c) * 3));
+        g.boundingBox = box.clone();
+        g.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+        const mesh = new THREE.Mesh(g, mat);
+        mesh.receiveShadow = true;
+        group.add(mesh);
       }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    g.setIndex(new THREE.BufferAttribute(idx, 1));
-    g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: texture }));
-    mesh.receiveShadow = true;
-    return mesh;
+    return group;
   }
 }
