@@ -257,6 +257,7 @@ spawnTraffic('tractor', world.graphs.tractor, 10, TRACTOR_COLORS, () => ({ trail
 spawnTraffic('quad', world.graphs.tractor, 3, MOTO_COLORS);
 spawnTraffic('bike', world.graphs.bike, 14, BIKE_COLORS);
 new AutobahnTraffic(scene, world, rng(55), vehicles); // A5: PKW und LKW, je Richtung zwei Fahrstreifen
+const sharedVehicles = vehicles.slice(); // bei allen Spieler:innen gleich (fester Zufall): Index = Fahrzeug im Multiplayer
 
 for (let i = 0; i < 35; i++) pedestrians.push(new Pedestrian(scene, world.graphs.walk, world.graphs.walk.randomSpot(rand), rand));
 // Camper, die auf den Wegen des Campingplatzes spazieren
@@ -365,11 +366,26 @@ function updateCamera(dt) {
 function nearestVehicle() {
   let found = null, best = Infinity;
   for (const v of vehicles) {
+    if (v.remote) continue; // fährt gerade ein:e Mitspieler:in
     if (!Vehicle.boxPush(player.pos.x, player.pos.z, v.x, v.z, v.heading, v.k.halfLen + 1.8, v.k.halfW + 1.8)) continue;
     const d = Math.hypot(v.x - player.pos.x, v.z - player.pos.z);
     if (d < best) { best = d; found = v; }
   }
   return found;
+}
+
+// Fahrzeug übernehmen (ich oder ein:e Mitspieler:in): ein Fahrer aus dem Verkehr steigt aus
+function takeOver(n) {
+  n.leftBy = null;
+  if (n.npc?.onTakeover) { n.npc.onTakeover(); n.npc = null; } // Golfcart: Golfer steigen aus und spielen zu Fuß weiter
+  else if (n.npc) {
+    // Der bisherige Fahrer steigt aus und geht zu Fuß weiter.
+    const off = n.k.halfW + 0.9;
+    const ped = new Pedestrian(scene, world.graphs.walk, world.graphs.walk.nearest(n.x, n.z), rand);
+    ped.x = n.x + n.fz * off; ped.z = n.z - n.fx * off;
+    pedestrians.push(ped);
+    n.npc = null;
+  }
 }
 
 function toggleVehicle() {
@@ -385,20 +401,13 @@ function toggleVehicle() {
     player.groundY = v.y; // steigt auf der Brücke aus, nicht darunter
     player.car = null;
     v.setRider(false);
+    v.leftBy = -1; // von mir abgestellt
     player.setVisible(true);
     return;
   }
   const n = nearestVehicle();
   if (!n) return;
-  if (n.npc?.onTakeover) { n.npc.onTakeover(); n.npc = null; } // Golfcart: Golfer steigen aus und spielen zu Fuß weiter
-  else if (n.npc) {
-    // Der bisherige Fahrer steigt aus und geht zu Fuß weiter.
-    const off = n.k.halfW + 0.9;
-    const ped = new Pedestrian(scene, world.graphs.walk, world.graphs.walk.nearest(n.x, n.z), rand);
-    ped.x = n.x + n.fz * off; ped.z = n.z - n.fx * off;
-    pedestrians.push(ped);
-    n.npc = null;
-  }
+  takeOver(n);
   player.car = n;
   n.setRider(true);
   player.setVisible(false);
@@ -423,7 +432,8 @@ function returnVehicles(dt) {
   frustum.setFromProjectionMatrix(viewProj);
   for (const v of vehicles) {
     const h = v.home, r = v.k.halfLen + 1;
-    if (!h || v.npc || v === player.car || Math.abs(v.speed) > 0.1 || !v.awayFromHome()
+    // im Multiplayer bleiben von Spieler:innen abgestellte Fahrzeuge stehen, damit alle sie am selben Ort finden
+    if (!h || v.npc || v.remote || v === player.car || (v.leftBy != null && multiplayer.remotes.size) || Math.abs(v.speed) > 0.1 || !v.awayFromHome()
       || inView(v.x, v.y ?? 0, v.z, r) || inView(h.x, h.y ?? world.heightAt(h.x, h.z), h.z, r)) { v.unseen = 0; continue; }
     if ((v.unseen = (v.unseen || 0) + step) < 20) continue;
     if (vehicles.some((o) => o !== v && Math.hypot(o.x - h.x, o.z - h.z) < o.radius + v.k.halfLen)) continue; // Platz belegt
@@ -500,6 +510,8 @@ const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
+multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
+multiplayer.onTakeover = takeOver;
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
 window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
@@ -535,6 +547,7 @@ function frame() {
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);
+    else if (v.remote) continue; // Mitspieler:in fährt, multiplayer.js setzt die Position
     else if (v.npc) v.npcUpdate(dt, world, vehicles, player);
     else if (Math.abs(v.speed) > 0.01) {
       // Ausrollen nach dem Aussteigen oder nach einem Rempler
