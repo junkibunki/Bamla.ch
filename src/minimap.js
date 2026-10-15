@@ -19,7 +19,7 @@ export const POIS = [
   { name: 'Grillplatz', icon: '🔥', x: -465, z: 217.9 },
   { name: 'Feuerwehr & Tennisclub', icon: '🚒', x: -317.2, z: -585.3 },
   { name: 'Golfresort', icon: '⛳', x: 413.1, z: -109.5 },
-  { name: 'Kapelle Kapellenberg', icon: '✝️', x: 534.3, z: -403.8 },
+  { name: 'Kapelle Mariahügel', icon: '✝️', x: 534.3, z: -403.8 },
   { name: 'Jugendtreff Baracke', icon: '🍻', x: -810.8, z: 603.2 },
   { name: 'Schloss Rheinweiler', icon: '🏰', x: -1413, z: 630.6 },
   { name: 'Metzgerei Dosenbach', icon: '🥩', x: -1432.7, z: 700.1 },

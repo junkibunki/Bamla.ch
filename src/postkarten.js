@@ -16,7 +16,7 @@ export const KARTEN = [
   { id: 'grillplatz', name: 'Grillplatz', icon: '🔥', x: -465, z: 217.9, a: 2.0, d: 36, h: 10 },
   { id: 'feuerwehr', name: 'Feuerwehr und Tennisclub', icon: '🚒', x: -317.2, z: -585.3, a: 0.8, d: 40, h: 12 },
   { id: 'golf', name: 'Drei Thermen Golfresort', icon: '⛳', x: 413.1, z: -109.5, r: 60, a: 1.6, d: 70, h: 20 },
-  { id: 'kapelle', name: 'Kapelle am Kapellenberg', icon: '✝️', x: 534.3, z: -403.8, a: 2.4, d: 26, h: 8 },
+  { id: 'kapelle', name: 'Kapelle am Mariahügel', icon: '✝️', x: 534.3, z: -403.8, a: 2.4, d: 26, h: 8 },
   { id: 'baracke', name: 'Jugendtreff Baracke', icon: '🍻', x: -810.8, z: 603.2, a: -2, d: 30, h: 14 },
   { id: 'schloss', name: 'Schloss Rheinweiler', icon: '🏰', x: -1413, z: 630.6, r: 50, a: 2.0, d: 60, h: 18, look: 6 },
   { id: 'schule', name: 'Sonnenrainschule Rheinweiler', icon: '🏫', x: -1220.8, z: 770.3, r: 50, a: 0.4, d: 60, h: 18 },

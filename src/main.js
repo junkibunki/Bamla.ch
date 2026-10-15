@@ -11,6 +11,7 @@ import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
 import { splitKirschgartenMouth, buildKirschgartenEcke } from './kirschgarten-ecke.js';
 import { buildProbsteiweg, fixProbsteiweg } from './probsteiweg.js';
+import { fixMariahuegelWeg } from './kapelle-mariahuegel.js';
 import { buildStrassengruen } from './strassengruen.js';
 import { buildFeuerwehr } from './feuerwehr.js';
 import { buildMuseum, buildBusStop } from './museum.js';
@@ -105,6 +106,7 @@ data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/buil
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
+fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
