@@ -184,3 +184,13 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
   font-size: 15px; text-align: center; transition: opacity .2s;
 }
 body.editing #quest-track, body.editing #quest-toast { display: none; }
+
+/* Geldbeutel, Gutscheine und Getragenes (carry.js) */
+#carry {
+  position: fixed; right: 12px; bottom: 26px; max-width: 260px;
+  background: #0008; padding: 6px 10px; border-radius: 8px;
+  font-size: 13px; line-height: 1.55; pointer-events: none; text-align: right;
+}
+#carry .money { font-weight: 700; }
+#carry .voucher { color: #ffe27a; }
+body.editing #carry { display: none; }
