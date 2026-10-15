@@ -1,6 +1,6 @@
-// Andacht: an der Kirche St. Peter und Paul und an den Kapellen beten (E, kniend, Vaterunser mit Orgel)
-// oder singen (R, Choral mit Orgelbegleitung). Am Turmportal geht es die Treppe hinauf in die Glockenstube (T):
-// Blick durch die vier Schallöffnungen, Mausrad als Fernglas. Am Kirchenmodell selbst ändert sich nichts.
+// Andacht: in St. Peter und Paul in einer Bank (vom Mittelgang aus) und an den Kapellen beten (E, kniend,
+// Vaterunser mit Orgel) oder singen (R, Choral mit Orgelbegleitung). Am Fuß der Treppe in der Turmhalle geht es
+// hinauf in die Glockenstube (T): Blick durch die vier Schallöffnungen, Mausrad als Fernglas.
 // Haken für Aufgaben und Belohnungen (IDEEN.md): onPray, onSing, onTower; towerOpen sperrt später den Turm.
 import * as THREE from 'three';
 import { KIRCHE } from './kirche.js';
@@ -166,12 +166,11 @@ function segDist(px, pz, [ax, az], [bx, bz]) {
 }
 
 export class Andacht {
-  constructor(scene, world) {
-    const [px, pz] = KIRCHE.toWorld(-1.4, 4.425); // vor dem Rundbogenportal im Turm
+  constructor(scene, world, kirche) {
+    this.kirche = kirche; // Innenraum (kirche-innen.js): Bänke, Turmtreppe
     const u = CHAPEL.u, door = [CHAPEL.c[0] + u[0] * 4.4, CHAPEL.c[1] + u[1] * 4.4]; // Holztür der Kapelle
     this.places = [
-      { name: 'St. Peter und Paul', church: true, facing: Math.atan2(KIRCHE.U[0], KIRCHE.U[1]),
-        near: (x, z) => Math.hypot(x - px, z - pz) < 3 },
+      { name: 'St. Peter und Paul', at: (x, z) => kirche.pewAt(x, z) }, // in der Bank, vom Mittelgang aus
       { name: 'Kapelle auf dem Kapellenberg', facing: Math.atan2(-u[0], -u[1]),
         near: (x, z) => Math.hypot(x - door[0], z - door[1]) < 2.6 },
     ];
@@ -217,10 +216,18 @@ export class Andacht {
 
   get active() { return !!this.mode; }
 
+  // Wo man gerade beten/singen kann: { name, facing | center, pew? }
   spot(player) {
     if (player.car || this.mode) return null;
-    return this.places.find((p) => p.near(player.pos.x, player.pos.z)) || null;
+    const { x, z } = player.pos;
+    for (const p of this.places) {
+      if (p.at) { const pew = p.at(x, z); if (pew) return { ...p, pew, facing: pew.facing }; }
+      else if (p.near(x, z)) return p;
+    }
+    return null;
   }
+
+  canClimb(player) { return !player.car && !this.mode && this.towerOpen && this.kirche.stairAt(player.pos.x, player.pos.z); }
 
   hint(player) {
     switch (this.mode) {
@@ -230,12 +237,21 @@ export class Andacht {
       case 'descend': return 'Du steigst wieder hinunter …';
       case 'tower': return `Glockenstube, Blick nach ${OPENINGS[this.view].name} · Maus: umsehen · A/D: andere Öffnung · Mausrad: Fernglas · E: hinunter`;
     }
+    if (this.canClimb(player)) return 'T: Turmtreppe hinauf zur Glockenstube';
     const p = this.spot(player);
     if (!p) return '';
-    return `${p.name}: E beten · R singen` + (p.church && this.towerOpen ? ' · T auf den Turm' : '');
+    return p.pew ? 'E: In der Bank beten · R: Singen' : `${p.name}: E beten · R singen`;
   }
 
-  face(player, place) {
+  // Ausrichten; in der Kirche in die Bank treten (zurück in den Mittelgang beim Aufstehen)
+  face(player, place, kneel) {
+    if (place.pew) {
+      this.ret = [player.pos.x, player.pos.z];
+      const [x, z] = kneel ? place.pew.kneel : place.pew.stand;
+      player.pos.set(x, 0, z);
+      player.groundY = this.kirche.floor;
+      player.mesh.position.set(x, player.groundY, z);
+    }
     if (place.center) player.facing = Math.atan2(place.center[0] - player.pos.x, place.center[1] - player.pos.z);
     else player.facing = place.facing;
   }
@@ -243,7 +259,7 @@ export class Andacht {
   pray(player, place) {
     this.mode = 'pray';
     this.t = 0;
-    this.face(player, place);
+    this.face(player, place, true);
     const m = player.mesh;
     m.position.y = player.groundY - KNEEL;
     m.rotation.set(0, player.facing, 0);
@@ -257,7 +273,7 @@ export class Andacht {
     this.mode = 'sing';
     this.t = 0;
     this.noteT = 0;
-    this.face(player, place);
+    this.face(player, place, false);
     const m = player.mesh;
     m.position.y = player.groundY;
     m.rotation.set(0, player.facing, 0);
@@ -305,7 +321,8 @@ export class Andacht {
     this.book.visible = false;
     const m = player.mesh;
     for (const l of [m.legL, m.legR, m.armL, m.armR]) l.rotation.set(0, 0, 0);
-    m.position.y = player.groundY + player.pos.y;
+    if (this.ret) { player.pos.set(this.ret[0], 0, this.ret[1]); this.ret = null; } // zurück in den Mittelgang
+    m.position.set(player.pos.x, player.groundY + player.pos.y, player.pos.z);
   }
 
   update(dt, input, player) {

@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildPerson, animateWalk } from './person.js';
+import { buildInterior } from './kirche-innen.js';
 
 // Kirchengrundriss aus OSM; skip: Modell wird hier gebaut (Wert = Höhe für Kollision/Kamera)
 export const KIRCHE_OVERRIDES = [{ c: [-4.7, 39.0], skip: 26 }];
@@ -19,7 +20,10 @@ const U = [Math.cos(ANG), Math.sin(ANG)], V = [-U[1], U[0]];
 const ROT = Math.atan2(-U[1], U[0]);
 const toWorld = (a, b) => [O[0] + U[0] * a + V[0] * b, O[1] + U[1] * a + V[1] * b];
 // Für andacht.js (Portal, Glockenstube): Kirchensystem und Fußbodenhöhe, floor wird in buildChurch gesetzt
-export const KIRCHE = { toWorld, U, V, floor: 0 };
+export const KIRCHE = { toWorld, U, V, O, floor: 0 };
+// Öffnungen: Portal, Turmbogen (Turmhalle → Schiff), Chorbogen (Spitzbogen)
+export const DOOR_W = 2.0, DOOR_H = 4.0, CHOIR_W = 5.4, CHOIR_H = 7.0;
+export const PASSAGE = [[-1.1, 0], [-1.1, 2.6], [1.1, 2.6], [1.1, 0]]; // rechteckiger Durchgang unter der Empore
 const rect = (a0, a1, b0, b1) => [toWorld(a0, b0), toWorld(a1, b0), toWorld(a1, b1), toWorld(a0, b1)];
 
 // Grabfelder im Kirchensystem (a0, a1, b0, b1); gap = Querweg im Feld
@@ -152,6 +156,24 @@ class Parts {
     for (const ze of [z0 - o, z1 + o]) this.poly(key, [[x0 - ox0, low, ze], [x1 + ox1, low, ze], [x1 + ox1, ridge, zc], [x0 - ox0, ridge, zc]]);
     return low;
   }
+  // Senkrechte Wand von p0 nach p1 (x/z), Höhe y0..y1; holes: Öffnungen { c: [x, z] Mitte, y: Unterkante, pts: Umriss (archPts) }
+  wall(key, p0, p1, y0, y1, holes = []) {
+    const dx = p1[0] - p0[0], dz = p1[1] - p0[1], L = Math.hypot(dx, dz), tx = dx / L, tz = dz / L;
+    const s = new THREE.Shape([[0, y0], [L, y0], [L, y1], [0, y1]].map(([u, y]) => new THREE.Vector2(u, y)));
+    for (const h of holes) {
+      const sc = (h.c[0] - p0[0]) * tx + (h.c[1] - p0[1]) * tz;
+      s.holes.push(new THREE.Path(h.pts.map(([u, y]) => new THREE.Vector2(sc + u, h.y + y))));
+    }
+    const g = new THREE.ShapeGeometry(s), pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const u = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, p0[0] + tx * u, y, p0[1] + tz * u); }
+    g.computeVertexNormals();
+    return this.add(key, g);
+  }
+  // Laibung einer Öffnung: Umriss pts (quer t, hoch y ab y0) um c, von Tiefe 0 bis d entlang n
+  reveal(key, c, t, n, d, pts, y0 = 0) {
+    const q = ([u, y], o) => [c[0] + t[0] * u + n[0] * o, y0 + y, c[1] + t[1] * u + n[1] * o];
+    for (let i = 0; i < pts.length - 1; i++) this.poly(key, [q(pts[i], 0), q(pts[i + 1], 0), q(pts[i + 1], d), q(pts[i], d)]);
+  }
   gableWall(key, x, z0, z1, eave, ridge) { this.poly(key, [[x, eave, z0], [x, eave, z1], [x, ridge, (z0 + z1) / 2]]); }
   // Eckquader: abwechselnd lange und kurze Blöcke um alle vier Ecken
   quoins(key, x0, x1, z0, z1, y0, y1) {
@@ -191,6 +213,26 @@ function lancet(w, h) {
   for (let i = 1; i <= 8; i++) { const t = (Math.PI / 3) * (i / 8); s.lineTo(-w / 2 + w * Math.cos(t), hs + w * Math.sin(t)); }
   for (let i = 1; i <= 8; i++) { const t = (Math.PI * 2) / 3 + (Math.PI / 3) * (i / 8); s.lineTo(w / 2 + w * Math.cos(t), hs + w * Math.sin(t)); }
   return new THREE.ShapeGeometry(s);
+}
+
+// Umriss einer Öffnung, unten offen: links unten, über den Rund- bzw. Spitzbogen, rechts unten ([quer, hoch])
+export function archPts(w, h, pointed = false, n = 10) {
+  const r = w / 2, pts = [[-r, 0]];
+  if (pointed) {
+    const hs = h - w * 0.866;
+    for (let i = 0; i <= n; i++) { const t = (Math.PI / 3) * (i / n); pts.push([r - w * Math.cos(t), hs + w * Math.sin(t)]); }
+    for (let i = 1; i <= n; i++) { const t = (Math.PI / 3) * (1 - i / n); pts.push([-r + w * Math.cos(t), hs + w * Math.sin(t)]); }
+  } else {
+    for (let i = 0; i <= n; i++) { const t = Math.PI * (1 - i / n); pts.push([r * Math.cos(t), h - r + r * Math.sin(t)]); }
+  }
+  pts.push([r, 0]);
+  return pts;
+}
+
+// Gewände: Rundbogen wo × ho mit ausgesparter Öffnung wi × hi (beide unten bündig)
+function archFrame(wo, ho, wi, hi) {
+  const pts = [...archPts(wo, ho), ...archPts(wi, hi).reverse()];
+  return new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))));
 }
 
 function roundArch(w, h) {
@@ -247,17 +289,23 @@ function buildChurch(scene, world, mats) {
 
   // Turm: 8,6 × 8,85 m, Traufe 21 m, Satteldach mit Giebeln nach Westen und Osten
   const TB = 8.85, TC = TB / 2, TE = 21, TR = 25.5;
-  P.box('ochre', 0, 8.6, base, TE, 0, TB);
-  P.box('stone', -0.06, 8.66, base, 0.9, -0.06, TB + 0.06);
+  // Wände einzeln statt als Quader: Portal und Turmbogen zum Schiff sind offen (außen sieht alles aus wie zuvor)
+  P.wall('ochre', [0, 0], [8.6, 0], base, TE);
+  P.wall('ochre', [8.6, TB], [0, TB], base, TE);
+  P.wall('ochre', [0, TB], [0, 0], base, TE, [{ c: [0, TC], y: 0, pts: archPts(DOOR_W, DOOR_H) }]);
+  P.wall('ochre', [8.6, 0], [8.6, TB], base, TE, [{ c: [8.6, TC], y: 0, pts: PASSAGE }]);
+  // Sockel als Rahmen (ohne Deckel, der im Turm läge), am Portal ausgespart; die Ostseite verdeckt das Schiff
+  P.box('stone', -0.06, 8.66, base, 0.9, -0.06, 0.06);
+  P.box('stone', -0.06, 8.66, base, 0.9, TB - 0.06, TB + 0.06);
+  P.box('stone', -0.06, 0.06, base, 0.9, 0.06, TC - DOOR_W / 2);
+  P.box('stone', -0.06, 0.06, base, 0.9, TC + DOOR_W / 2, TB - 0.06);
   P.box('stone', -0.12, 8.72, TE - 0.3, TE, -0.12, TB + 0.12);
   P.quoins('stone', 0, 8.6, 0, TB, 0.9, TE - 0.3);
   P.gableWall('ochre', 0, 0, TB, TE, TR);
   P.gableWall('ochre', 8.6, 0, TB, TE, TR);
   P.gableX('towerRoof', 0, 8.6, 0, TB, TE, TR, 0.35);
   // Rundbogenportal mit Sandsteingewände, darüber ein schmales Fenster
-  P.onWall('stone', roundArch(2.7, 4.5), 0, 0, TC, -1, 0, 0.03);
-  P.onWall('wood', roundArch(2.0, 4.0), 0, 0, TC, -1, 0, 0.06);
-  P.box('dark', -0.08, -0.06, 0, 3.6, TC - 0.03, TC + 0.03);
+  P.onWall('stone', archFrame(2.7, 4.5, DOOR_W, DOOR_H), 0, 0, TC, -1, 0, 0.03); // Türflügel: kirche-innen.js
   P.onWall('stone', roundArch(1.1, 3.0), 0, 8.4, TC, -1, 0, 0.03);
   P.onWall('glass', roundArch(0.8, 2.7), 0, 8.55, TC, -1, 0, 0.05);
   // Schallöffnungen der Glockenstube, je zwei pro Seite
@@ -277,8 +325,19 @@ function buildChurch(scene, world, mats) {
 
   // Schiff: 23,6 × 12,6 m, Traufe 9 m, Dachneigung 50°
   const N0 = 8.6, N1 = 32.2, NB0 = -1.5, NB1 = 11.07, NE = 9, NR = NE + ((NB1 - NB0) / 2) * Math.tan(THREE.MathUtils.degToRad(50));
-  P.box('ochre', N0, N1, base, NE, NB0, NB1);
-  P.box('stone', N0, N1 + 0.06, base, 0.8, NB0 - 0.06, NB1 + 0.06);
+  // Wände einzeln: im Westen nur neben dem Turm, im Osten mit dem Chorbogen
+  const CC0 = (1.37 + 8.6) / 2;
+  P.wall('ochre', [N0, NB0], [N1, NB0], base, NE);
+  P.wall('ochre', [N1, NB1], [N0, NB1], base, NE);
+  P.wall('ochre', [N0, NB0], [N0, 0], base, NE);
+  P.wall('ochre', [N0, TB], [N0, NB1], base, NE);
+  P.wall('ochre', [N1, NB0], [N1, NB1], base, NE, [{ c: [N1, CC0], y: 0, pts: archPts(CHOIR_W, CHOIR_H, true) }]);
+  P.box('stone', N0, N1 + 0.06, base, 0.8, NB0 - 0.06, NB0 + 0.06);
+  P.box('stone', N0, N1 + 0.06, base, 0.8, NB1 - 0.06, NB1 + 0.06);
+  P.box('stone', N0, N0 + 0.12, base, 0.8, NB0 - 0.06, 0);
+  P.box('stone', N0, N0 + 0.12, base, 0.8, TB, NB1 + 0.06);
+  P.box('stone', N1 - 0.06, N1 + 0.06, base, 0.8, NB0 + 0.06, 1.37);
+  P.box('stone', N1 - 0.06, N1 + 0.06, base, 0.8, 8.6, NB1 - 0.06);
   P.box('stone', N0, N1 + 0.12, NE - 0.25, NE, NB0 - 0.12, NB1 + 0.12);
   P.gableWall('ochre', N0, NB0, NB1, NE, NR);
   P.gableWall('ochre', N1, NB0, NB1, NE, NR);
@@ -307,8 +366,8 @@ function buildChurch(scene, world, mats) {
   const C0 = 32.2, C1 = 36.6, CB0 = 1.37, CB1 = 8.6, CE = 8, CC = (CB0 + CB1) / 2;
   const CR = CE + ((CB1 - CB0) / 2) * Math.tan(THREE.MathUtils.degToRad(50));
   const apse = [[C1, CB0], [38.7, 3.47], [38.7, 6.28], [C1, CB1]];
-  const choir = new THREE.Shape([[C0, CB0], ...apse, [C0, CB1]].map(([a, b]) => new THREE.Vector2(a, -b)));
-  P.add('ochre', new THREE.ExtrudeGeometry(choir, { depth: CE - base, bevelEnabled: false }).rotateX(-Math.PI / 2).translate(0, base, 0));
+  const choir = [[C0, CB0], ...apse, [C0, CB1]];
+  for (let i = 0; i < choir.length - 1; i++) P.wall('ochre', choir[i], choir[i + 1], base, CE); // zum Schiff hin offen (Chorbogen)
   const low = P.gableX('roof', C0, C1, CB0, CB1, CE, CR, 0.35, 0, 0);
   const ctr = [35, CC], ridge = [C1, CR, CC];
   const out = apse.map(([a, b]) => { // Traufpunkte um den Überstand nach außen
@@ -343,6 +402,7 @@ function buildChurch(scene, world, mats) {
   g.position.set(O[0], floor, O[1]);
   g.rotation.y = ROT;
   scene.add(g);
+  return { g, floor };
 }
 
 // ---------- Friedhof ----------
@@ -727,7 +787,8 @@ class Pfarrer {
     this.phase += moving ? dt * this.speed * 6 : 0;
     animateWalk(this.mesh, this.phase, moving ? 0.35 : 0);
     if (this.wait > 0 && !moving && !this.talking) this.mesh.armR.rotation.x = -0.5; // Buch aufgeschlagen
-    this.mesh.position.set(this.x, world.heightAt(this.x, this.z), this.z);
+    this.y = world.groundAt(this.x, this.z, this.y ?? -Infinity); // Kirchentreppe: Stufe für Stufe
+    this.mesh.position.set(this.x, this.y, this.z);
     this.mesh.rotation.y = this.facing;
   }
 
@@ -738,13 +799,14 @@ class Pfarrer {
   }
 }
 
-// Baut Kirche, Friedhof und Krippe; gibt den Pfarrer zurück (wird wie ein Fußgänger aktualisiert).
+// Baut Kirche (mit Innenraum), Friedhof und Krippe; gibt den Pfarrer (wird wie ein Fußgänger aktualisiert) und den Innenraum zurück.
 export function buildKirche(scene, world, player) {
   const mats = materials();
-  buildChurch(scene, world, mats);
+  const { g, floor } = buildChurch(scene, world, mats);
+  const innen = buildInterior({ g, world, floor, mats, Parts, archPts, K: { ...KIRCHE, DOOR_W, DOOR_H, CHOIR_W, CHOIR_H, PASSAGE } }); // Treppe, Türflügel, Innenraum, Kollision
   buildCemetery(scene, world, mats);
   buildKrippe(scene, world, mats);
   tickClocks();
   setInterval(tickClocks, 10000);
-  return new Pfarrer(scene, player);
+  return { pfarrer: new Pfarrer(scene, player), innen };
 }

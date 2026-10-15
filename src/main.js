@@ -213,8 +213,9 @@ spawnTraffic('bike', world.graphs.bike, 14, BIKE_COLORS);
 new AutobahnTraffic(scene, world, rng(55), vehicles); // A5: PKW und LKW, je Richtung zwei Fahrstreifen
 
 for (let i = 0; i < 35; i++) pedestrians.push(new Pedestrian(scene, world.graphs.walk, world.graphs.walk.randomSpot(rand), rand));
-pedestrians.push(buildKirche(scene, world, player)); // Kirche, Friedhof, Krippe; Pfarrer läuft wie ein Fußgänger
-const andacht = new Andacht(scene, world); // Beten/Singen an Kirche und Kapellen, Glockenstube mit Aussicht
+const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Friedhof, Krippe
+pedestrians.push(kirche.pfarrer); // Pfarrer läuft wie ein Fußgänger
+const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der Kirche und an den Kapellen, Glockenstube
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 // Camper, die auf den Wegen des Campingplatzes spazieren
 for (let i = 0, n = 0; i < 600 && n < 16; i++) {
@@ -303,8 +304,10 @@ function updateCamera(dt) {
   const t = world.rayFraction(camTarget.x, camTarget.y, camTarget.z, cx, cy, cz);
   const k = Math.max(0.1, t - 0.05);
   const px = camTarget.x + (cx - camTarget.x) * k, pz = camTarget.z + (cz - camTarget.z) * k;
-  // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt)
+  // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt), in der Kirche nicht durch die Decke
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
+  const ceil = kirche.innen.ceilingAt(px, pz);
+  if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
   camera.position.lerp(camPos, Math.min(1, dt * 12));
   camera.lookAt(camTarget);
   drunk.applyCamera(camera);
@@ -458,7 +461,7 @@ function frame() {
   if (!editing && input.hit('KeyK') && ecar.near(player)) ecar.toggle(); // Ladekabel des Elektroautos
   if (!editing && input.hit('KeyR') && !player.car && !bus.rider && nearBar()?.wine) player.drink('schorle'); // Weinschorle
   else if (!editing && input.hit('KeyR') && !bus.rider && andacht.spot(player)) andacht.sing(player, andacht.spot(player));
-  if (!editing && input.hit('KeyT') && !bus.rider && andacht.towerOpen && andacht.spot(player)?.church) andacht.climb(player);
+  if (!editing && input.hit('KeyT') && !bus.rider && andacht.canClimb(player)) andacht.climb(player);
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);
@@ -493,6 +496,7 @@ function frame() {
   else if (bus.rider) player.pos.set(bus.car.x, 0, bus.car.z);
   else if (!ridingSwing() && !andacht.active) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
+  kirche.innen.update(dt, player); // Portaltüren
 
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);
