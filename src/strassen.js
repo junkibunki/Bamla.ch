@@ -783,8 +783,10 @@ export const STREET_OVERRIDES = [
   // nicht sichtbar: c:[-205.1,222.3], c:[-186,195.7] (vermutlich baugleich mit den beiden obigen)
   // ===== Probsteiweg =====
   // Quelle: Google Street View Apr 2022. Abschnitt 1 (Stichweg nach Süden) ohne Abdeckung; Haus bei c:[-115.1,92.7] in Street View verpixelt.
-  { c: [-141.6, 77.2], wall: 0xf3ede0, roof: 0x7a4a3a, look: 'shutter', shutters: 0x6a4434 },   // Probstei (Nr. 1/1): cremeweißer Rauputz, braune Läden; Sockel, Statue usw. in probsteiweg.js
-  { c: [-109.1, 87.2], wall: 0xb3aa98, roof: 0x7a4a3a, look: 'plain' },                                        // Nr. 3: Scheune, grauer Rauputz-Giebel zur Straße
+  { c: [-141.6, 77.2], skip: 12 },   // Probstei (Nr. 1/1) mit Nordflügel und Scheune: eigenes Modell in probstei.js
+  { c: [-109.1, 87.2], skip: 10 },   // Nr. 3: Scheune mit Rundbogentor, eigenes Modell in probstei.js
+  { c: [-117.1, 64.1], skip: 10 },   // Scheune Nordost am Hof der Probstei, eigenes Modell in probstei.js
+  { c: [-115.2, 92.7], skip: 3 },    // OSM-„Garage“ = Wellblech-Vordach an der Scheune Nr. 3, gebaut in probstei.js
   { c: [-142.9, 147.6], wall: 0xb2b0a8, roof: 0x8e8b84, look: 'band', lodRoof: true },                         // Marienheim (Nr. 2, 1975): Sichtbeton, Fensterbänder; Details in probsteiweg.js
   { c: [-106.9, 153.9], wall: 0x8fbc5f, roof: 0x7c7d7a, look: 'plain', lodRoof: true,                          // Weingut Marienheim: grün gestrichene Halle, graues Wellplattendach
     front: [{ t: 'garage', face: 'N', x: 0, w: 3.4, h: 3.0, color: 0x9a9c9e, style: 'sectional' }] },          // graues Rolltor im Nordgiebel

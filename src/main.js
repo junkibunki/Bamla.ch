@@ -10,7 +10,7 @@ import { Minimap, BigMap } from './minimap.js';
 import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
 import { splitKirschgartenMouth, buildKirschgartenEcke } from './kirschgarten-ecke.js';
-import { buildProbsteiweg } from './probsteiweg.js';
+import { buildProbsteiweg, fixProbsteiweg } from './probsteiweg.js';
 import { buildFeuerwehr } from './feuerwehr.js';
 import { buildMuseum, buildBusStop } from './museum.js';
 import { buildOrtseingaenge } from './ortseingang.js';
@@ -96,6 +96,7 @@ data.paving = await loadPaving().catch(() => null); // Pflaster/Höfe aus dem Lu
 data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/build-golf.mjs)
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
+fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);

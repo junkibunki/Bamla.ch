@@ -398,6 +398,76 @@ function boxWalls(cx, cz, half, y0, y1, col, buf) {
   }
 }
 
+// Fensterraster der LoD2-Wände: Zellen von 3 × 3 m (eine Texturkachel), je Wandfläche mittig ausgerichtet, Zeilen ab
+// dem Erdgeschoss. Eine Zelle zeigt ihr Fenster nur, wenn es samt Läden ganz auf der Wand liegt – sonst schnitten
+// Giebelschrägen und Hauskanten Fenster an; dort bleibt die Wand glatt.
+const CELL = 3, WIN = [0.35, 2.65, 0.6, 2.45]; // Fenster in der Zelle: u0, u1, y0, y1 (m)
+function clipPoly(poly, axis, v, keepBelow) {
+  const out = [], inside = (q) => (keepBelow ? q[axis] <= v : q[axis] >= v);
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], ia = inside(a), ib = inside(b);
+    if (ia) out.push(a);
+    if (ia !== ib) { const t = (v - a[axis]) / (b[axis] - a[axis]); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+  }
+  return out;
+}
+function windowedWalls(tris, floor, col, buf) {
+  // Dreiecke nach Wandebene gruppieren (Richtung der Normalen und Abstand vom Ursprung)
+  const planes = new Map();
+  for (const t of tris) {
+    const tl = Math.hypot(t.n.x, t.n.z) || 1, nx = t.n.x / tl, nz = t.n.z / tl;
+    const key = `${Math.round(Math.atan2(nx, nz) * 30)},${Math.round((t.p[0].x * nx + t.p[0].z * nz) * 3)}`;
+    if (!planes.has(key)) planes.set(key, { tx: -nz, tz: nx, tris: [] });
+    planes.get(key).tris.push(t);
+  }
+  for (const { tx, tz, tris: pts } of planes.values()) {
+    const q0 = pts[0].p[0], u0q = q0.x * tx + q0.z * tz;
+    const flat = pts.map(({ p }) => p.map((q) => [q.x * tx + q.z * tz, q.y]));
+    const us = flat.flat().map((q) => q[0]), uMin = Math.min(...us), W = Math.max(...us) - uMin;
+    const nCols = Math.floor((W + 0.01) / CELL), start = uMin + (W - nCols * CELL) / 2;
+    const inTri = ([u, y], [a, b, c]) => { // mit etwas Toleranz, damit Fenster auf Dreieckskanten nicht herausfallen
+      const d = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
+      if (Math.abs(d) < 1e-9) return false;
+      const l1 = ((b[0] - u) * (c[1] - y) - (c[0] - u) * (b[1] - y)) / d, l2 = ((c[0] - u) * (a[1] - y) - (a[0] - u) * (c[1] - y)) / d;
+      return l1 > -0.01 && l2 > -0.01 && 1 - l1 - l2 > -0.01;
+    };
+    const fitCache = new Map();
+    const fits = (ci, ri) => {
+      if (ci < 0 || ci >= nCols) return false;
+      const k = ci + ',' + ri;
+      if (!fitCache.has(k)) {
+        const ua = start + ci * CELL, ya = floor + ri * CELL;
+        fitCache.set(k, [[WIN[0], WIN[2]], [WIN[1], WIN[2]], [WIN[1], WIN[3]], [WIN[0], WIN[3]]]
+          .every(([du, dy]) => flat.some((tri) => inTri([ua + du, ya + dy], tri))));
+      }
+      return fitCache.get(k);
+    };
+    const to3 = ([u, y]) => V(q0.x + (u - u0q) * tx, y, q0.z + (u - u0q) * tz);
+    const uvOf = ([u, y], on) => (on ? [u - start, 1 - (y - floor)] : BLANK_UV);
+    flat.forEach((tri, i) => {
+      const tu = tri.map((q) => q[0]), ty = tri.map((q) => q[1]);
+      const c0 = Math.floor((Math.min(...tu) - start) / CELL), c1 = Math.ceil((Math.max(...tu) - start) / CELL) - 1;
+      const r0 = Math.floor((Math.min(...ty) - floor) / CELL), r1 = Math.ceil((Math.max(...ty) - floor) / CELL) - 1;
+      let all = true, none = true;
+      for (let ci = c0; ci <= c1; ci++) for (let ri = r0; ri <= r1; ri++) { if (fits(ci, ri)) none = false; else all = false; }
+      if (all || none) { // ganzes Dreieck einheitlich: unverändert übernehmen
+        const p = pts[i].p;
+        buf.tri(p[0], p[1], p[2], uvOf(tri[0], all), uvOf(tri[1], all), uvOf(tri[2], all), col, null);
+        return;
+      }
+      for (let ci = c0; ci <= c1; ci++) for (let ri = r0; ri <= r1; ri++) { // in Zellen zerlegen
+        const ua = start + ci * CELL, ya = floor + ri * CELL;
+        let poly = clipPoly(clipPoly(tri, 0, ua, false), 0, ua + CELL, true);
+        poly = clipPoly(clipPoly(poly, 1, ya, false), 1, ya + CELL, true);
+        if (poly.length < 3) continue;
+        const on = fits(ci, ri);
+        for (let k = 1; k < poly.length - 1; k++)
+          buf.tri(to3(poly[0]), to3(poly[k]), to3(poly[k + 1]), uvOf(poly[0], on), uvOf(poly[k], on), uvOf(poly[k + 1], on), col, null);
+      }
+    });
+  }
+}
+
 // Gebäude aus dem LoD2-Modell des LGL (scripts/build-roofs.mjs): Wände mit Fensterraster ab Erdgeschoss,
 // Dachflächen in der im Luftbild gemessenen Farbe, erkannte PV-Module, optional Dachfenster.
 // Ausgleich für Ziegeltextur (im Mittel ~0,7) und Beleuchtung, damit besonnte Dächer etwa wie im Luftbild wirken
@@ -409,17 +479,17 @@ function lod2Geometry(lod, world, o, b) {
   const up = V(0, 1, 0);
   let sky = null; // größte Dachfläche auf der gewünschten Seite (für Dachfenster)
   for (const rec of lod) {
-    const w = rec.wall;
+    const w = rec.wall, tris = [];
     for (let k = 0; k < w.length; k += 9) {
       const p = [pt(w, k), pt(w, k + 3), pt(w, k + 6)];
       const n = new THREE.Vector3().subVectors(p[1], p[0]).cross(new THREE.Vector3().subVectors(p[2], p[0]));
       for (const q of p) top = Math.max(top, q.y);
       // Fußpunkte bis unter das (gröbere) Spielgelände verlängern
       for (const q of p) { const g = world.heightAt(q.x, q.z); if (q.y < g + 1) q.y = Math.min(q.y, g) - 0.3; }
-      const tl = Math.hypot(n.x, n.z) || 1, tx = -n.z / tl, tz = n.x / tl;
-      const uv = p.map((q) => (o.windows ? [q.x * tx + q.z * tz, 1 - (q.y - o.floor)] : BLANK_UV));
-      b.wallBuf.tri(p[0], p[1], p[2], uv[0], uv[1], uv[2], o.wallCol, null);
+      tris.push({ p, n });
     }
+    if (o.windows) windowedWalls(tris, o.floor, o.wallCol, b.wallBuf);
+    else for (const { p } of tris) b.wallBuf.tri(p[0], p[1], p[2], BLANK_UV, BLANK_UV, BLANK_UV, o.wallCol, null);
     const roofC = col(o.roofHex ?? rec.color, o.roofCol, ROOF_GAIN), flatC = col(rec.flatColor ?? rec.color, FLAT, FLAT_GAIN);
     for (const f of rec.roof) {
       const a = pt(f, 0);

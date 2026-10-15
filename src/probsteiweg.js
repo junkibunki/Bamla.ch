@@ -8,6 +8,7 @@
 // Rundbogennische, daneben eine schwarze Inschrifttafel; Holzbalkon, Kopfsteinpflasterhof, Holztor.
 import * as THREE from 'three';
 import { Parts, canvasTex, sample, wallGeometry, obstacleRun } from './kirschgarten-ecke.js';
+import { buildHof } from './probstei.js';
 
 const lambert = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
 const unit = (a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz); return [dx / l, dz / l, l]; };
@@ -23,10 +24,23 @@ const WINE_WALL = { c: [-111, 110.5], r: 3.2 }; // geschwungene Mauer an der Zuf
 const PR_W = [-156.81, 88.68], PR_SE = [-137.98, 99.52], PR_NE = [-132.14, 89.43]; // Südfassade W→SE, Ostgiebel SE→NE
 const YARD_WALL = [[-136.79, 97.46], [-129.1, 99.88]];                     // Hofmauer vom Giebel nach Osten bis zum Tor
 
+// OSM legt den Probsteiweg an der Probstei ~2 m zu weit nach Norden (die Hausecke stünde auf der Fahrbahn) und
+// zu breit: laut Luftbild und Street View biegt er vor der Hausecke nach Süden und ist nur ~4,4 m breit.
+// Nur innere Stützpunkte ändern – gemeinsame Knoten mit anderen Wegen bleiben, sonst reißt das Wegenetz.
+export function fixProbsteiweg(data) {
+  const r = data.roads.find((x) => x.name === 'Probsteiweg' && x.pts.some(([x0, z0]) => Math.hypot(x0 + 143.6, z0 - 98.5) < 0.2));
+  if (!r) return;
+  const i = r.pts.findIndex(([x0, z0]) => Math.hypot(x0 + 143.6, z0 - 98.5) < 0.2);
+  if (Math.hypot(r.pts[i + 1][0] + 130.9, r.pts[i + 1][1] - 102.5) > 0.2) return;
+  r.pts.splice(i, 2, [-150, 96.4], [-138, 102.4], [-130.9, 103.4]);
+  r.width = 4.4;
+}
+
 export const PROBSTEI_PAVED = [
   { color: '#a8a196', pts: [[-150, 108.5], [-121.5, 111.5], [-119, 114], [-122, 122.6], [-139, 118.4], [-146.5, 117]] }, // Hof vor dem Marienheim
   { color: '#aaa294', pts: [[-136.7, 97.5], [-131.4, 89.2], [-142.8, 82.1], [-141.9, 71.2], [-131.3, 71.3], [-113.8, 77.7], [-113, 96.1],
     [-112.8, 98.4], [-129, 100.4]] },                                                                                 // Kopfsteinpflaster im Hof der Probstei
+  { color: '#77787a', pts: [[-157.3, 88.4], [-137.4, 99.9], [-138.4, 101.1], [-158.2, 89.6]] },                       // Gehweg an der Südfassade
 ];
 
 const plaqueTex = () => canvasTex(128, 160, (g, w, h) => {
@@ -175,22 +189,7 @@ export function buildProbsteiweg(scene, world) {
   }
 
   // ================= Probstei (Nr. 1/1) =================
-  const [sx0, sz0, sLen] = unit(PR_W, PR_SE), nS = [-sz0, sx0];         // Südfassade, Normale nach Süden (Straße)
-  const [gx0, gz0, gLen] = unit(PR_SE, PR_NE), nG = [-gz0, gx0];        // Ostgiebel, Normale nach Osten (Hof)
-  // lachsrosa Sockel mit vergitterten Rundbogen-Kellerfenstern entlang der Straße
-  {
-    const sm = sample([PR_W, PR_SE], 1).map((p) => ({ ...p, x: p.x + nS[0] * 0.04, z: p.z + nS[1] * 0.04 }));
-    const yRoad = (p) => H(p.x + nS[0] * 1.5, p.z + nS[1] * 1.5) + ROAD;
-    P.add('plinth', wallGeometry(sm, 0.06, 1, (p) => yRoad(p) - 0.5, (p) => yRoad(p) + 1.45));
-    const ry = Math.atan2(nS[0], nS[1]), arch = new THREE.Shape();
-    arch.moveTo(-0.3, 0); arch.lineTo(0.3, 0); arch.absarc(0, 0, 0.3, 0, Math.PI, false); arch.lineTo(-0.3, 0);
-    for (const t of [0.12, 0.27, 0.42, 0.57, 0.72, 0.87]) {
-      const x = PR_W[0] + sx0 * sLen * t + nS[0] * 0.11, z = PR_W[1] + sz0 * sLen * t + nS[1] * 0.11, y = H(x + nS[0] * 1.5, z + nS[1] * 1.5) + ROAD + 1.12;
-      P.add('cellar', new THREE.ShapeGeometry(arch, 8).rotateY(ry).translate(x, y, z));
-      for (const o of [-0.15, 0, 0.15]) box('grille', 0.025, 0.3, 0.025, x + Math.cos(ry) * o + nS[0] * 0.01, y + 0.14, z - Math.sin(ry) * o + nS[1] * 0.01);
-      box('grille', 0.6, 0.025, 0.025, x + nS[0] * 0.01, y + 0.12, z + nS[1] * 0.01, ry);
-    }
-  }
+  const [gx0, gz0] = unit(PR_SE, PR_NE), nG = [-gz0, gx0];        // Ostgiebel, Normale nach Osten (Hof)
   // Hofmauer (verputzt, Sandsteinabdeckung) vom Giebel nach Osten, Holztor zwischen Sandsteinpfosten
   const yRoadG = H(-134.5, 100.6) + ROAD, yT = yRoadG + 1.45; // Höhe der Hofterrasse vor dem Giebel
   {
@@ -224,9 +223,9 @@ export function buildProbsteiweg(scene, world) {
     P.add('pot', new THREE.CylinderGeometry(0.16, 0.11, 0.24, 10).translate(fx, yT + 0.12, fz));
     for (let k = 0; k < 6; k++) P.add(k % 2 ? 'flowers' : 'leaves', new THREE.IcosahedronGeometry(0.08, 0).translate(fx + Math.cos(k) * 0.08, yT + 0.3 + (k % 3) * 0.03, fz + Math.sin(k) * 0.08));
   }
-  // Holzbalkon im ersten Obergeschoss am Ostgiebel (nördliche zwei Drittel), auf Holzstützen
+  // Holzbalkon im ersten Obergeschoss am Ostgiebel (rechts vom Eingang), auf Holzstützen
   {
-    const yB = yT + 2.9, u0 = 4.0, u1 = gLen - 0.6, um = (u0 + u1) / 2, ry = Math.atan2(gx0, gz0);
+    const yB = yT + 2.9, u0 = 4.9, u1 = 9.7, um = (u0 + u1) / 2, ry = Math.atan2(gx0, gz0);
     const at = (u, o) => [PR_SE[0] + gx0 * u + nG[0] * o, PR_SE[1] + gz0 * u + nG[1] * o];
     const [cx, cz] = at(um, 0.85);
     box('wood', 1.7, 0.18, u1 - u0, cx, yB, cz, ry);
@@ -237,4 +236,5 @@ export function buildProbsteiweg(scene, world) {
   }
 
   P.build(scene, mats);
+  buildHof(scene, world, yT); // Probstei, Nordflügel und Scheunen am Hof (probstei.js)
 }
