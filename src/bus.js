@@ -1,38 +1,60 @@
-// Linienbus (Regionalbus, weiß mit blauem RVL-Band; Lackierung angenommen), fährt ab und zu die Alte Weinstraße entlang.
-// Richtung Norden hält er an der Haltestelle „Bamlach“ (Wartehalle auf der Ostseite, siehe museum.js):
-// Türen auf, der wartende Fahrgast steigt ein, nach einer Weile geht es weiter. Richtung Süden hält er nur, wenn der
-// Spieler an der Haltestelle wartet. Mitfahren: E bei offenen Türen (einsteigen/aussteigen), während der Fahrt E = Haltewunsch.
+// Linienbus (Regionalbus, weiß mit blauem RVL-Band; Lackierung angenommen) zwischen Bad Bellingen und Rheinweiler:
+// Alte Weinstraße (Bamlach) – Bamlacher Straße – Burgunderstraße. Hält in beiden Richtungen an den Haltestellen
+// „Bamlach“ (Wartehalle auf der Ostseite, siehe museum.js) und „Rheinweiler Ort“ (Burgunderstraße, siehe bahnhof-site.js):
+// Türen auf, der wartende Fahrgast steigt ein, nach einer Weile geht es weiter.
+// Mitfahren: E bei offenen Türen (einsteigen/aussteigen), während der Fahrt E = Haltewunsch.
 import * as THREE from 'three';
 import { Vehicle } from './vehicles.js';
 import { buildPerson } from './person.js';
 import { BUS_STOP } from './museum.js';
+import { BUS_STOP_RW } from './bahnhof-site.js';
 
 const LEN = 12, WID = 2.55, HGT = 3.0, CLEAR = 0.35;  // Solobus: Länge, Breite, Kastenhöhe, Bodenfreiheit
-const VMAX = 11, ACC = 1.2, DEC = 1.6;               // m/s, m/s²
+const VMAX = 12.5, ACC = 1.2, DEC = 1.6;             // m/s, m/s²
 const LANE = 1.6, LANE_STOP = 1.95;                  // Abstand der Fahrzeugmitte von der Straßenmitte
-const STOP_AT = [-133.2, -74.5];                     // Bugposition beim Halt (Fronttür an der Wartehalle)
-const STOP_AT_SOUTH = [-133.3, -67.5];               // Richtung Süden: Halt gegenüber der Wartehalle
+const STOP_BAMLACH_N = [-133.2, -74.5];              // Bugposition beim Halt Richtung Bad Bellingen (Fronttür an der Wartehalle)
+const STOP_BAMLACH_S = [-133.3, -67.5];              // Richtung Rheinweiler: Halt gegenüber der Wartehalle
 const ROAD_Y = 0.18;                                 // Fahrbahn liegt so hoch über dem Gelände (world.js)
 
-// ---------- Strecke: OSM-Teilstücke der Alten Weinstraße verketten (Süd → Nord) ----------
+// ---------- Strecke: kürzester Weg über das Straßennetz (Nordende Alte Weinstraße – Westende Burgunderstraße) ----------
 
-function chainRoute(roads) {
-  const segs = roads.filter((r) => r.name === 'Alte Weinstraße' && !r.oneway).map((r) => r.pts);
-  const key = (p) => p[0] + ',' + p[1];
-  const count = new Map();
-  for (const s of segs) for (const p of [s[0], s[s.length - 1]]) count.set(key(p), (count.get(key(p)) || 0) + 1);
-  // Anfang: das südlichste lose Ende
-  let start = null;
-  for (const s of segs) for (const p of [s[0], s[s.length - 1]]) if (count.get(key(p)) === 1 && (!start || p[1] > start[1])) start = p;
-  const pts = [start], used = new Set();
-  for (;;) {
-    const end = pts[pts.length - 1];
-    const i = segs.findIndex((s, k) => !used.has(k) && (key(s[0]) === key(end) || key(s[s.length - 1]) === key(end)));
-    if (i < 0) break;
-    used.add(i);
-    const s = key(segs[i][0]) === key(end) ? segs[i] : [...segs[i]].reverse();
-    pts.push(...s.slice(1));
+const WEIGHT = { secondary: 1, tertiary: 1, unclassified: 1.3, residential: 1.8 }; // Hauptstraßen bevorzugt
+function findRoute(roads, waypoints) {
+  const key = (p) => p[0] + ',' + p[1], adj = new Map(), pos = new Map();
+  const add = (a, b, w) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push([b, w]); };
+  for (const r of roads) {
+    if (!(r.type in WEIGHT)) continue;
+    for (let i = 1; i < r.pts.length; i++) {
+      const a = key(r.pts[i - 1]), b = key(r.pts[i]);
+      pos.set(a, r.pts[i - 1]); pos.set(b, r.pts[i]);
+      const w = Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]) * WEIGHT[r.type];
+      add(a, b, w);
+      if (!r.oneway) add(b, a, w);
+    }
   }
+  const nearest = ([x, z]) => {
+    let best = null, bd = Infinity;
+    for (const [k, p] of pos) { const d = (p[0] - x) ** 2 + (p[1] - z) ** 2; if (d < bd && adj.has(k)) { bd = d; best = k; } }
+    return best;
+  };
+  const path = (a, b) => { // Dijkstra
+    const dist = new Map([[a, 0]]), prev = new Map(), done = new Set(), q = [[0, a]];
+    while (q.length) {
+      let m = 0;
+      for (let i = 1; i < q.length; i++) if (q[i][0] < q[m][0]) m = i;
+      const [d, u] = q.splice(m, 1)[0];
+      if (done.has(u)) continue;
+      done.add(u);
+      if (u === b) break;
+      for (const [v, w] of adj.get(u) || []) if (d + w < (dist.get(v) ?? Infinity)) { dist.set(v, d + w); prev.set(v, u); q.push([d + w, v]); }
+    }
+    const out = [];
+    for (let u = b; u !== a && u; u = prev.get(u)) out.push(pos.get(u));
+    out.push(pos.get(a));
+    return out.reverse();
+  };
+  const nodes = waypoints.map(nearest), pts = [pos.get(nodes[0])];
+  for (let i = 1; i < nodes.length; i++) pts.push(...path(nodes[i - 1], nodes[i]).slice(1));
   return pts;
 }
 
@@ -180,9 +202,34 @@ export class BusLine {
   constructor(scene, world, data, r = Math.random) {
     this.world = world;
     this.r = r;
-    this.route = new Route(chainRoute(data.roads));
-    this.stopS = this.route.nearest(STOP_AT); // Bug des Busses auf der Mittellinie beim Halt
-    this.stopSouthS = this.route.length - this.route.nearest(STOP_AT_SOUTH);
+    const aw = data.roads.filter((x) => x.name === 'Alte Weinstraße').flatMap((x) => x.pts);
+    const bg = data.roads.filter((x) => x.name === 'Burgunderstraße').flatMap((x) => x.pts);
+    const north = aw.reduce((a, b) => (b[1] < a[1] ? b : a)), west = bg.reduce((a, b) => (b[0] < a[0] ? b : a));
+    const rwE = BUS_STOP_RW.find((b) => b.dir === 'east'), rwW = BUS_STOP_RW.find((b) => b.dir === 'west');
+    // Fahrgäste warten an der Wartehalle Bamlach bzw. an den Masten in Rheinweiler
+    const { x, z, heading } = BUS_STOP;
+    const lx = 0.9, lz = 0.2; // vor der Bank, Richtung Straße
+    const spots = [
+      { at: [x + lx * Math.cos(heading) + lz * Math.sin(heading), z - lx * Math.sin(heading) + lz * Math.cos(heading)], wait: [x, z], name: 'Bamlach' },
+      { at: [rwE.sign[0] - 0.6, rwE.sign[1] - 0.8], wait: rwE.sign, name: 'Rheinweiler Ort' },
+      { at: [rwW.sign[0] + 0.6, rwW.sign[1] + 0.8], wait: rwW.sign, name: 'Rheinweiler Ort' },
+    ];
+    this.spots = spots.map((sp) => {
+      const p = buildPerson(r);
+      p.position.set(sp.at[0], world.heightAt(...sp.at), sp.at[1]);
+      p.rotation.y = Math.atan2(sp.wait[0] - sp.at[0], sp.wait[1] - sp.at[1]) + Math.PI;
+      scene.add(p);
+      return { ...sp, person: p };
+    });
+    // Richtung Rheinweiler (Süd/West) und Richtung Bad Bellingen (Ost/Nord), je mit Haltestellen in Fahrtreihenfolge
+    const mk = (wps, stops, display) => {
+      const route = new Route(findRoute(data.roads, wps));
+      return { route, display, stops: stops.map(([at, spot]) => ({ s: route.nearest(at), spot: this.spots[spot] })) };
+    };
+    this.lines = [
+      mk([north, STOP_BAMLACH_S, rwW.stop, west], [[STOP_BAMLACH_S, 0], [rwW.stop, 2]], 'Rheinweiler'),
+      mk([west, rwE.stop, STOP_BAMLACH_N, north], [[rwE.stop, 1], [STOP_BAMLACH_N, 0]], 'Bad Bellingen'),
+    ];
     this.rider = null; // Spieler fährt mit
     this.lane = LANE;
     const { g, doors, display } = busMesh();
@@ -196,16 +243,7 @@ export class BusLine {
     this.cars = [this.car];
     this.trip = null;
     this.wait = 20 + r() * 25;  // erster Bus kommt bald
-    this.north = r() < 0.7;     // erste Fahrt meist nordwärts, damit man den Halt sieht
-
-    // Fahrgast wartet an der Wartehalle
-    this.passenger = buildPerson(r);
-    const { x, z, heading } = BUS_STOP;
-    const lx = 0.9, lz = 0.2; // vor der Bank, Richtung Straße
-    this.waitSpot = [x + lx * Math.cos(heading) + lz * Math.sin(heading), z - lx * Math.sin(heading) + lz * Math.cos(heading)];
-    this.passenger.position.set(this.waitSpot[0], world.heightAt(...this.waitSpot), this.waitSpot[1]);
-    this.passenger.rotation.y = heading;
-    scene.add(this.passenger);
+    this.next = r() < 0.5 ? 0 : 1;
   }
 
   setDisplay(text) {
@@ -216,39 +254,36 @@ export class BusLine {
   }
 
   start() {
-    const north = this.north;
-    this.north = !this.north;
-    this.trip = { north, s: -LEN, v: VMAX, dwell: 0, stopped: false, doorT: 0, boarding: 0, blockT: 0, passed: false, reqS: null, at: null };
+    const L = this.lines[this.next];
+    this.next = 1 - this.next;
+    this.trip = { L, route: L.route, s: -LEN, v: VMAX, dwell: 0, stopped: false, doorT: 0, boarding: 0, blockT: 0, stop: 0, reqS: null, at: null, here: null };
     this.lane = LANE;
-    this.nextWait = 60 + this.r() * 90; // Pause bis zur nächsten Fahrt (schon jetzt bekannt, für die Anzeige an der Haltestelle)
-    this.setDisplay(north ? 'Bad Bellingen' : 'Rheinweiler');
+    this.nextWait = 50 + this.r() * 70; // Pause bis zur nächsten Fahrt (schon jetzt bekannt, für die Anzeige an der Haltestelle)
+    this.setDisplay(L.display);
     this.mesh.visible = true;
   }
 
   get speed() { return this.trip ? this.trip.v : 0; }
   get doorsOpen() { return !!this.trip?.stopped && this.trip.doorT > 0.6; }
 
-  // Lage auf der Strecke: Bogenlänge in Fahrtrichtung → Weltposition, rechts versetzt
+  // Lage auf der Strecke: Bogenlänge → Weltposition, rechts versetzt
   place(s, lane) {
-    const R = this.route, d = this.trip.north ? s : R.length - s;
-    const p = R.at(d), sg = this.trip.north ? 1 : -1;
-    const dx = p.dx * sg, dz = p.dz * sg;
-    return { x: p.x - dz * lane, z: p.z + dx * lane, dx, dz };
+    const p = this.trip.route.at(s);
+    return { x: p.x - p.dz * lane, z: p.z + p.dx * lane, dx: p.dx, dz: p.dz };
   }
 
-  stopFor(t) { return t.north ? this.stopS : this.stopSouthS; }
-
-  // Spieler zu Fuß an der Haltestelle? Dann hält der Bus auch Richtung Süden.
+  // Haltestelle, an der der Spieler zu Fuß wartet (oder null)
   waiting(player) {
-    return !player.car && !this.rider && Math.hypot(player.pos.x - BUS_STOP.x, player.pos.z - BUS_STOP.z) < 10;
+    if (player.car || this.rider) return null;
+    return this.spots.find((sp) => Math.hypot(player.pos.x - sp.wait[0], player.pos.z - sp.wait[1]) < 10) || null;
   }
 
   // Nächstes Halteziel (Bogenlänge des Bugs): Haltestelle, Haltewunsch oder mit Fahrgast die Endhaltestelle
-  goal(t, player) {
+  goal(t) {
     let g = Infinity;
-    if (!t.passed && (t.north || this.waiting(player))) g = this.stopFor(t);
+    if (t.stop < t.L.stops.length) g = t.L.stops[t.stop].s;
     if (t.reqS != null) g = Math.min(g, t.reqS);
-    if (this.rider) g = Math.min(g, this.route.length - 1);
+    if (this.rider) g = Math.min(g, t.route.length - 1);
     return g;
   }
 
@@ -266,8 +301,9 @@ export class BusLine {
 
   canBoard(player) {
     if (this.rider || player.car || !this.doorsOpen || this.trip.at === 'end') return false;
-    if (this.trip.at === 'stop' && this.waiting(player)) return true; // Richtung Süden hält er gegenüber der Wartehalle
-    return !!Vehicle.boxPush(player.pos.x, player.pos.z, this.car.x, this.car.z, this.car.heading, LEN / 2 + 1.5, WID / 2 + 4.5); // auch aus der Wartehalle
+    const here = this.trip.here?.spot;
+    if (this.trip.at === 'stop' && here && this.waiting(player) === here) return true; // auch von der Wartehalle gegenüber
+    return !!Vehicle.boxPush(player.pos.x, player.pos.z, this.car.x, this.car.z, this.car.heading, LEN / 2 + 1.5, WID / 2 + 4.5);
   }
 
   board(player) {
@@ -297,48 +333,56 @@ export class BusLine {
 
   riderHint() {
     const t = this.trip;
-    if (this.doorsOpen) return t.at === 'end' ? 'Endhaltestelle – E: Aussteigen' : 'E: Aussteigen';
+    if (this.doorsOpen) return t.at === 'end' ? 'Endhaltestelle – E: Aussteigen' : `${t.at === 'stop' ? t.here.spot.name + ' – ' : ''}E: Aussteigen`;
     if (t.stopped) return '';
-    return t.reqS != null ? 'Halt angefordert' : 'E: Haltewunsch';
+    const next = t.L.stops[t.stop]?.spot.name;
+    return t.reqS != null ? 'Halt angefordert' : `E: Haltewunsch${next ? ` · Nächster Halt: ${next}` : ''}`;
   }
 
-  // Hinweis zu Fuß: einsteigen oder wann der nächste Bus kommt
+  // Hinweis zu Fuß: einsteigen oder wann der nächste Bus an dieser Haltestelle hält
   footHint(player) {
-    if (this.canBoard(player)) return 'E: In den Bus einsteigen';
-    if (!this.waiting(player)) return '';
-    const t = this.trip, toStop = (north) => (north ? this.stopS : this.stopSouthS) / VMAX + 3;
-    if (t?.stopped && t.at === 'stop') return 'Bus hält';
+    if (this.canBoard(player)) return `E: In den Bus einsteigen (Richtung ${this.trip.L.display})`;
+    const sp = this.waiting(player);
+    if (!sp) return '';
+    const t = this.trip;
+    if (t?.stopped && t.at === 'stop' && t.here?.spot === sp) return 'Bus hält';
+    const sOf = (L) => L.stops.find((x) => x.spot === sp)?.s;
+    const first = (L, delay) => { const s = sOf(L); return s == null ? Infinity : delay + s / VMAX + 12; };
     let eta;
-    if (!t) eta = this.wait + toStop(this.north);
-    else if (!t.passed) eta = Math.max(0, this.stopFor(t) - t.s) / VMAX;
-    else eta = (this.route.length + LEN - t.s) / VMAX + this.nextWait + toStop(this.north);
-    return eta < 15 ? 'Der Bus kommt gleich' : `Haltestelle Bamlach – nächster Bus in ca. ${Math.ceil(eta / 10) * 10} s`;
+    if (!t) eta = first(this.lines[this.next], this.wait);
+    else {
+      const s = sOf(t.L);
+      eta = s != null && s > t.s ? (s - t.s) / VMAX + 18 * t.L.stops.filter((x) => x.s > t.s && x.s < s).length
+        : first(this.lines[this.next], (t.route.length + LEN - t.s) / VMAX + this.nextWait);
+    }
+    if (eta === Infinity) return '';
+    return eta < 15 ? 'Der Bus kommt gleich' : `Haltestelle ${sp.name} – nächster Bus in ca. ${Math.ceil(eta / 10) * 10} s`;
   }
 
   // ---------- Fahrt ----------
 
   update(dt, vehicles, player) {
     if (!this.trip) {
-      if ((this.wait -= dt) > 0 || this.route.length < 200) return;
+      if ((this.wait -= dt) > 0) return;
       this.start();
     }
-    const t = this.trip, R = this.route;
-    if (!t.passed && t.s > this.stopFor(t) + 1) t.passed = true; // ohne Halt vorbeigefahren
-    const goal = this.goal(t, player);
+    const t = this.trip, R = t.route;
+    const goal = this.goal(t);
 
     if (t.stopped) {
       // Türen auf, Fahrgäste steigen ein/aus, Türen zu, weiter
       t.dwell -= dt;
       t.doorT = Math.min(1, t.doorT + dt / 1.2);
       if (t.dwell < 2.5) t.doorT = Math.max(0, Math.min(t.doorT, t.dwell / 1.2));
-      if (t.at === 'stop' && t.north && this.passenger.visible && t.dwell < 12) {
+      const p = t.here?.spot.person;
+      if (t.at === 'stop' && p?.visible && t.dwell < 12) { // wartender Fahrgast geht zur Fronttür
         t.boarding = Math.min(1, t.boarding + dt / 2.5);
         const door = this.place(t.s - 1.2, this.lane + WID / 2 + 0.6);
-        const [wx, wz] = this.waitSpot, k = t.boarding;
+        const [wx, wz] = t.here.spot.at, k = t.boarding;
         const px = wx + (door.x - wx) * k, pz = wz + (door.z - wz) * k;
-        this.passenger.position.set(px, this.world.heightAt(px, pz), pz);
-        this.passenger.rotation.y = Math.atan2(door.x - wx, door.z - wz);
-        if (k >= 1) this.passenger.visible = false;
+        p.position.set(px, this.world.heightAt(px, pz), pz);
+        p.rotation.y = Math.atan2(door.x - wx, door.z - wz);
+        if (k >= 1) p.visible = false;
       }
       if (t.at === 'end') {
         // Endhaltestelle: Fahrgast muss raus; der Bus verschwindet erst, wenn der Spieler weit genug weg ist
@@ -360,24 +404,26 @@ export class BusLine {
       if (goal < Infinity && t.s >= goal - 0.3) {
         t.stopped = true;
         t.v = 0;
-        const atStop = !t.passed && Math.abs(goal - this.stopFor(t)) < 1;
+        const stop = t.L.stops[t.stop], atStop = !!stop && Math.abs(goal - stop.s) < 1;
         t.at = this.rider && goal >= R.length - 1.5 ? 'end' : atStop ? 'stop' : 'request';
-        if (atStop) t.passed = true;
+        t.here = atStop ? stop : null;
+        if (atStop) { t.stop++; t.boarding = 0; }
         if (t.reqS != null && t.s >= t.reqS - 1) t.reqS = null;
-        t.dwell = t.at === 'stop' ? (t.north ? 16 + this.r() * 8 : 10) : 8;
+        t.dwell = t.at === 'stop' ? 14 + this.r() * 8 : 8;
       }
     }
     for (const d of this.doors) d.position.z = d.userData.closedZ + (d.userData.openZ - d.userData.closedZ) * t.doorT;
+    while (t.stop < t.L.stops.length && t.s > t.L.stops[t.stop].s + 1) t.stop++; // Haltestelle schon hinter dem Bus
 
     if (t.s > R.length + LEN) {
       this.trip = null;
       this.wait = this.nextWait;
       this.mesh.visible = false;
       this.car.on = false;
-      if (!this.passenger.visible) { // nächster Fahrgast wartet schon
-        this.passenger.visible = true;
-        this.passenger.position.set(this.waitSpot[0], this.world.heightAt(...this.waitSpot), this.waitSpot[1]);
-        this.passenger.rotation.y = BUS_STOP.heading;
+      for (const sp of this.spots) if (!sp.person.visible) { // nächster Fahrgast wartet schon
+        sp.person.visible = true;
+        sp.person.position.set(sp.at[0], this.world.heightAt(...sp.at), sp.at[1]);
+        sp.person.rotation.y = Math.atan2(sp.wait[0] - sp.at[0], sp.wait[1] - sp.at[1]) + Math.PI;
       }
       return;
     }

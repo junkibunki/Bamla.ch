@@ -1066,7 +1066,6 @@ export const STREET_OVERRIDES = [
   { c: [-1463.1, 810.9], wall: 0xf2f0ea, roof: 0x7a4a3a, look: 'shutter', shutters: 0x8a9098 },             // langes weißes Haus, braunes Ziegeldach, graue Läden
   { c: [-1459.2, 809.9], wall: 0xf2f0ea, roof: 0x7a4a3a, look: 'shutter', shutters: 0x8a9098, eave: 6, pitch: 40 }, // (gleiches Haus, OSM-Umriss)
   { c: [-1455.7, 818.6], wall: 0xf2f2ee, roof: 0x4e4a48, look: 'roller', eave: 5.8, pitch: 40 },             // weiß, dunkles Dach mit holzverschalter Gaube, Holzbalkon
-  { c: [-1472.5, 781.5], wall: 0x5a6e8a, roof: 0x6a6866, look: 'plain' },                                     // Fahrradboxen am Bahnhof (blaugraues Metall)
   { c: [-1502.1, 997.3], wall: 0xf2f2ee, roof: 0x6a6866, look: 'modern', eave: 6.3, pitch: 0 },               // Neubau 2024: weißer Kubus, Flachdach
   { c: [-1520, 986.3], wall: 0xb8b6b0, roof: 0x6a6866, look: 'modern', eave: 9, pitch: 0 },                   // Neubau-Mehrfamilienhaus 2024 im Rohbau (Betongrau, 3 Geschosse)
   { c: [-1521.6, 992], wall: 0xb8b6b0, roof: 0x6a6866, look: 'modern', eave: 9, pitch: 0 },                   // dto.

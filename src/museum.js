@@ -258,7 +258,7 @@ export function buildMuseum(scene, world) {
 
 export const BUS_STOP = { x: -126.6, z: -71.4, heading: -1.509 }; // lokales +z zeigt zur Straße (Westen)
 
-function stopSignTexture() {
+export function stopSignTexture(name = 'Bamlach') {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 176;
   const g = c.getContext('2d');
@@ -274,7 +274,7 @@ function stopSignTexture() {
   g.fillRect(0, 90, 128, 36);
   g.fillStyle = '#fff';
   g.font = 'bold 22px Arial, sans-serif';
-  g.fillText('Bamlach', 64, 109);
+  g.fillText(name, 64, 109, 120);
   g.fillStyle = '#1f4f9f';
   g.font = 'bold 18px Arial, sans-serif';
   g.fillText('RVL', 64, 150);
