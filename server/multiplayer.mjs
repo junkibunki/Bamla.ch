@@ -12,7 +12,7 @@ import { WebSocketServer } from 'ws';
 const PATH = '/mp';
 const TICK = 100; // ms zwischen zwei Rundsendungen
 const MAX_PLAYERS = 64;
-const VEHICLES = ['car', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck'];
+const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck'];
 
 const num = (v, lim) => (Number.isFinite(v) ? Math.max(-lim, Math.min(lim, v)) : 0);
 const cleanName = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 20);
@@ -50,6 +50,7 @@ export function attachMultiplayer(httpServer, { joinLog } = {}) {
           x: num(m.x, 5000), y: num(m.y, 1000), z: num(m.z, 5000), h: num(m.h, 100),
           v: VEHICLES.includes(m.v) ? m.v : null,
           ti: typeof m.ti === 'string' ? cleanName(m.ti) || undefined : undefined, // Titel aus dem Dorfpass
+          ri: Number.isInteger(m.ri) && m.ri >= 0 ? m.ri : undefined, // fährt mit: Id des Fahrers, 0 = im Zug
         };
       }
     });
