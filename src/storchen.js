@@ -657,4 +657,15 @@ export function buildStorchen(scene, world) {
   if (bi >= 0) { world.buildings[bi] = ring; world.addToGrid(ring, bi); }
   world.addObstacle(WING.map(([a, b]) => P(a, b)), 12);
   world.addObstacle(ANNEX.map(([a, b]) => P(a, b)), 11);
+
+  return {
+    wine: true, // Bier oder Weinschorle
+    // vor dem Restauranteingang (Pflaster vor der Freitreppe), zu Fuß
+    canDrink(pl) {
+      if (pl.car || pl.sip > 0) return false;
+      const dx = pl.pos.x - O[0], dz = pl.pos.z - O[1];
+      const a = dx * U[0] + dz * U[1], b = dx * V[0] + dz * V[1];
+      return a > 12.2 && a < 17.4 && b > -2.4 && b < 0.4;
+    },
+  };
 }

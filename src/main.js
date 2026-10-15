@@ -93,7 +93,7 @@ buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
 buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus)
-buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3
+const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang)
 buildRathaus(scene, world); // ehemaliges Rathaus gegenüber, Brunnen davor
 buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
@@ -124,9 +124,17 @@ buildGaertnerei(scene, world, rng(888)); // Gärtnerei Hugenschmidt: Gewächshä
 const gaertnerei = new GaertnereiBetrieb(scene, world, player, rng(889)); // Gärtner bei der Arbeit, Minibagger auf dem Lagerplatz
 const baracke = buildBaracke(scene, world, player); // Jugendtreff Baracke: offene Halle mit Theke, Vordach, Bierwagen, Feuertonne
 pedestrians.push(baracke);
-const drunk = new Drunk(renderer.domElement); // nach einem Bier an der Theke: 30 s betrunken
+const drunk = new Drunk(renderer.domElement); // nach einem Bier oder einer Weinschorle: 30 s betrunken
 player.drunk = drunk;
 player.onDrink = () => drunk.start(30);
+// Ausschank: Baracke (nur Bier), Storchen und Campingplatz-Kiosk (Bier oder Weinschorle)
+const bars = [baracke, storchen, camping.kiosk].filter(Boolean);
+const nearBar = () => bars.find((b) => b.canDrink(player));
+function barHint(b) {
+  const more = drunk.left > 0;
+  const beer = more ? 'E: Noch ein Bier' : 'E: Bier trinken';
+  return b.wine ? `${beer} · R: ${more ? 'Noch eine Weinschorle' : 'Weinschorle trinken'}` : beer;
+}
 vehicles.push(gaertnerei.excavator);
 pedestrians.push(gaertnerei);
 const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => Math.hypot(v.x - x, v.z - z) < 6) && !kienzler.inYard(x, z);
@@ -338,7 +346,7 @@ function updateHud(dt) {
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
-  else if (baracke.canDrink(player)) hud.hint.textContent = drunk.left > 0 ? 'E: Noch ein Bier trinken' : 'E: Bier trinken';
+  else if (nearBar()) hud.hint.textContent = barHint(nearBar());
   else {
     const n = nearestVehicle();
     const verb = n?.kind === 'bike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
@@ -352,9 +360,12 @@ function updateHud(dt) {
     const r = world.nearestRoad(p.x, p.z);
     hud.street.textContent = r?.name || (r?.type === 'motorway' ? 'A5' : r?.type === 'track' ? 'Feldweg' : '');
   }
-  hud.buzz.textContent = drunk.left > 0 ? `🍺 Betrunken – noch ${Math.ceil(drunk.left)} s` : '';
-  if (input.hit('KeyH')) hud.help.style.display = hud.help.style.display === 'none' ? '' : 'none';
+  hud.buzz.textContent = drunk.left > 0 ? `${player.lastDrink === 'schorle' ? '🍷' : '🍺'} Betrunken – noch ${Math.ceil(drunk.left)} s` : '';
+  helpAt ||= performance.now() + 12000; // Steuerung nach dem Start 12 s zeigen, dann ausblenden
+  if (helpAt > 0 && performance.now() > helpAt) { helpAt = -1; document.body.classList.add('helpHidden'); }
+  if (input.hit('KeyH')) { helpAt = -1; document.body.classList.toggle('helpHidden'); }
 }
+let helpAt = 0; // Zeitpunkt (ms) zum Ausblenden der Steuerung, gesetzt beim ersten Bild
 
 const editor = new Editor({ world, camera, cam, canvas: renderer.domElement, input, minimap, sheds, player });
 const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielsteuerung ruht, solange der Editor offen ist
@@ -375,9 +386,10 @@ function frame() {
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
-    else if (baracke.canDrink(player)) { player.drink(); baracke.serve(); } // Theke in der Baracke
+    else if (nearBar()) { const b = nearBar(); player.drink('beer'); b.serve?.(); } // Theke: Bier
     else toggleVehicle();
   }
+  if (!editing && input.hit('KeyR') && !player.car && !bus.rider && nearBar()?.wine) player.drink('schorle'); // Weinschorle
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);

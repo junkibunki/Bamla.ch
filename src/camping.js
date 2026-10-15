@@ -811,6 +811,17 @@ export class Camping {
       sign.position.set(sx, gy + 2.95, sz);
       sign.rotation.y = h;
       this.scene.add(sign);
+      // Kiosk: vor der Glastür gibt es Bier oder Weinschorle
+      const dx0 = -ho * 0.35;
+      this.kiosk = {
+        wine: true,
+        canDrink(pl) {
+          if (pl.car || pl.sip > 0) return false;
+          const dx = pl.pos.x - fx, dz = pl.pos.z - fz;
+          const lx = Math.cos(h) * dx - Math.sin(h) * dz, lz = Math.sin(h) * dx + Math.cos(h) * dz;
+          return Math.abs(lx - dx0) < 1.8 && lz > 0.1 && lz < 2.3;
+        },
+      };
       // Bistro-Terrasse: Tische mit weißen Sonnenschirmen
       for (const tx of [ho * 0.2, ho * 0.55]) {
         const [x, z] = toWorld(fx, fz, h, tx, 2.6);

@@ -1,10 +1,23 @@
-// Spielfigur zu Fuß: laufen, rennen, springen, Bier trinken (betrunken: torkeln, siehe drunk.js).
+// Spielfigur zu Fuß: laufen, rennen, springen, Bier oder Weinschorle trinken (betrunken: torkeln, siehe drunk.js).
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 import { beerBottle } from './baracke.js';
 
 const RADIUS = 0.4;
 const SIP = 2.4; // Sekunden für einen kräftigen Schluck
+
+// Schorleglas (0,5 l): helle Weinschorle mit Schaumrand in einem Glas
+function schorleGlass() {
+  const g = new THREE.Group();
+  const drink = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.034, 0.15, 10), new THREE.MeshLambertMaterial({ color: 0xe9d77a }));
+  drink.position.y = -0.01;
+  const foam = new THREE.Mesh(new THREE.CylinderGeometry(0.041, 0.041, 0.012, 10), new THREE.MeshLambertMaterial({ color: 0xfaf6e4 }));
+  foam.position.y = 0.07;
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.038, 0.18, 12, 1, true),
+    new THREE.MeshLambertMaterial({ color: 0xdfeef2, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
+  g.add(drink, foam, glass);
+  return g;
+}
 
 export class Player {
   constructor(scene) {
@@ -24,13 +37,19 @@ export class Player {
     this.bottle.position.set(0, -0.62, 0.13);
     this.bottle.visible = false;
     this.mesh.armR.add(this.bottle);
+    this.glass = schorleGlass();
+    this.glass.position.set(0, -0.62, 0.13);
+    this.glass.visible = false;
+    this.mesh.armR.add(this.glass);
+    this.lastDrink = 'beer';
   }
 
-  // Bier trinken: kurz stehen bleiben, Flasche ansetzen
-  drink() {
+  // Bier oder Weinschorle trinken: kurz stehen bleiben, Flasche bzw. Glas ansetzen
+  drink(kind = 'beer') {
     if (this.sip > 0) return;
     this.sip = SIP;
-    this.bottle.visible = true;
+    this.lastDrink = kind;
+    (kind === 'schorle' ? this.glass : this.bottle).visible = true;
   }
 
   update(dt, input, camYaw, world, vehicles) {
@@ -97,7 +116,7 @@ export class Player {
       const e = lift * lift * (3 - 2 * lift);
       this.mesh.armR.rotation.x = -0.3 - 1.85 * e;
       this.mesh.armR.rotation.z = -0.4 * e;
-      if (this.sip <= 0) { this.bottle.visible = false; this.onDrink?.(); }
+      if (this.sip <= 0) { this.bottle.visible = this.glass.visible = false; this.onDrink?.(); }
     }
     this.groundY = world.groundAt(this.pos.x, this.pos.z, feet); // auf der Brücke das Deck, darunter die Straße
     this.mesh.position.set(this.pos.x, this.groundY + this.pos.y, this.pos.z);

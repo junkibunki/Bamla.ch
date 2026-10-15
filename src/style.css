@@ -67,7 +67,16 @@ body.editing #players { display: none; }
   position: fixed; top: 12px; left: 12px;
   background: #0008; padding: 10px 14px; border-radius: 8px;
   font-size: 13px; line-height: 1.6;
+  transition: opacity 0.6s;
 }
+/* Steuerung nach dem Start ausgeblendet (main.js), H blendet sie wieder ein */
+#helpTag {
+  position: fixed; top: 12px; left: 12px; font-size: 12px;
+  background: #0006; padding: 3px 8px; border-radius: 6px;
+  opacity: 0; pointer-events: none; transition: opacity 0.6s;
+}
+body.helpHidden #help { opacity: 0; pointer-events: none; }
+body.helpHidden #helpTag { opacity: 1; }
 
 #attribution {
   position: fixed; right: 6px; bottom: 4px; font-size: 11px;
@@ -76,7 +85,7 @@ body.editing #players { display: none; }
 #attribution a { color: #cde; }
 
 /* Karten-Editor (src/editor.js, Taste B) */
-body.editing #hud, body.editing #help { display: none; }
+body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
 #editor {
   position: fixed; top: 12px; right: 12px; width: 330px; max-height: calc(100% - 60px); overflow: auto;
   background: #141b24e6; padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5;
