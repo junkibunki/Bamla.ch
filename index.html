@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini-GTA Bamlach</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="loading">Lade Bamlach …</div>
+
+  <div id="hud">
+    <div id="street"></div>
+    <div id="speed"></div>
+    <div id="hint"></div>
+  </div>
+
+  <canvas id="minimap" width="220" height="220"></canvas>
+
+  <div id="help">
+    <b>Steuerung</b><br />
+    Klick: Maus fangen · Maus: Kamera<br />
+    WASD: laufen / fahren · Shift: rennen<br />
+    Leertaste: springen / Handbremse<br />
+    Mausrad: Zoom · E: ein-/aussteigen · H: Hilfe aus/an<br />
+    R / Q: Gabel heben / senken (Gabelstapler)<br />
+    B: Karten-Editor (Gebäude ändern, Gartenhütten setzen)
+  </div>
+
+  <div id="attribution">Kartendaten © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap-Mitwirkende</a> · Gelände (DGM1), Gebäude (LoD2), Dächer, Reben und Pflaster (aus DOP20): © <a href="https://www.lgl-bw.de" target="_blank">LGL BW</a> (<a href="https://www.govdata.de/dl-de/by-2-0" target="_blank">dl-de/by-2-0</a>)</div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

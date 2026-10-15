@@ -1,0 +1,11 @@
+node_modules/
+dist/
+# Rohdaten (DGM1, LoD2, DOP20) – groß, aus dem LGL-Open-Data-Portal neu ladbar
+data/
+.claude/
+.playwright-mcp/
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db

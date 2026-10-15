@@ -1,0 +1,69 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #9cc7e8;
+  font-family: system-ui, sans-serif;
+  color: #fff;
+}
+
+canvas { display: block; }
+
+#loading {
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  font-size: 28px; background: #1d2633; z-index: 10;
+}
+
+#hud {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+  text-shadow: 0 2px 4px #000a;
+}
+#street { font-size: 18px; opacity: .9; }
+#speed { font-size: 42px; font-weight: 700; }
+#hint { font-size: 16px; margin-top: 4px; color: #ffe27a; }
+
+#minimap {
+  position: fixed; left: 16px; bottom: 16px;
+  border-radius: 50%; border: 3px solid #fffc;
+  box-shadow: 0 4px 16px #0006;
+}
+
+#help {
+  position: fixed; top: 12px; left: 12px;
+  background: #0008; padding: 10px 14px; border-radius: 8px;
+  font-size: 13px; line-height: 1.6;
+}
+
+#attribution {
+  position: fixed; right: 6px; bottom: 4px; font-size: 11px;
+  background: #0006; padding: 2px 6px; border-radius: 4px;
+}
+#attribution a { color: #cde; }
+
+/* Karten-Editor (src/editor.js, Taste B) */
+body.editing #hud, body.editing #help { display: none; }
+#editor {
+  position: fixed; top: 12px; right: 12px; width: 330px; max-height: calc(100% - 60px); overflow: auto;
+  background: #141b24e6; padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5;
+  box-shadow: 0 6px 24px #0008;
+}
+#editor[hidden], #editor [hidden] { display: none !important; }
+#editor .ed-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 15px; }
+#editor .ed-head span { font-size: 12px; opacity: .7; }
+#editor #ed-info { margin-bottom: 8px; }
+#editor .ed-row { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; align-items: center; }
+#editor button {
+  font: inherit; font-size: 12px; color: #fff; background: #2b3746; border: 1px solid #41526a;
+  border-radius: 6px; padding: 4px 8px; cursor: pointer;
+}
+#editor button:hover { background: #3a4a5f; }
+#editor button.on { background: #b88a00; border-color: #ffd400; }
+#editor .ed-sw button { width: 24px; height: 22px; padding: 0; }
+#editor .ed-sw button.on { outline: 2px solid #ffd400; outline-offset: 1px; }
+#editor label { display: grid; grid-template-columns: 62px 1fr 52px; align-items: center; gap: 6px; }
+#editor label span { text-align: right; opacity: .85; }
+#editor #ed-status { margin-top: 8px; color: #9fe39f; min-height: 1.5em; }
+#editor #ed-status.err { color: #ff9a8a; }
+#editor .ed-help { margin-top: 8px; font-size: 11.5px; opacity: .7; }
