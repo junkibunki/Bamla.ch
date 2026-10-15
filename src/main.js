@@ -53,6 +53,8 @@ import { Carry } from './carry.js';
 import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
+import { buildReitzentrum } from './reitzentrum.js';
+import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -61,7 +63,7 @@ const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
-const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
+const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -124,6 +126,7 @@ const tennis = buildTennis(scene, world, rng(77));
 const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feuerstelle, Bolzplatz, Beachvolleyball, Spielgeräten
 buildKuppelgarten(scene, world); // Kuppel- und Glasgewächshaus im Garten an der Unteren Römerstraße (statt zweier OSM-Häuser)
 const kneipp = buildWassertretanlage(scene, world); // Kneipp-Wassertretanlage an der Belchenstraße: Becken zum Durchwaten, Armbad, Bank
+const reit = buildReitzentrum(scene, world); // Reitkunstzentrum: Reithalle, Stall, Führanlage, Paddock, gesattelte Pferde zum Reiten
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
@@ -168,8 +171,9 @@ function barHint(b) {
   return b.wine ? `${beer} · R: ${more ? 'Noch eine Weinschorle' : 'Weinschorle trinken'}` : beer;
 }
 vehicles.push(gaertnerei.excavator);
+vehicles.push(...reit.horses);
 pedestrians.push(gaertnerei);
-const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => Math.hypot(v.x - x, v.z - z) < 6) && !kienzler.inYard(x, z);
+const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => Math.hypot(v.x - x, v.z - z) < 6) && !kienzler.inYard(x, z) && !reit.onSite(x, z);
 
 // Elektroauto mit Wallbox vor Im Kirschgarten 1 (vor den übrigen Parkern, damit der Platz frei bleibt)
 const ecar = new ElectricCar(scene, world);
@@ -307,7 +311,7 @@ function updateCamera(dt) {
   let dist, lift = 0;
   const v = player.car;
   if (v) {
-    camTarget.set(v.x, v.mesh.position.y + (v.mesh.rider ? 1.6 : 1.8), v.z);
+    camTarget.set(v.x, v.mesh.position.y + (v.k.camY ?? (v.mesh.rider ? 1.6 : 1.8)), v.z);
     dist = v.k.camDist + Math.abs(v.speed) * 0.06;
     lift = v.mesh.rider ? 0.5 : 1.6;
     // Ohne Mausbewegung schwenkt die Kamera hinter das Fahrzeug.
@@ -436,7 +440,7 @@ let streetTimer = 0;
 
 function updateHud(dt) {
   const v = player.car;
-  hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' + (v === ecar.car ? ` · 🔋 ${ecar.percent()} %` : '') : riding() ? Math.round(riding().speed * 3.6) + ' km/h' : '';
+  hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' + (v === ecar.car ? ` · 🔋 ${ecar.percent()} %` : v.kind === 'horse' ? ` · ${GAIT_NAMES[gaitOf(Math.abs(v.speed))]}` : '') : riding() ? Math.round(riding().speed * 3.6) + ' km/h' : '';
   if (v?.kind === 'forklift') hud.hint.textContent = 'E: Aussteigen · R/Q: Gabel heben/senken';
   else if (v?.kind === 'excavator') hud.hint.textContent = EXCAVATOR_HINT;
   else if (v?.kind === 'firetruck') hud.hint.textContent = (Math.abs(v.speed) > 6 ? '' : 'E: Aussteigen · ') + 'R: Wasser marsch · T/G: Rohr heben/senken'; // Wasserwerfer
@@ -453,7 +457,7 @@ function updateHud(dt) {
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
-    const verb = n?.kind === 'bike' || n?.kind === 'trike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
+    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
       : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
@@ -493,7 +497,7 @@ const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -541,6 +545,7 @@ function frame() {
   tennis.update(dt);
   grillplatz.update(dt, player); // Volleyball, Bolzen
   kneipp.update(dt, player); // Spritzer beim Wassertreten
+  reit.update(dt); // Führanlage, Weidepferde
   updateSwings(dt, editing ? IDLE : input); // Schaukeln, auf denen man sitzen kann
   golf.update(dt, player);
   kienzler.update(dt, player);
@@ -565,7 +570,7 @@ function frame() {
   backofen.update(dt); // Holzfeuer, Temperatur, Backen, Brotschieber
 
   drunk.update(dt);
-  camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);
+  camera.layers[(!player.car && baracke.inside(player.pos)) || reit.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER); // Hallendach (Baracke, Reithalle)
   updateCamera(dt);
   returnVehicles(dt);
   updateHud(dt);

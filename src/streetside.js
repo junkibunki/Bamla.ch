@@ -14,6 +14,7 @@ import { BARACKE_SITE } from './baracke-site.js';
 import { ECKE_PAVED } from './kirschgarten-ecke.js';
 import { PROBSTEI_PAVED } from './probsteiweg.js';
 import { KNEIPP_PAVED } from './wassertretanlage.js';
+import { REIT_SITE } from './reitzentrum-site.js';
 import { GRUEN } from './strassengruen-data.js';
 
 const TARGET = ['secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service'];
@@ -51,7 +52,7 @@ function segmentIndex(roads) {
 
 const inBuilding = (world, x, z) => !!world.collide(x, z, 0.05);
 // Punkt in einer der gepflasterten Flächen (Vorplätze) oder auf einem eigens gebauten Gelände – dort keine Büsche
-export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED].some(({ pts }) => {
+export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_SITE].some(({ pts }) => {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, zi] = pts[i], [xj, zj] = pts[j];

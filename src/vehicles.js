@@ -1,8 +1,9 @@
-// Fahrzeuge: Auto, Traktor (optional mit Anhänger), Fahrrad, Kinderdreirad, Motorrad, Quad, Golfcart, Gabelstapler.
+// Fahrzeuge: Auto, Traktor (optional mit Anhänger), Fahrrad, Kinderdreirad, Motorrad, Quad, Golfcart, Gabelstapler, Pferd.
 // Gemeinsame Arcade-Fahrphysik für den Spieler und eine einfache Verkehrs-KI.
 import * as THREE from 'three';
 import { ROAD_STYLE } from './world.js';
 import { buildPerson, animatePedal } from './person.js';
+import { horseMesh, animateHorse } from './pferd.js';
 
 const lambert = (color) => new THREE.MeshLambertMaterial({ color });
 const MAT = {
@@ -274,6 +275,8 @@ export const KINDS = {
   quad:    { halfLen: 0.95, halfW: 0.65, wheelbase: 1.2, maxSpeed: 22, accel: 9, brake: 14, rev: 3, circles: [0.35, -0.35], r: 0.65, npcSpeed: 9, camDist: 6, mesh: quadMesh },
   golfcart: { halfLen: 1.25, halfW: 0.65, wheelbase: 1.6, maxSpeed: 7, accel: 3, brake: 8, rev: 3, circles: [0.6, -0.6], r: 0.65, npcSpeed: 5.5, camDist: 6, mesh: golfcartMesh },
   // lift: maximale Hubhöhe der Gabel (m), forkOff: Abstand Fahrzeugmitte – Mitte der aufgenommenen Palette
+  // Pferd (Reitkunstzentrum): camY/labelY: Kamera und Namensschild über dem höheren Sitz
+  horse:   { halfLen: 1.15, halfW: 0.4, wheelbase: 1.3, maxSpeed: 14, accel: 4, brake: 9, rev: 1.2, circles: [0.6, -0.6], r: 0.42, npcSpeed: 1.5, camDist: 6.5, mesh: horseMesh, camY: 2.3, labelY: 3.3 },
   forklift: { halfLen: 1.25, halfW: 0.6, wheelbase: 1.35, maxSpeed: 5.5, accel: 3, brake: 8, rev: 4, circles: [0.45, -0.5], r: 0.62, npcSpeed: 3, camDist: 6.5, mesh: forkliftMesh, lift: 3.0, forkOff: 1.75 },
 };
 const TRAILER_HALF = 2.2;
@@ -440,7 +443,8 @@ export class Vehicle {
         r.legL.rotation.x = r.legR.rotation.x = -1.25;
         r.legL.rotation.z = -0.2; r.legR.rotation.z = 0.2;
       }
-    } else if (this.kind === 'trike') { // Pedale am kleinen Vorderrad: wild strampeln, Beine fast waagrecht
+    } else if (this.kind === 'horse') animateHorse(this.mesh, dt, this.speed, this.mesh.rider.visible);
+    else if (this.kind === 'trike') { // Pedale am kleinen Vorderrad: wild strampeln, Beine fast waagrecht
       const r = this.mesh.rider, s = Math.sin(this.mesh.wheels[0].wheel.rotation.x);
       r.legL.rotation.x = -1.4 + s * 0.25; r.legR.rotation.x = -1.4 - s * 0.25;
     }

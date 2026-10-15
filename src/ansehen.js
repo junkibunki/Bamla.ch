@@ -1,6 +1,6 @@
 // Dorf-Ansehen in der Welt (quests.js, LEVELS): ab „Bekanntes Gesicht“ grüßen Fußgänger mit Winken und Sprechblase,
 // ab „Bamlacher:in“ feiert das Dorf ein Fest vor der Gemeindehalle (Brückleweg 2) mit Feuerwerk beim ersten Besuch.
-// Wer betrunken fährt (drunk.js), verliert Ansehen und wird von Fußgängern beschimpft; mit schlechtem Ruf murren sie.
+// Wer betrunken fährt (drunk.js), verliert Ansehen (betrunken reiten ist erlaubt) und wird von Fußgängern beschimpft; mit schlechtem Ruf murren sie.
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 import { beerBottle } from './baracke.js';
@@ -79,7 +79,7 @@ export class Ansehen {
     const v = player.car;
     const now = this.t;
     const speed = v ? Math.abs(v.speed) : 0;
-    const drunkDriving = !!v && drunk.level > 0 && speed > 2;
+    const drunkDriving = !!v && v.kind !== 'horse' && drunk.level > 0 && speed > 2; // Pferd kennt den Heimweg
 
     // Betrunken fahren: Ansehen weg, beim Weiterfahren immer wieder ein bisschen
     if (drunkDriving) {
