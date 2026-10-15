@@ -15,6 +15,7 @@ import { KIGA_PAVED } from './kindergarten-site.js';
 import { KIGA_RW_PAVED, carveKigaRheinweiler } from './kiga-rheinweiler-site.js';
 import { RATHAUS_PAVED } from './rathaus.js';
 import { GAERTNEREI_PAVED } from './gaertnerei-site.js';
+import { BARACKE_PAVED, carveBaracke } from './baracke-site.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
 import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
 import { surfaceAt, samplesAlong } from './paving.js';
@@ -189,6 +190,7 @@ export class World {
     carveUnderBridges(terrain, this.bridges, data.roads);
     carveSchule(terrain); // Sonnenrainschule: Carport, Pausenhof, Sporthof
     carveKigaRheinweiler(terrain); // Kindergarten Rheinweiler: Gartenterrasse
+    carveBaracke(terrain); // Jugendtreff Baracke: Boden unter Haus und Vordach
     smoothRoads(terrain, underpassWays(data.roads), this.bridges, roadWidth, true); // Rampenkuppen abrunden
     this.autobahn = prepareAutobahn(this); // A5: Achse, Unterführungen (Gelände + Brücken)
 
@@ -274,7 +276,7 @@ export class World {
     // Reben: aus dem Luftbild erkannt (OSM-Rebflächen sind teils veraltet und bleiben Wiese)
     if (this.vineyards) paintVineyards(g, this.vineyards, t.minX, t.minZ);
     if (this.data.golf) paintGolf(g, this.data.golf, t.minX, t.minZ); // Golfplatz aus dem Luftbild
-    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
+    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;

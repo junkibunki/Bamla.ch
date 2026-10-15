@@ -52,6 +52,7 @@ body.editing #players { display: none; }
   text-align: center; pointer-events: none;
   text-shadow: 0 2px 4px #000a;
 }
+#buzz { font-size: 17px; font-weight: 700; color: #ffb347; }
 #street { font-size: 18px; opacity: .9; }
 #speed { font-size: 42px; font-weight: 700; }
 #hint { font-size: 16px; margin-top: 4px; color: #ffe27a; }

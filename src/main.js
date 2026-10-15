@@ -35,6 +35,8 @@ import { AutobahnTraffic } from './autobahn.js';
 import { ShedLayer } from './edits.js';
 import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
+import { buildBaracke, ROOF_LAYER } from './baracke.js';
+import { Drunk } from './drunk.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -58,6 +60,7 @@ scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, 250, 1100);
 
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.3, 2500);
+camera.layers.enable(ROOF_LAYER); // Hallendach der Baracke (ausgeblendet, solange man drin steht)
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -70,6 +73,7 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 1, far: 400 });
 sun.shadow.bias = -0.0005;
+sun.shadow.camera.layers.enable(ROOF_LAYER);
 scene.add(sun, sun.target);
 
 // ---------- Welt laden ----------
@@ -118,6 +122,11 @@ vehicles.push(...feuerwehr.trucks); // fahrbares Feuerwehrauto vor dem ersten Ha
 vehicles.push(...buildMetzgerei(scene, world).vans); // Metzgerei Dosenbach (Rheinweiler): Laden, Pavillon, Halle, Kühltransporter
 buildGaertnerei(scene, world, rng(888)); // Gärtnerei Hugenschmidt: Gewächshäuser mit Anzuchttischen, Verkaufshaus, Frühbeete
 const gaertnerei = new GaertnereiBetrieb(scene, world, player, rng(889)); // Gärtner bei der Arbeit, Minibagger auf dem Lagerplatz
+const baracke = buildBaracke(scene, world, player); // Jugendtreff Baracke: offene Halle mit Theke, Vordach, Bierwagen, Feuertonne
+pedestrians.push(baracke);
+const drunk = new Drunk(renderer.domElement); // nach einem Bier an der Theke: 30 s betrunken
+player.drunk = drunk;
+player.onDrink = () => drunk.start(30);
 vehicles.push(gaertnerei.excavator);
 pedestrians.push(gaertnerei);
 const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => Math.hypot(v.x - x, v.z - z) < 6) && !kienzler.inYard(x, z);
@@ -260,6 +269,7 @@ function updateCamera(dt) {
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
   camera.position.lerp(camPos, Math.min(1, dt * 12));
   camera.lookAt(camTarget);
+  drunk.applyCamera(camera);
 
   // Schattenbereich folgt dem Spieler
   sun.position.set(camTarget.x + 80, 150, camTarget.z + 50);
@@ -314,6 +324,7 @@ const hud = {
   speed: document.getElementById('speed'),
   hint: document.getElementById('hint'),
   street: document.getElementById('street'),
+  buzz: document.getElementById('buzz'),
   help: document.getElementById('help'),
 };
 let streetTimer = 0;
@@ -326,6 +337,8 @@ function updateHud(dt) {
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
+  else if (player.sip > 0) hud.hint.textContent = 'Prost!';
+  else if (baracke.canDrink(player)) hud.hint.textContent = drunk.left > 0 ? 'E: Noch ein Bier trinken' : 'E: Bier trinken';
   else {
     const n = nearestVehicle();
     const verb = n?.kind === 'bike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
@@ -339,6 +352,7 @@ function updateHud(dt) {
     const r = world.nearestRoad(p.x, p.z);
     hud.street.textContent = r?.name || (r?.type === 'motorway' ? 'A5' : r?.type === 'track' ? 'Feldweg' : '');
   }
+  hud.buzz.textContent = drunk.left > 0 ? `🍺 Betrunken – noch ${Math.ceil(drunk.left)} s` : '';
   if (input.hit('KeyH')) hud.help.style.display = hud.help.style.display === 'none' ? '' : 'none';
 }
 
@@ -349,7 +363,7 @@ const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielste
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
+window.game = { baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
 const clock = new THREE.Clock();
 
 function frame() {
@@ -361,6 +375,7 @@ function frame() {
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
+    else if (baracke.canDrink(player)) { player.drink(); baracke.serve(); } // Theke in der Baracke
     else toggleVehicle();
   }
 
@@ -396,12 +411,15 @@ function frame() {
   else if (bus.rider) player.pos.set(bus.car.x, 0, bus.car.z);
   else if (!ridingSwing()) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
 
+  drunk.update(dt);
+  camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);
   updateCamera(dt);
   updateHud(dt);
   multiplayer.update(dt, player, bus);
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others);
 
   renderer.render(scene, camera);
+  drunk.afterRender();
   input.endFrame();
   requestAnimationFrame(frame);
 }

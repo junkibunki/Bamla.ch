@@ -19,8 +19,9 @@ import { KIGA_OVERRIDES } from './kindergarten-site.js';
 import { KIGA_RW_OVERRIDES } from './kiga-rheinweiler-site.js';
 import { GAERTNEREI_OVERRIDES } from './gaertnerei-site.js';
 import { GRILL_OVERRIDES } from './grillplatz.js';
+import { BARACKE_OVERRIDES } from './baracke-site.js';
 
-const ALL_OVERRIDES = [...KIGA_OVERRIDES, ...KIGA_RW_OVERRIDES,...GRILL_OVERRIDES, ...SCHULE_OVERRIDES, ...STORCHEN_OVERRIDES, ...RATHAUS_OVERRIDES, ...MUSEUM_OVERRIDES, ...OVERRIDES, ...STREET_OVERRIDES, ...SITE_OVERRIDES, ...CAMP_OVERRIDES, ...KIRCHE_OVERRIDES, ...GOLF_OVERRIDES, ...SCHLOSS_OVERRIDES, ...KIENZLER_OVERRIDES, ...METZGEREI_OVERRIDES, ...GAERTNEREI_OVERRIDES];
+const ALL_OVERRIDES = [...KIGA_OVERRIDES, ...KIGA_RW_OVERRIDES,...GRILL_OVERRIDES, ...SCHULE_OVERRIDES, ...STORCHEN_OVERRIDES, ...RATHAUS_OVERRIDES, ...MUSEUM_OVERRIDES, ...OVERRIDES, ...STREET_OVERRIDES, ...SITE_OVERRIDES, ...CAMP_OVERRIDES, ...KIRCHE_OVERRIDES, ...GOLF_OVERRIDES, ...SCHLOSS_OVERRIDES, ...KIENZLER_OVERRIDES, ...METZGEREI_OVERRIDES, ...GAERTNEREI_OVERRIDES, ...BARACKE_OVERRIDES];
 const findOverride = (cx, cz) => ALL_OVERRIDES.find((o) => Math.hypot(o.c[0] - cx, o.c[1] - cz) < 3);
 export const customModelAt = (cx, cz) => !!findOverride(cx, cz)?.skip; // Karten-Editor: eigenes Modell, nicht bearbeitbar
 

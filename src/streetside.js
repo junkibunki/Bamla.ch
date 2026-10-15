@@ -10,6 +10,7 @@ import { PAVED_AREAS } from './belchenstrasse.js';
 import { KIGA_SITE } from './kindergarten-site.js';
 import { KIGA_RW_SITE } from './kiga-rheinweiler-site.js';
 import { RATHAUS_PAVED } from './rathaus.js';
+import { BARACKE_SITE } from './baracke-site.js';
 
 const TARGET = ['secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service'];
 const STREETS = ['secondary', 'tertiary', 'unclassified', 'residential', 'living_street'];
@@ -46,7 +47,7 @@ function segmentIndex(roads) {
 
 const inBuilding = (world, x, z) => !!world.collide(x, z, 0.05);
 // Punkt in einer der gepflasterten Flächen (Vorplätze) oder auf einem eigens gebauten Gelände – dort keine Büsche
-const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED].some(({ pts }) => {
+const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE].some(({ pts }) => {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, zi] = pts[i], [xj, zj] = pts[j];
