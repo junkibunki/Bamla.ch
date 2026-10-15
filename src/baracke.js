@@ -16,7 +16,7 @@ const C = {
   roof: 0xffffff, ridge: 0x8e2a22, fascia: 0x3a3a3c, darkWood: 0x4a3626, wood: 0x8a6440, glulam: 0xd98a2e,
   concrete: 0xb2aea6, floor: 0x8c8983, parapet: 0xc2beb5, steel: 0x2c2c2e, galv: 0xa9aeb3, chrome: 0xd7dadd,
   gate: 0x6d7073, white: 0xf0f0ec, canopyRoof: 0xa8352e, annexRoof: 0x7c2c27, black: 0x111214, tabletop: 0x3b2c22,
-  pallet: 0xc9a774, orange: 0xe8711c, trunk: 0x5a4636, shedRoof: 0x75857b,
+  pallet: 0xc9a774, orange: 0xe8711c, trunk: 0x5a4636, shedRoof: 0x75857b, brass: 0x8f7a3c,
 };
 
 const MATS = new Map();
@@ -179,6 +179,51 @@ const signTex = () => canvasTex(512, 128, (g, w, h) => {
   g.font = '600 64px Georgia, serif'; g.fillText('BARACKE', w / 2, 72);
   g.font = 'italic 32px Georgia, serif'; g.fillText('Rheinweiler', w / 2, 110);
 });
+// Schild im Giebel: schwarzes Whiskey-Etikett „BARACKE Old No. 4 … ZÄPFLE“ (nach Foto)
+const labelTex = () => canvasTex(400, 640, (g, w, h) => {
+  const ink = '#f2efe6', cx = w / 2;
+  g.fillStyle = '#0d0d0e'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = ink;
+  g.lineWidth = 4; g.strokeRect(10, 10, w - 20, h - 20);
+  g.lineWidth = 1.5; g.strokeRect(18, 18, w - 36, h - 36);
+  for (const [x, y] of [[18, 18], [w - 18, 18], [18, h - 18], [w - 18, h - 18]]) { // Eckornamente
+    g.beginPath(); g.arc(x, y, 9, 0, 7); g.stroke();
+  }
+  g.fillStyle = ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  const line = (txt, y, font) => { g.font = font; g.fillText(txt, cx, y); };
+  const rule = (y, x0 = 60, x1 = w - 60) => { g.fillRect(x0, y, x1 - x0, 2); };
+  // BARACKE im Bogen
+  g.font = 'bold 46px Georgia, "Times New Roman", serif';
+  const word = 'BARACKE', R = 260, span = 0.78, cy = 92 + R;
+  for (let i = 0; i < word.length; i++) {
+    const a = -span / 2 + (span * (i + 0.5)) / word.length;
+    g.save(); g.translate(cx + Math.sin(a) * R, cy - Math.cos(a) * R); g.rotate(a);
+    g.fillText(word[i], 0, 0); g.restore();
+  }
+  line('OLD TIME', 122, 'bold 20px Georgia, serif');
+  // Rahmen „Old No. 4“
+  g.lineWidth = 2; g.strokeRect(118, 136, w - 236, 98);
+  g.strokeRect(124, 142, w - 248, 86);
+  line('Old', 170, 'italic bold 28px Georgia, serif');
+  line('No. 4', 200, 'bold 30px Georgia, serif');
+  line('3 BRANDS', 222, 'bold 15px Georgia, serif');
+  line('QUALITY', 268, 'bold 15px Georgia, serif');
+  g.textAlign = 'right'; g.font = 'italic 13px Georgia, serif'; g.fillText('of', w - 100, 268); g.textAlign = 'center';
+  line('Rheinweiler', 318, 'italic bold 50px "Brush Script MT", "Segoe Script", cursive');
+  line('SINCE 1973', 344, 'bold 15px Georgia, serif');
+  rule(356);
+  line('ZÄPFLE', 430, 'bold 78px "Arial Narrow", Impact, sans-serif');
+  rule(446);
+  g.font = 'bold 18px Georgia, serif';
+  g.textAlign = 'left'; g.fillText('33 cl', 44, 476);
+  g.textAlign = 'right'; g.fillText('5,1 % Vol.', w - 44, 476);
+  g.textAlign = 'center';
+  line('DISTILLED AND BOTTLED BY', 512, 'bold 15px Georgia, serif');
+  line('STAATSBRAUEREI ROTHAUS', 538, 'bold 20px Georgia, serif');
+  line('AND IS " DRUNKEN " BY', 562, 'bold 15px Georgia, serif');
+  line('BARACKE RHEINWEILER. 79415 GER', 586, 'bold 15px Georgia, serif');
+  g.textAlign = 'right'; g.font = '12px Georgia, serif'; g.fillText('© 2006', w - 34, 612);
+});
 const tvTex = () => canvasTex(256, 144, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0c1c3c'); gr.addColorStop(1, '#183a6e');
   g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -308,8 +353,13 @@ function buildHouse(root, roofG, M) {
     face.rotation.y = a;
   }
   blk(root, C.white, -0.12, -0.06, 3.38, 3.5, VM - 0.05, VM + 0.05);       // Bewegungsmelder
-  blk(root, C.black, -0.28, -0.06, 2.72, 3.22, VM - 0.17, VM + 0.17);     // Laterne
-  blk(root, M.lantern, -0.29, -0.27, 2.77, 3.17, VM - 0.13, VM + 0.13);
+  // Nasenschild im Messingrahmen, quer zum Giebel: von der Straße aus beiden Richtungen lesbar
+  blk(root, C.brass, -0.74, -0.14, 2.68, 3.58, VM - 0.06, VM + 0.06);
+  for (const y of [2.78, 3.3]) blk(root, C.steel, -0.16, -0.06, y - 0.03, y + 0.03, VM - 0.03, VM + 0.03); // Wandhalter
+  for (const s of [1, -1]) {
+    const lb = add(root, new THREE.PlaneGeometry(0.5, 0.8), M.label, -0.44, 3.13, VM + s * 0.062);
+    if (s < 0) lb.rotation.y = Math.PI;
+  }
 
   // Hinterer Raum: Außenwände aus verwitterten Brettern, Fenster und Tür zum Vordach
   blk(root, M.weathered, HALL.u1, REAR.u1, 0, EAVE, W - 0.15, W);
@@ -678,7 +728,7 @@ export function buildBaracke(scene, world, player) {
     crate: new THREE.MeshLambertMaterial({ map: crateTex() }),
     glass: new THREE.MeshLambertMaterial({ color: 0x2b3640, emissive: 0x0d1418 }),
     ledWhite: new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xe8f0ff, emissiveIntensity: 0.8 }),
-    lantern: new THREE.MeshLambertMaterial({ color: 0xffe2a0, emissive: 0xffc060, emissiveIntensity: 0.7 }),
+    label: texMat(labelTex(), 1, {}, true),
     bulb: new THREE.MeshLambertMaterial({ color: 0xfff0c0, emissive: 0xffd070, emissiveIntensity: 1 }),
     bottle: new THREE.MeshLambertMaterial({ color: 0x5a2d0c }),
     bottleGreen: new THREE.MeshLambertMaterial({ color: 0x2c5a1e }),
