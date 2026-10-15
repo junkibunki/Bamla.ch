@@ -69,8 +69,8 @@ document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
-const FOG_FAR = 750;
-scene.fog = new THREE.Fog(SKY, 180, FOG_FAR);
+const FOG_FAR = 450;
+scene.fog = new THREE.Fog(SKY, 90, FOG_FAR);
 
 // Hinter dem Nebelende ist alles Himmelfarbe – dort muss nichts mehr gezeichnet werden.
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.3, FOG_FAR + 50);
@@ -85,7 +85,7 @@ scene.add(new THREE.HemisphereLight(0xdfefff, 0x6b7a4a, 1.1));
 const sun = new THREE.DirectionalLight(0xfff2dd, 2.0);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 1, far: 400 });
+Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 1, far: 400 });
 sun.shadow.bias = -0.0005;
 sun.shadow.camera.layers.enable(ROOF_LAYER);
 scene.add(sun, sun.target);
@@ -560,8 +560,9 @@ function frame() {
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, cam.yaw, vehicles, multiplayer.others, quests.markers);
   if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, multiplayer.others, quests.markers);
 
-  statics.update();
+  statics.update(camera); // Bewegtes aus dem Verbund lösen, ferne Kleinteile für dieses Bild verstecken
   renderer.render(scene, camera);
+  statics.afterRender();
   drunk.afterRender();
   input.endFrame();
   requestAnimationFrame(frame);

@@ -37,20 +37,63 @@ export function tileInstances(scene, size = 200, minCount = 256) {
 // Statische Kleinteile (Fassadendetails, Zäune, Schilder …) kosten je einen Draw-Call und jedes Bild eine
 // Matrixrechnung. Was sich in den ersten Sekunden nicht bewegt, wird je Kachel und Materialaussehen zu
 // einem Mesh zusammengefasst; die Originale bleiben im Szenengraph (ohne Layer, also unsichtbar) und
-// werden reihum (je Bild ein Drittel) verglichen. Bewegt sich eins doch noch, ändert es Sichtbarkeit, Elternteil oder
+// werden reihum (je Bild ein Viertel) verglichen. Bewegt sich eins doch noch, ändert es Sichtbarkeit, Elternteil oder
 // Materialfarbe, fällt es aus dem Verbund heraus und wird wieder einzeln gezeichnet.
+// Zusätzlich werden kleine Dinge in der Ferne gar nicht gezeichnet: Verbünde sind nach Größe getrennt
+// (kleine Teile in kleinen Kacheln), und alles Kleine jenseits seiner Sichtweite wird nur für die
+// Dauer des Renderns versteckt (cull vor, restore nach renderer.render), die Spiellogik merkt nichts.
+const SIZES = [ // Radius bis, Kachelgröße, Sichtweite (Abstand bis zum Rand der Kugel)
+  { r: 0.75, tile: 40, far: 70 },   // Blumen, Schrauben, Lampen, Schilder
+  { r: 3, tile: 80, far: 140 },     // Bänke, Zäune, Figuren, Autos
+  { r: 8, tile: 150, far: 260 },    // Hütten, Bäume, Busse
+  { r: Infinity, tile: 150, far: Infinity },
+];
+const sizeClass = (r) => SIZES.findIndex((c) => r < c.r);
+
 export class StaticBatcher {
-  constructor(scene, { tile = 150, maxVerts = 4000, settleFrames = 90 } = {}) {
-    this.scene = scene; this.tile = tile; this.maxVerts = maxVerts; this.wait = settleFrames;
+  constructor(scene, { maxVerts = 4000, settleFrames = 90 } = {}) {
+    this.scene = scene; this.maxVerts = maxVerts; this.wait = settleFrames;
+    this.items = []; this.hidden = []; this.frozen = []; this.stale = false;
     this.first = new Map(); // Knoten → Zustand zu Beginn der Beobachtung
     scene.traverse((o) => { if (o !== scene) { const n = { o, i: 0, num: new Float64Array(10) }; saveNode(n, n.num); this.first.set(o, n); } });
     this.nodes = []; this.mats = []; this.batches = []; this.dirty = new Set(); this.cursor = 0;
     this.merged = 0; this.dropped = 0;
   }
 
-  update() {
+  update(camera) {
     if (this.wait > 0) { if (--this.wait === 0) this.build(); return; }
-    const ns = this.nodes, k = Math.ceil(ns.length / 3);
+    this.detect();
+    this.cull(camera.position);
+  }
+
+  // Ferne Kleinteile für dieses Bild verstecken; afterRender() macht es rückgängig. Versteckte
+  // bewegliche Dinge (Autos, Fußgänger) bekommen in diesem Bild auch keine neue Weltmatrix.
+  cull(cam) {
+    const cx = cam.x, cy = cam.y, cz = cam.z;
+    for (const b of this.batches) {
+      const dx = b.x - cx, dy = b.y - cy, dz = b.z - cz, d = b.far + b.r;
+      b.mesh.visible = dx * dx + dy * dy + dz * dz < d * d;
+    }
+    if (this.stale) { for (const it of this.items) if (!it.dyn) it.w.copy(it.c).applyMatrix4(it.o.matrixWorld); this.stale = false; }
+    for (const it of this.items) {
+      const o = it.o;
+      if (!o.visible) continue;
+      const w = it.dyn ? it.w.copy(o.position).add(it.c) : it.w; // Wurzeln liegen direkt in der Szene: Position = Weltposition
+      const dx = w.x - cx, dy = w.y - cy, dz = w.z - cz, d = it.far + it.r;
+      if (dx * dx + dy * dy + dz * dz < d * d) continue;
+      o.visible = false; this.hidden.push(o);
+      if (it.dyn) { o.updateMatrixWorld = skipUnforced; this.frozen.push(o); }
+    }
+  }
+
+  afterRender() {
+    for (const o of this.hidden) o.visible = true;
+    for (const o of this.frozen) delete o.updateMatrixWorld;
+    this.hidden.length = 0; this.frozen.length = 0;
+  }
+
+  detect() {
+    const ns = this.nodes, k = Math.ceil(ns.length / 4);
     for (let i = 0; i < k; i++) {
       const n = ns[this.cursor = (this.cursor + 1) % ns.length];
       if (!n.gone && !sameNode(n, this.num)) this.release(n);
@@ -64,6 +107,8 @@ export class StaticBatcher {
   release(n) {
     n.gone = true;
     n.o.matrixAutoUpdate = true;
+    this.stale = true; // Weltlage unbewegter Einzelteile für die Entfernungsprüfung neu bestimmen
+    for (let p = n.o; p; p = p.parent) if (p.updateMatrixWorld === skipUnforced) delete p.updateMatrixWorld;
     for (const e of n.entries) this.drop(e);
   }
 
@@ -106,9 +151,10 @@ export class StaticBatcher {
       if (!attrs.every((a) => plainAttr(g.attributes[a]))) return;
       if (!g.boundingSphere) g.computeBoundingSphere();
       c.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld);
-      const key = [Math.floor(c.x / this.tile), Math.floor(c.z / this.tile), matKey(m), attrs.join(','),
+      const cls = sizeClass(g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis()), tile = SIZES[cls].tile;
+      const key = [cls, Math.floor(c.x / tile), Math.floor(c.z / tile), matKey(m), attrs.join(','),
         o.layers.mask, o.castShadow, o.receiveShadow, o.renderOrder].join('|');
-      if (!groups.has(key)) groups.set(key, { material: m, attrs, layers: o.layers.mask, o, list: [] });
+      if (!groups.has(key)) groups.set(key, { material: m, attrs, layers: o.layers.mask, o, list: [], far: SIZES[cls].far });
       groups.get(key).list.push(o);
     });
     // Vorfahren mitverfolgen, damit eine Bewegung der Gruppe auch die Kinder freigibt
@@ -123,17 +169,54 @@ export class StaticBatcher {
         this.merged++;
       }
     }
+    this.collectItems(isStatic);
+    // Die Szene selbst bewegt sich nie; ohne ihr updateMatrix() erzwingt sie nicht mehr jedes Bild die
+    // Neuberechnung aller Weltmatrizen. Ganz unbewegte Teilbäume werden dann gar nicht mehr durchlaufen.
+    scene.matrixAutoUpdate = false;
+    const full = new Map();
+    const isFull = (o) => {
+      let ok = nodeOf.has(o);
+      for (const ch of o.children) ok = isFull(ch) && ok;
+      full.set(o, ok);
+      return ok;
+    };
+    for (const o of scene.children) isFull(o);
+    for (const [o, ok] of full) if (ok && !full.get(o.parent)) o.updateMatrixWorld = skipUnforced;
     this.num = new Float64Array(this.nodes.length * 10);
     for (const n of this.nodes) saveNode(n, this.num); // Layer der Originale gehören jetzt zum Ausgangszustand
     this.first = null;
   }
 
-  merge({ material, attrs, layers, o: proto, list }) {
+  // Was nicht im Verbund steckt und klein ist, einzeln nach Entfernung ausblenden: bewegliche Wurzeln
+  // (Fahrzeuge, Fußgänger) als Ganzes, unbewegte Einzelteile je Mesh
+  collectItems(isStatic) {
+    const scene = this.scene, box = new THREE.Box3(), sph = new THREE.Sphere();
+    const add = (o, center, r, dyn) => {
+      const far = SIZES[sizeClass(r)].far;
+      if (far < Infinity) this.items.push({ o, c: center, r, far, dyn, w: dyn ? new THREE.Vector3() : center.clone().applyMatrix4(o.matrixWorld) });
+    };
+    for (const o of scene.children) {
+      if (isStatic.get(o) || o.name === 'static-batch' || !o.visible) continue;
+      box.setFromObject(o);
+      if (box.isEmpty()) continue;
+      box.getBoundingSphere(sph);
+      add(o, sph.center.clone().sub(o.position), sph.radius, true);
+    }
+    scene.traverse((o) => {
+      if (!isStatic.get(o) || o.layers.mask === 0 || o.isInstancedMesh) return;
+      if (!(o.isMesh || o.isLine || o.isPoints || o.isSprite) || !o.geometry) return;
+      const g = o.geometry;
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      add(o, g.boundingSphere.center.clone(), g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis(), false);
+    });
+  }
+
+  merge({ material, attrs, layers, o: proto, list, far }) {
     let verts = 0, idx = 0;
     for (const o of list) { const g = o.geometry; verts += g.attributes.position.count; idx += g.index ? g.index.count : g.attributes.position.count; }
     const out = Object.fromEntries(attrs.map((a) => [a, new Float32Array(verts * list[0].geometry.attributes[a].itemSize)]));
     const index = verts > 65535 ? new Uint32Array(idx) : new Uint16Array(idx);
-    const batch = { entries: [] }, v = new THREE.Vector3(), nm = new THREE.Matrix3();
+    const batch = { entries: [], far }, v = new THREE.Vector3(), nm = new THREE.Matrix3();
     let vo = 0, io = 0;
     for (const o of list) {
       const g = o.geometry, n = g.attributes.position.count, mw = o.matrixWorld;
@@ -169,6 +252,7 @@ export class StaticBatcher {
     mesh.name = 'static-batch';
     this.scene.add(mesh);
     batch.mesh = mesh;
+    ({ x: batch.x, y: batch.y, z: batch.z } = geo.boundingSphere.center); batch.r = geo.boundingSphere.radius;
     this.batches.push(batch);
     return batch;
   }
@@ -179,13 +263,18 @@ function saveNode(n, num) {
   const o = n.o, p = o.position, q = o.quaternion, c = o.scale, j = n.i * 10;
   num[j] = p.x; num[j + 1] = p.y; num[j + 2] = p.z; num[j + 3] = q.x; num[j + 4] = q.y; num[j + 5] = q.z; num[j + 6] = q.w;
   num[j + 7] = c.x; num[j + 8] = c.y; num[j + 9] = c.z;
-  n.vis = o.visible; n.par = o.parent; n.mask = o.layers.mask; n.mat = o.material; n.geo = o.geometry;
+  n.vis = o.visible; n.par = o.parent; n.mask = o.layers.mask; n.mat = o.material; n.geo = o.geometry; n.kids = o.children.length;
 }
 function sameNode(n, num) {
   const o = n.o, p = o.position, q = o.quaternion, c = o.scale, j = n.i * 10;
   return p.x === num[j] && p.y === num[j + 1] && p.z === num[j + 2] && q.x === num[j + 3] && q.y === num[j + 4] && q.z === num[j + 5]
     && q.w === num[j + 6] && c.x === num[j + 7] && c.y === num[j + 8] && c.z === num[j + 9]
-    && o.visible === n.vis && o.parent === n.par && o.layers.mask === n.mask && o.material === n.mat && o.geometry === n.geo;
+    && o.visible === n.vis && o.parent === n.par && o.layers.mask === n.mask && o.material === n.mat && o.geometry === n.geo
+    && o.children.length === n.kids;
+}
+// Ersatz für updateMatrixWorld an unbewegten Teilbäumen: nur rechnen, wenn ein Vorfahr es erzwingt
+function skipUnforced(force) {
+  if (force) THREE.Object3D.prototype.updateMatrixWorld.call(this, force);
 }
 function matState(m) {
   return [m.color?.r, m.color?.g, m.color?.b, m.emissive?.r, m.emissive?.g, m.emissive?.b, m.emissiveIntensity, m.opacity, m.visible, m.map, m.transparent, m.version];
