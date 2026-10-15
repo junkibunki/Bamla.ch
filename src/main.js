@@ -21,6 +21,7 @@ import { Railway } from './train.js';
 import { BusLine } from './bus.js';
 import { Camping, campingAreas } from './camping.js';
 import { buildKirche } from './kirche.js';
+import { Andacht } from './andacht.js';
 import { buildSchloss } from './schloss.js';
 import { Golf } from './golf.js';
 import { loadGolf } from './golf-ground.js';
@@ -205,6 +206,7 @@ new AutobahnTraffic(scene, world, rng(55), vehicles); // A5: PKW und LKW, je Ric
 
 for (let i = 0; i < 35; i++) pedestrians.push(new Pedestrian(scene, world.graphs.walk, world.graphs.walk.randomSpot(rand), rand));
 pedestrians.push(buildKirche(scene, world, player)); // Kirche, Friedhof, Krippe; Pfarrer läuft wie ein Fußgänger
+const andacht = new Andacht(scene, world); // Beten/Singen an Kirche und Kapellen, Glockenstube mit Aussicht
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 // Camper, die auf den Wegen des Campingplatzes spazieren
 for (let i = 0, n = 0; i < 600 && n < 16; i++) {
@@ -238,6 +240,13 @@ function updateCamera(dt) {
     camera.lookAt(...cam.free.look);
     return;
   }
+  if (andacht.mode === 'tower') { // Glockenstube: Blick durch die Schallöffnungen
+    const look = andacht.towerCamera(camera);
+    sun.position.set(look.x + 80, 150, look.z + 50);
+    sun.target.position.copy(look);
+    return;
+  }
+  andacht.resetFov(camera);
   cam.yaw -= input.mouseDX * 0.0025;
   cam.pitch = Math.max(0.05, Math.min(1.25, cam.pitch + input.mouseDY * 0.002));
 
@@ -347,6 +356,7 @@ function updateHud(dt) {
   else if (v?.kind === 'excavator') hud.hint.textContent = EXCAVATOR_HINT;
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
+  else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
   else if (nearBar()) hud.hint.textContent = barHint(nearBar());
@@ -380,7 +390,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht }; // zum Debuggen in der Konsole
 const clock = new THREE.Clock();
 
 function frame() {
@@ -389,13 +399,17 @@ function frame() {
   const editing = editor.update(dt);
   if (!editing && (input.hit('KeyE') || input.hit('KeyF'))) {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
+    else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
     else if (nearBar()) { const b = nearBar(); player.drink('beer'); b.serve?.(); } // Theke: Bier
+    else if (andacht.spot(player)) andacht.pray(player, andacht.spot(player));       // Kirche, Kapelle: beten
     else toggleVehicle();
   }
   if (!editing && input.hit('KeyR') && !player.car && !bus.rider && nearBar()?.wine) player.drink('schorle'); // Weinschorle
+  else if (!editing && input.hit('KeyR') && !bus.rider && andacht.spot(player)) andacht.sing(player, andacht.spot(player));
+  if (!editing && input.hit('KeyT') && !bus.rider && andacht.towerOpen && andacht.spot(player)?.church) andacht.climb(player);
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);
@@ -427,7 +441,8 @@ function frame() {
 
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
   else if (bus.rider) player.pos.set(bus.car.x, 0, bus.car.z);
-  else if (!ridingSwing()) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
+  else if (!ridingSwing() && !andacht.active) player.update(dt, editing ? IDLE : input, cam.yaw, world, movers);
+  andacht.update(dt, editing ? IDLE : input, player);
 
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);

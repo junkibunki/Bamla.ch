@@ -18,6 +18,8 @@ const ANG = Math.atan2(2.4, 23.4);
 const U = [Math.cos(ANG), Math.sin(ANG)], V = [-U[1], U[0]];
 const ROT = Math.atan2(-U[1], U[0]);
 const toWorld = (a, b) => [O[0] + U[0] * a + V[0] * b, O[1] + U[1] * a + V[1] * b];
+// Für andacht.js (Portal, Glockenstube): Kirchensystem und Fußbodenhöhe, floor wird in buildChurch gesetzt
+export const KIRCHE = { toWorld, U, V, floor: 0 };
 const rect = (a0, a1, b0, b1) => [toWorld(a0, b0), toWorld(a1, b0), toWorld(a1, b1), toWorld(a0, b1)];
 
 // Grabfelder im Kirchensystem (a0, a1, b0, b1); gap = Querweg im Feld
@@ -241,6 +243,7 @@ function buildChurch(scene, world, mats) {
   const ring = [[0, 0], [8.6, 0], [8.6, -1.5], [36.6, -3.85], [38.7, 3.47], [38.7, 6.28], [32.2, 11.07], [0, 8.85]];
   const ground = ring.map(([a, b]) => world.heightAt(...toWorld(a, b)));
   const floor = Math.max(...ground), base = Math.min(...ground) - 0.4 - floor;
+  KIRCHE.floor = floor;
 
   // Turm: 8,6 × 8,85 m, Traufe 21 m, Satteldach mit Giebeln nach Westen und Osten
   const TB = 8.85, TC = TB / 2, TE = 21, TR = 25.5;
