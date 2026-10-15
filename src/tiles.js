@@ -192,6 +192,7 @@ export class StaticBatcher {
   collectItems(isStatic) {
     const scene = this.scene, box = new THREE.Box3(), sph = new THREE.Sphere();
     const add = (o, center, r, dyn) => {
+      if (!o.frustumCulled) return; // Partikel (Wasserstrahl, Feuerwerk …) liegen in Weltkoordinaten, ihre Hülle sagt nichts
       const far = SIZES[sizeClass(r)].far;
       if (far < Infinity) this.items.push({ o, c: center, r, far, dyn, w: dyn ? new THREE.Vector3() : center.clone().applyMatrix4(o.matrixWorld) });
     };
