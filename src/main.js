@@ -11,6 +11,7 @@ import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
 import { splitKirschgartenMouth, buildKirschgartenEcke } from './kirschgarten-ecke.js';
 import { buildProbsteiweg, fixProbsteiweg } from './probsteiweg.js';
+import { buildStrassengruen } from './strassengruen.js';
 import { buildFeuerwehr } from './feuerwehr.js';
 import { buildMuseum, buildBusStop } from './museum.js';
 import { buildOrtseingaenge } from './ortseingang.js';
@@ -172,6 +173,7 @@ const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffi
 const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
 const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
+buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.

@@ -13,6 +13,7 @@ import { RATHAUS_PAVED } from './rathaus.js';
 import { BARACKE_SITE } from './baracke-site.js';
 import { ECKE_PAVED } from './kirschgarten-ecke.js';
 import { PROBSTEI_PAVED } from './probsteiweg.js';
+import { GRUEN } from './strassengruen-data.js';
 
 const TARGET = ['secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service'];
 const STREETS = ['secondary', 'tertiary', 'unclassified', 'residential', 'living_street'];
@@ -49,7 +50,7 @@ function segmentIndex(roads) {
 
 const inBuilding = (world, x, z) => !!world.collide(x, z, 0.05);
 // Punkt in einer der gepflasterten Flächen (Vorplätze) oder auf einem eigens gebauten Gelände – dort keine Büsche
-const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED].some(({ pts }) => {
+export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED].some(({ pts }) => {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, zi] = pts[i], [xj, zj] = pts[j];
@@ -122,8 +123,9 @@ function roadsideBushes(world, driveways) {
   // Büsche in Gruppen statt gleichmäßig verteilt
   const clump = (x, z) => Math.sin(x * 0.21) + Math.sin(z * 0.19) + Math.sin((x + z) * 0.11) > 0.4;
   const bushes = [];
+  const surveyed = new Set(GRUEN.map((f) => f.street)); // dort stehen die echten Hecken und Sträucher (strassengruen.js)
   for (const road of world.data.roads) {
-    if (!STREETS.includes(road.type)) continue;
+    if (!STREETS.includes(road.type) || surveyed.has(road.name)) continue;
     const hw = ROAD_STYLE[road.type].w / 2;
     for (let i = 1; i < road.pts.length; i++) {
       const [ax, az] = road.pts[i - 1], [bx, bz] = road.pts[i];
@@ -179,7 +181,7 @@ export function buildStreetside(world, pavers) {
     world.scene.add(mesh);
   }
   const nBush = roadsideBushes(world, driveways);
-  return { driveways: driveways.length, bushes: nBush };
+  return { driveways: driveways.length, bushes: nBush, ways: driveways };
 }
 
 export { toHex };
