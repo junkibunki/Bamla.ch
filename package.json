@@ -13,7 +13,8 @@
     "build-terrain": "unzip -o -q \"data/dgm/*.zip\" -d data/dgm/xyz && node scripts/build-terrain.mjs && rm -rf data/dgm/xyz"
   },
   "dependencies": {
-    "three": "^0.170.0"
+    "three": "^0.170.0",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "geotiff": "^2.1.3",

@@ -34,3 +34,13 @@ jobs:
 
       - name: Hochladen
         run: rsync -az --delete dist/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/bamla/
+
+      # Multiplayer-Server (server/multiplayer.mjs + ws) nach ~/bamla-mp, systemd-User-Dienst neu starten
+      - name: Multiplayer-Server
+        run: |
+          mkdir -p mp/node_modules
+          cp server/multiplayer.mjs server/bamla-mp.service mp/
+          cp -r node_modules/ws mp/node_modules/
+          rsync -az --delete mp/ deploy@${{ secrets.DEPLOY_HOST }}:bamla-mp/
+          ssh deploy@${{ secrets.DEPLOY_HOST }} 'export XDG_RUNTIME_DIR=/run/user/$(id -u); systemctl --user restart bamla-mp' \
+            || echo "::warning::Dienst bamla-mp nicht neu gestartet – einmalige Einrichtung siehe README (Multiplayer)"

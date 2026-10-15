@@ -9,6 +9,18 @@
 <body>
   <div id="loading">Lade Bamlach …</div>
 
+  <div id="join">
+    <form>
+      <h1>Bamla.ch</h1>
+      <label for="join-name">Wie heißt du?</label>
+      <input id="join-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Dein Name" required />
+      <button type="submit">Losspielen</button>
+      <p>Andere Spieler sehen dich unter diesem Namen in Bamlach und auf der Karte.</p>
+    </form>
+  </div>
+
+  <div id="players"></div>
+
   <div id="hud">
     <div id="street"></div>
     <div id="speed"></div>

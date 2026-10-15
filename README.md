@@ -15,8 +15,9 @@ Dann http://localhost:5173 öffnen.
 
 ## Veröffentlichen
 
-Das Spiel läuft vollständig im Browser: Rendering, Physik, Verkehr und NPCs rechnet jeder Client selbst,
-es gibt keinen Spiel-Server. Für den Betrieb reicht ein statischer Webhost (Nginx, GitHub Pages, Netlify, …):
+Das Spiel läuft im Browser: Rendering, Physik, Verkehr und NPCs rechnet jeder Client selbst.
+Nur für den Multiplayer gibt es einen kleinen Server (siehe unten), ohne ihn läuft das Spiel allein weiter.
+Für den Rest reicht ein statischer Webhost (Nginx, GitHub Pages, Netlify, …):
 
 ```bash
 npm run build
@@ -24,6 +25,29 @@ npm run build
 
 Den Ordner `dist/` hochladen (enthält auch die Kartendaten aus `public/`, ca. 9 MB pro Erstaufruf; gzip/brotli
 am Server verkleinert die JSON-Dateien deutlich). Der Karten-Editor speichert nur über den Dev-Server.
+
+## Multiplayer
+
+Beim Start gibt sich jeder Spieler einen Namen. Die Spieler sehen sich gegenseitig als Figur bzw. im Fahrzeug
+mit Namensschild, als farbigen Punkt auf der Minimap und in der Liste oben rechts. Der Server
+(`server/multiplayer.mjs`, WebSocket unter `/mp`) reicht nur Name und Position weiter (10× pro Sekunde);
+Verkehr und NPCs bleiben pro Client. Im Dev-Server (`npm run dev`) läuft er automatisch mit.
+
+Betrieb: Die GitHub Action lädt den Server nach `~deploy/bamla-mp/` und startet den systemd-User-Dienst
+`bamla-mp` neu (Port 8787, nur localhost). Einmalig auf dem Server einrichten (Node ≥ 18 nötig):
+
+```bash
+sudo loginctl enable-linger deploy            # User-Dienste laufen ohne Login
+# als deploy, nach dem ersten Deploy:
+mkdir -p ~/.config/systemd/user && cp ~/bamla-mp/bamla-mp.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now bamla-mp
+```
+
+Im Caddyfile im Block der Seite `reverse_proxy /mp 127.0.0.1:8787` ergänzen (WebSockets leitet Caddy von selbst weiter).
+
+Jede Anmeldung schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name` nach `~deploy/bamla-joins.log`
+(anderer Pfad über die Umgebungsvariable `JOIN_LOG`); im Spiel wird das nicht angezeigt. Ansehen: `cat ~/bamla-joins.log`.
+Auch ein Neuladen der Seite oder ein Wiederverbinden nach Verbindungsabbruch erzeugt eine Zeile.
 
 ## Rohdaten
 

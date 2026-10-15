@@ -49,7 +49,7 @@ export class Minimap {
     return c;
   }
 
-  draw(px, pz, facing, camYaw, cars) {
+  draw(px, pz, facing, camYaw, cars, others = []) {
     const { ctx, canvas, world } = this;
     const w = canvas.width, h = canvas.height, b = world.bounds;
     ctx.clearRect(0, 0, w, h);
@@ -73,6 +73,34 @@ export class Minimap {
       ctx.arc((c.x - b.minX) * PX_PER_M, (c.z - b.minZ) * PX_PER_M, 3 / this.zoom, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Mitspieler: Punkt mit Namen, Schrift nicht mitgedreht; außerhalb am Rand festgehalten
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    const cos = Math.cos(camYaw), sin = Math.sin(camYaw), rMax = w / 2 - 7;
+    for (const o of others) {
+      const dx = (o.x - px) * PX_PER_M * this.zoom, dz = (o.z - pz) * PX_PER_M * this.zoom;
+      let sx = dx * cos - dz * sin, sy = dx * sin + dz * cos;
+      const d = Math.hypot(sx, sy), edge = d > rMax;
+      if (edge) { sx *= rMax / d; sy *= rMax / d; }
+      sx += w / 2; sy += h / 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, edge ? 4 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#' + o.color.toString(16).padStart(6, '0');
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      if (edge) continue;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000a';
+      ctx.strokeText(o.name, sx, sy - 9);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(o.name, sx, sy - 9);
+    }
+    ctx.restore();
 
     // Spielerpfeil
     ctx.translate((px - b.minX) * PX_PER_M, (pz - b.minZ) * PX_PER_M);

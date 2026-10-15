@@ -1,0 +1,14 @@
+# systemd-User-Dienst für den Multiplayer-Server (einmalig einrichten, siehe README „Multiplayer“).
+# Liegt auf dem Server unter ~deploy/.config/systemd/user/bamla-mp.service
+[Unit]
+Description=Bamla.ch Multiplayer-Server
+
+[Service]
+WorkingDirectory=%h/bamla-mp
+Environment=PORT=8787
+ExecStart=/usr/bin/env node multiplayer.mjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

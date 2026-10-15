@@ -34,6 +34,9 @@ import { GaertnereiBetrieb, EXCAVATOR_HINT } from './gaertnerei-betrieb.js';
 import { AutobahnTraffic } from './autobahn.js';
 import { ShedLayer } from './edits.js';
 import { Editor } from './editor.js';
+import { askName, Multiplayer } from './multiplayer.js';
+
+const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
 const SKY = 0x9cc7e8;
 const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 0x1a1a1a, 0x7f8c8d, 0x8e2b2b];
@@ -342,10 +345,11 @@ function updateHud(dt) {
 const editor = new Editor({ world, camera, cam, canvas: renderer.domElement, input, minimap, sheds, player });
 const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielsteuerung ruht, solange der Editor offen ist
 
-window.game = { grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor }; // zum Debuggen in der Konsole
-
 // ---------- Hauptschleife ----------
 document.getElementById('loading').remove();
+const multiplayer = new Multiplayer(scene, world, await playerName);
+
+window.game = { grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer }; // zum Debuggen in der Konsole
 const clock = new THREE.Clock();
 
 function frame() {
@@ -394,7 +398,8 @@ function frame() {
 
   updateCamera(dt);
   updateHud(dt);
-  minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles);
+  multiplayer.update(dt, player, bus);
+  minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others);
 
   renderer.render(scene, camera);
   input.endFrame();

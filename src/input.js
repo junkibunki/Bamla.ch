@@ -8,6 +8,7 @@ export class Input {
     this.lastMouseMove = 0;
 
     addEventListener('keydown', (e) => {
+      if (e.target.matches?.('input[type=text], textarea')) return; // Tippen im Namensfeld steuert nicht das Spiel
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);
       if (e.code === 'Space') e.preventDefault();
