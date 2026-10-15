@@ -40,6 +40,7 @@ import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows } from './tiles.js';
 import { ElectricCar } from './ecar.js';
+import { Quests } from './quests.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -149,6 +150,7 @@ const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => M
 // Elektroauto mit Wallbox vor Im Kirschgarten 1 (vor den übrigen Parkern, damit der Platz frei bleibt)
 const ecar = new ElectricCar(scene, world);
 vehicles.push(ecar.car);
+const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/), Dorfpass mit Taste J
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
@@ -408,6 +410,7 @@ function updateHud(dt) {
   else if (v === ecar.car && ecar.driveHint()) hud.hint.textContent = ecar.driveHint();
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
+  else if (quests.hint(player)) hud.hint.textContent = quests.hint(player); // Schwarzes Brett, Aushänge
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
@@ -451,16 +454,18 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
+quests.start(window.game);
 const clock = new THREE.Clock();
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  const editing = editor.update(dt) || mapKeys(); // Editor oder Vollbildkarte offen: Spielsteuerung ruht
+  const editing = editor.update(dt) || quests.busy || mapKeys(); // Editor, Aushang/Dorfpass oder Vollbildkarte offen: Spielsteuerung ruht
   if (!editing && (input.hit('KeyE') || input.hit('KeyF'))) {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
     else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
+    else if (quests.nearBoard(player)) quests.read(player);                // Schwarzes Brett, Aushang
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
@@ -513,9 +518,10 @@ function frame() {
   updateCamera(dt);
   returnVehicles(dt);
   updateHud(dt);
-  multiplayer.update(dt, player, bus);
-  minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others);
-  if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, multiplayer.others);
+  quests.update(dt, input, player, camera);
+  multiplayer.update(dt, player, bus, quests.title);
+  minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others, quests.markers);
+  if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, multiplayer.others, quests.markers);
 
   renderer.render(scene, camera);
   drunk.afterRender();

@@ -9,13 +9,15 @@
 
 Spieler bekommen Aufgaben, die beim Erfüllen der Bedingung als erledigt gelten.
 
+Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes „!“ darüber und auf der Minimap), E liest, Zahl/Klick nimmt an; J öffnet den Dorfpass mit Stempeln, Ansehen und Titelwahl (Titel erscheint im Multiplayer am Namensschild). Jede Aufgabe ist eine Datei in `src/quests/`.
+
 | # | Aufgabe | Beschreibung | Erledigt wenn … | Status |
 |---|---------|--------------|-----------------|--------|
 | 1 | Don't drink and drive | Fahre nach einem Bier oder Wein zu viel nach Hause. | man betrunken Auto fährt | offen |
-| 2 | Nutze die Öffis | Fahr mit dem Bus. | man in den Bus steigt | offen |
+| 2 | Nutze die Öffis | Fahr mit dem Bus. | man in den Bus steigt | erledigt |
 | 3 | Man hilft sich aus | Bringe mit dem Gabelstapler Material in die Gärtnerei. | Material per Gabelstapler in der Gärtnerei abgeliefert | offen |
 | 4 | Essen auf Rädern | Beim Metzger Fleisch kaufen und ins Altersheim bringen. | Fleisch vom Metzger im Altersheim abgegeben | offen |
-| 5 | Andacht | In die Kirche oder die Kapelle gehen, um zu beten. | man in Kirche oder Kapelle betet | offen |
+| 5 | Andacht | In die Kirche oder die Kapelle gehen, um zu beten. | man in Kirche oder Kapelle betet | erledigt |
 | 6 | Platzpflege | Mit dem Minibagger auf dem Golfplatz ein Loch buddeln. | Loch mit Minibagger auf dem Golfplatz gegraben | offen |
 | 7 | Easy Rider | Einmal Motorrad fahren. | man auf ein Motorrad steigt und fährt | offen |
 | 8 | Ehrenamt | Mit dem Feuerwehrauto die Feuertonne an der Baracke löschen. | Feuertonne per Feuerwehrauto gelöscht | offen |

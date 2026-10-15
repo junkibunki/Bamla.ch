@@ -130,3 +130,57 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
 #editor #ed-status { margin-top: 8px; color: #9fe39f; min-height: 1.5em; }
 #editor #ed-status.err { color: #ff9a8a; }
 #editor .ed-help { margin-top: 8px; font-size: 11.5px; opacity: .7; }
+
+/* Aufgaben (src/quests.js): Aushang, Dorfpass (J), laufende Aufgaben, Meldungen */
+#quest-panel {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 12;
+  width: min(460px, calc(100% - 32px)); max-height: calc(100% - 80px); overflow: auto; box-sizing: border-box;
+  background: #5a3d24; border: 6px solid #3d2a1a; border-radius: 10px; padding: 12px; box-shadow: 0 8px 32px #000a;
+  color: #1d2633;
+}
+#quest-panel[hidden] { display: none; }
+#quest-panel .qhead { display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 17px; margin-bottom: 10px; }
+#quest-panel button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; }
+#quest-panel .qclose { background: #0005; color: #fff; width: 30px; height: 30px; }
+#quest-panel .qnote {
+  background: #f6f2e4; padding: 10px 12px; margin: 0 0 10px; border-radius: 2px;
+  box-shadow: 0 2px 6px #0007; transform: rotate(-0.6deg);
+}
+#quest-panel .qnote:nth-child(odd) { background: #fff7b0; transform: rotate(0.5deg); }
+#quest-panel .qnote.done { opacity: .6; }
+#quest-panel .qtitle { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+#quest-panel .qtext { font-size: 14px; line-height: 1.45; }
+#quest-panel .qreward { font-size: 12.5px; margin-top: 6px; color: #7a4a00; }
+#quest-panel .qaccept { margin-top: 8px; background: #ffd400; color: #1d2633; font-weight: 700; padding: 6px 12px; }
+#quest-panel .qstatus { margin-top: 6px; font-size: 13px; font-weight: 700; }
+#quest-panel .qfoot { color: #fffc; font-size: 12px; text-align: center; }
+#quest-panel .qlevel { color: #fff; font-size: 13px; margin-bottom: 10px; }
+#quest-panel .qstamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-bottom: 10px; }
+#quest-panel .qstamp {
+  background: #f6f2e4; border-radius: 6px; padding: 6px 4px; text-align: center; font-size: 11.5px; min-height: 58px;
+}
+#quest-panel .qstamp i {
+  display: grid; place-items: center; width: 30px; height: 30px; margin: 0 auto 3px; border-radius: 50%;
+  border: 2px dashed #8a7f6a; font-style: normal; font-weight: 700; color: #8a7f6a;
+}
+#quest-panel .qstamp.active i { border-style: solid; border-color: #2e86de; color: #2e86de; }
+#quest-panel .qstamp.done i { border: 3px solid #b0301f; color: #b0301f; transform: rotate(-12deg); font-size: 17px; }
+#quest-panel .qstamp.neu span { opacity: .5; }
+#quest-panel .qtitles { color: #fff; font-size: 13px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 10px; }
+#quest-panel .qtitles button { background: #0005; color: #fff; padding: 4px 8px; }
+#quest-panel .qtitles button.on { background: #ffd400; color: #1d2633; }
+
+#quest-track {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); max-width: min(520px, calc(100% - 32px));
+  font-size: 13px; line-height: 1.5; text-shadow: 0 1px 3px #000c; pointer-events: none; text-align: center;
+}
+#quest-track b { color: #ffe27a; }
+#quest-toast {
+  position: fixed; top: 22%; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px));
+  display: grid; gap: 6px; pointer-events: none; z-index: 11;
+}
+#quest-toast div {
+  background: #1d2633e0; border-left: 4px solid #ffd400; padding: 8px 12px; border-radius: 6px;
+  font-size: 15px; text-align: center; transition: opacity .2s;
+}
+body.editing #quest-track, body.editing #quest-toast { display: none; }

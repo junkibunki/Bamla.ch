@@ -49,6 +49,7 @@ export function attachMultiplayer(httpServer, { joinLog } = {}) {
         p.s = {
           x: num(m.x, 5000), y: num(m.y, 1000), z: num(m.z, 5000), h: num(m.h, 100),
           v: VEHICLES.includes(m.v) ? m.v : null,
+          ti: typeof m.ti === 'string' ? cleanName(m.ti) || undefined : undefined, // Titel aus dem Dorfpass
         };
       }
     });

@@ -80,6 +80,16 @@ class RemotePlayer {
     this.target = s;
     if (first || Math.hypot(s.x - this.x, s.z - this.z) > 40) { this.x = s.x; this.y = s.y; this.z = s.z; this.h = s.h; } // Teleport / erster Zustand
     const kind = KINDS[s.v] ? s.v : s.v ? 'car' : null;
+    if ((s.ti || '') !== (this.title || '')) { // Titel aus dem Dorfpass (quests.js) im Namensschild
+      this.title = s.ti || '';
+      const old = this.label;
+      this.label = nameSprite(this.title ? `${this.name} · ${this.title}` : this.name, this.color);
+      this.label.position.copy(old.position);
+      this.scene.remove(old);
+      old.material.map.dispose();
+      old.material.dispose();
+      this.scene.add(this.label);
+    }
     if ((this.vehicle?.kind ?? null) !== kind) {
       this.disposeVehicle();
       if (kind) {
@@ -196,7 +206,7 @@ export class Multiplayer {
   }
 
   // Jeden Frame: andere Spieler nachführen, alle 100 ms den eigenen Zustand senden.
-  update(dt, player, bus) {
+  update(dt, player, bus, title = '') {
     for (const r of this.remotes.values()) r.update(dt, this.world);
     this.sendTimer -= dt;
     if (!this.online || this.sendTimer > 0) return;
@@ -205,7 +215,7 @@ export class Multiplayer {
     const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };
-    this.ws.send(JSON.stringify({ t: 'state', ...state }));
+    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined }));
   }
 
   // Für die Minimap
