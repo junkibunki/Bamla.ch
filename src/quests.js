@@ -339,16 +339,15 @@ export class Quests {
     this.ansehen?.update(dt);
     this.postkarten?.update(dt);
 
-    // Marker: wippen, mit Abstand mitwachsen (bleiben von weitem sichtbar)
+    // Marker: wippen, nur in der Nähe sichtbar (von weitem zeigt sie die Minimap)
     const t = performance.now() / 1000;
     for (const b of this.boards) {
-      const fresh = b.quests.some((d) => !this.state.quests[d.id]);
-      b.marker.visible = fresh;
-      if (!fresh) continue;
-      const d = camera.position.distanceTo(b.marker.position);
-      const s = Math.max(0.8, d * 0.03);
-      b.marker.scale.set(s, s, 1);
-      b.marker.position.set(b.x, b.y + 2.9 + s * 0.5 + Math.sin(t * 2.5) * 0.15, b.z);
+      b.fresh = b.quests.some((d) => !this.state.quests[d.id]);
+      const d = Math.hypot(camera.position.x - b.x, camera.position.z - b.z);
+      b.marker.visible = b.fresh && d < 15;
+      if (!b.marker.visible) continue;
+      b.marker.scale.set(0.8, 0.8, 1);
+      b.marker.position.set(b.x, b.y + 3.3 + Math.sin(t * 2.5) * 0.15, b.z);
     }
     const tg = this.currentTarget();
     this.targetMarker.visible = !!tg;
@@ -370,7 +369,7 @@ export class Quests {
 
   // Für die Minimap: Aushänge mit neuen Aufgaben, Ziele angenommener Aufgaben
   get markers() {
-    const m = this.boards.filter((b) => b.marker.visible).map((b) => ({ x: b.x, z: b.z, glyph: '!', color: '#ffd400' }));
+    const m = this.boards.filter((b) => b.fresh).map((b) => ({ x: b.x, z: b.z, glyph: '!', color: '#ffd400' }));
     m.push(...this.extraMarkers);
     for (const q of this.handles.values()) if (q.active && q.targetPos) m.push({ ...q.targetPos, glyph: '▼', color: '#7fe07f' });
     return m;
