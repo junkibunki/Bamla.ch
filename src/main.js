@@ -39,6 +39,7 @@ import { askName, Multiplayer } from './multiplayer.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows } from './tiles.js';
+import { ElectricCar } from './ecar.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -47,7 +48,7 @@ const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
-const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
+const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -142,6 +143,10 @@ function barHint(b) {
 vehicles.push(gaertnerei.excavator);
 pedestrians.push(gaertnerei);
 const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => Math.hypot(v.x - x, v.z - z) < 6) && !kienzler.inYard(x, z);
+
+// Elektroauto mit Wallbox vor Im Kirschgarten 1 (vor den übrigen Parkern, damit der Platz frei bleibt)
+const ecar = new ElectricCar(scene, world);
+vehicles.push(ecar.car);
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
@@ -392,15 +397,17 @@ let streetTimer = 0;
 
 function updateHud(dt) {
   const v = player.car;
-  hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' : bus.rider ? Math.round(bus.speed * 3.6) + ' km/h' : '';
+  hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' + (v === ecar.car ? ` · 🔋 ${ecar.percent()} %` : '') : bus.rider ? Math.round(bus.speed * 3.6) + ' km/h' : '';
   if (v?.kind === 'forklift') hud.hint.textContent = 'E: Aussteigen · R/Q: Gabel heben/senken';
   else if (v?.kind === 'excavator') hud.hint.textContent = EXCAVATOR_HINT;
+  else if (v === ecar.car && ecar.driveHint()) hud.hint.textContent = ecar.driveHint();
   else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
   else if (bus.rider) hud.hint.textContent = bus.riderHint();
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
   else if (nearBar()) hud.hint.textContent = barHint(nearBar());
+  else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
     const verb = n?.kind === 'bike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
@@ -431,7 +438,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht }; // zum Debuggen in der Konsole
 const clock = new THREE.Clock();
 
 function frame() {
@@ -448,6 +455,7 @@ function frame() {
     else if (andacht.spot(player)) andacht.pray(player, andacht.spot(player));       // Kirche, Kapelle: beten
     else toggleVehicle();
   }
+  if (!editing && input.hit('KeyK') && ecar.near(player)) ecar.toggle(); // Ladekabel des Elektroautos
   if (!editing && input.hit('KeyR') && !player.car && !bus.rider && nearBar()?.wine) player.drink('schorle'); // Weinschorle
   else if (!editing && input.hit('KeyR') && !bus.rider && andacht.spot(player)) andacht.sing(player, andacht.spot(player));
   if (!editing && input.hit('KeyT') && !bus.rider && andacht.towerOpen && andacht.spot(player)?.church) andacht.climb(player);
@@ -471,6 +479,7 @@ function frame() {
   updateSwings(dt, editing ? IDLE : input); // Schaukeln, auf denen man sitzen kann
   golf.update(dt, player);
   kienzler.update(dt, player);
+  ecar.update(dt);
   // Zug und Bus schieben Fahrzeuge weg
   for (const v of vehicles) for (const c of [...railway.cars, ...bus.cars]) {
     const q = c.pushOut(v.x, v.z, v.k.halfW, v.y);
