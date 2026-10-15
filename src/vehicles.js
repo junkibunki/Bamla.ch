@@ -284,6 +284,19 @@ export class Vehicle {
   // Fahrer (Fahrrad, Motorrad, Quad) nur zeigen, wenn jemand fährt.
   setRider(on) { if (this.mesh.rider) this.mesh.rider.visible = on; }
 
+  // Stammplatz: weggefahrene oder weggeschobene Fahrzeuge werden außer Sicht dorthin zurückgesetzt.
+  setHome() { this.home = { x: this.x, z: this.z, y: this.y, heading: this.heading }; }
+  awayFromHome() {
+    const h = this.home, d = this.heading - h.heading;
+    return Math.hypot(this.x - h.x, this.z - h.z) > 1.5 || Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) > 0.3;
+  }
+  returnHome() {
+    const h = this.home;
+    this.x = h.x; this.z = h.z; this.y = h.y; this.heading = h.heading;
+    this.speed = this.steer = this.lift = 0;
+    if (this.trailer) this.placeTrailer(true);
+  }
+
   // Punkt in einer gedrehten Box? Gibt Push-Vektor zurück.
   static boxPush(px, pz, cx, cz, h, hl, hw) {
     const fx = Math.sin(h), fz = Math.cos(h);

@@ -184,6 +184,9 @@ for (const bi of order) {
     rand() < 0.15 ? pick(TRACTOR_COLORS) : pick(CAR_COLORS)));
 }
 
+// Stammplätze der abgestellten Fahrzeuge (Parker, Feuerwehr, Kühltransporter …); Stapler und Bagger haben eigene Fahrer
+for (const v of vehicles) if (!v.npc || v === kienzler.forklift || v === gaertnerei.excavator) v.setHome();
+
 // ---------- Verkehr ----------
 function spawnTraffic(kind, graph, count, colors, opts = () => ({})) {
   for (let n = 0, made = 0; n < count * 20 && made < count; n++) {
@@ -349,6 +352,34 @@ function toggleVehicle() {
   player.setVisible(false);
 }
 
+// ---------- Rückkehr abgestellter Fahrzeuge ----------
+// Weggefahrene oder weggeschobene Fahrzeuge stehen wieder auf ihrem Stammplatz, sobald dieser und der
+// Abstellort 20 s lang nicht zu sehen waren (außerhalb des Bildausschnitts oder weit im Nebel).
+const frustum = new THREE.Frustum(), viewProj = new THREE.Matrix4(), sphere = new THREE.Sphere();
+function inView(x, y, z, r) {
+  const d = camera.position.distanceTo(sphere.center.set(x, y, z));
+  if (d < 40 || d > 450) return d < 40;
+  sphere.radius = r;
+  return frustum.intersectsSphere(sphere);
+}
+let homeCheck = 0;
+function returnVehicles(dt) {
+  if ((homeCheck += dt) < 1) return;
+  const step = homeCheck;
+  homeCheck = 0;
+  viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(viewProj);
+  for (const v of vehicles) {
+    const h = v.home, r = v.k.halfLen + 1;
+    if (!h || v.npc || v === player.car || Math.abs(v.speed) > 0.1 || !v.awayFromHome()
+      || inView(v.x, v.y ?? 0, v.z, r) || inView(h.x, h.y ?? world.heightAt(h.x, h.z), h.z, r)) { v.unseen = 0; continue; }
+    if ((v.unseen = (v.unseen || 0) + step) < 20) continue;
+    if (vehicles.some((o) => o !== v && Math.hypot(o.x - h.x, o.z - h.z) < o.radius + v.k.halfLen)) continue; // Platz belegt
+    v.returnHome();
+    v.unseen = 0;
+  }
+}
+
 // ---------- HUD ----------
 const hud = {
   speed: document.getElementById('speed'),
@@ -457,6 +488,7 @@ function frame() {
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);
   updateCamera(dt);
+  returnVehicles(dt);
   updateHud(dt);
   multiplayer.update(dt, player, bus);
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : bus.rider ? bus.car.heading : player.facing, cam.yaw, vehicles, multiplayer.others);
