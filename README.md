@@ -4,6 +4,9 @@
 Karte aus OpenStreetMap, Gelände, Dächer, Reben und Beläge aus den Open-Data-Geodaten des LGL Baden-Württemberg,
 Gebäude Haus für Haus nach Street View und Fotos.
 
+**Jetzt spielen: [bamla.ch](https://bamla.ch)** – dort ist das Spiel gehostet und läuft im Multiplayer mit allen,
+die gerade online sind.
+
 ## Starten
 
 ```bash
