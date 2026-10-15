@@ -31,14 +31,14 @@ const CAPS = [0xffffff, 0x1b2a44, 0xf2f2f2, 0x333333, 0xc0392b];
 const BAGS = [0x1b2a44, 0xffffff, 0xc0392b, 0x222222, 0x2e7d4f];
 
 // Golfschläger: Schaft + Kopf, hängt unten an den Händen
-function club() {
+export function club() {
   const g = new THREE.Group();
   g.add(part(0.025, 0.95, 0.025, 0x9aa0a6, 0, -0.475, 0));
   g.add(part(0.06, 0.06, 0.12, 0x2a2a2a, 0, -0.96, 0.04));
   return g;
 }
 
-function bagMesh(color) {
+export function bagMesh(color) {
   const g = new THREE.Group();
   g.add(part(0.26, 0.85, 0.26, color, 0, 0.43, 0));
   g.add(part(0.28, 0.08, 0.28, 0x111111, 0, 0.88, 0));
