@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { World, rng } from './world.js';
+import { World, rng, pointInPolygon } from './world.js';
 import { Terrain } from './terrain.js';
 import { loadPaving } from './paving.js';
 import { Vehicle, separateVehicles } from './vehicles.js';
@@ -215,17 +215,27 @@ for (let i = 0, n = 0; i < 600 && n < 16; i++) {
   if (camping.inside(x, z)) { pedestrians.push(new Pedestrian(scene, world.graphs.walk, spot, rand)); n++; }
 }
 
-// Start: in der Belchenstraße, neben dem nächstgelegenen geparkten Fahrzeug.
-const START = [-30, -205];
+// Start: bei jedem Laden an einer zufälligen Stelle auf den Wegen im Dorf Bamlach (Wohngebiet um die Kirche),
+// neben einem geparkten Fahrzeug, wenn eines ganz in der Nähe steht. Rückfall: Belchenstraße.
+let START = [-30, -205], startFacing = -Math.PI / 2;
+const dorf = data.areas.find((a) => a.kind === 'residential' && pointInPolygon(-28, 41, a.pts)); // Kirche liegt mitten im Dorf
+for (let i = 0; dorf && i < 2000; i++) {
+  const spot = world.graphs.walk.randomSpot(Math.random);
+  const pts = world.graphs.walk.roads[spot.road].pts, [x, z] = pts[spot.idx], [px, pz] = pts[spot.idx - 1];
+  if (!pointInPolygon(x, z, dorf.pts) || world.collide(x, z, 0.6) || camping.inside(x, z)) continue;
+  START = [x, z];
+  startFacing = Math.atan2(x - px, z - pz); // in Wegrichtung
+  break;
+}
 const parked = vehicles.filter((v) => !v.npc);
 const dStart = (v) => Math.hypot(v.x - START[0], v.z - START[1]);
 const startCar = parked.reduce((a, b) => (dStart(a) < dStart(b) ? a : b), parked[0]);
-if (dStart(startCar) < 30) {
+if (dStart(startCar) < 15) {
   player.pos.set(startCar.x + startCar.fz * 2.2, 0, startCar.z - startCar.fx * 2.2);
   player.facing = startCar.heading;
 } else {
   player.pos.set(START[0], 0, START[1]);
-  player.facing = -Math.PI / 2; // Blick nach Westen, Richtung Brunnen
+  player.facing = startFacing;
 }
 
 // ---------- Kamera ----------
