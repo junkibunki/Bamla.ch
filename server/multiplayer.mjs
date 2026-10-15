@@ -87,6 +87,8 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
           o: OUTFITS.includes(m.o) ? m.o : undefined,                                  // Kleidung
           lk: Number.isInteger(m.lk) && m.lk >= 0 && m.lk <= 0xffffff ? m.lk : undefined, // Lackierung
           tr: m.tr === 1 ? 1 : undefined,                                               // Tennisschläger
+          sg: typeof m.sg === 'number' && m.sg >= 0 && m.sg <= 40 ? Math.round(m.sg * 10) / 10 : undefined, // singt: Sekunden im Lied
+          an: m.an === 'p' ? 'p' : undefined,                                           // betet (kniet)
         };
       } else if (m.t === 'stand' && p) {
         // Stand im Dorfpass: Zahl der erledigten Aufgaben, voller Pass = Ehrenbürger

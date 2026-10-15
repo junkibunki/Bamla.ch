@@ -8,6 +8,7 @@ import { buildPerson, animateWalk, dressPerson } from './person.js';
 import { Vehicle, KINDS } from './vehicles.js';
 import { rng } from './world.js';
 import { racket } from './tennis.js';
+import { hymnBook, andachtPose } from './andacht.js';
 
 const SEND_EVERY = 0.1; // s
 const COLORS = [0xe74c3c, 0x27ae60, 0xf39c12, 0x8e44ad, 0x16a085, 0xd35400, 0xc2185b, 0x00897b, 0x6d4c41, 0x3949ab];
@@ -103,6 +104,10 @@ class RemotePlayer {
       if (s.tr) this.mesh.armR.add(this.racket = racket());
       else { this.racket.removeFromParent(); this.racket = null; }
     }
+    if ((s.sg != null) !== !!this.book) { // Gesangbuch beim Singen (andacht.js)
+      if (s.sg != null) this.mesh.armR.add(this.book = hymnBook());
+      else { this.book.removeFromParent(); this.book = null; }
+    }
     // Fahrzeug aus der gemeinsamen Liste (vi): mein eigenes Exemplar fährt mit und bleibt nach dem Aussteigen stehen
     const mp = this.mp, own = kind && Number.isInteger(s.vi) ? mp.shared?.[s.vi] : null;
     const local = own && own.kind === kind && own !== mp.me?.car && (!own.remote || own.remote === this) ? own : null;
@@ -144,6 +149,9 @@ class RemotePlayer {
     const moving = speed > 0.5;
     this.walkPhase = moving ? this.walkPhase + dt * (speed > 6 ? 13 : 9) : 0;
     animateWalk(this.mesh, this.walkPhase, moving ? (speed > 6 ? 0.9 : 0.6) : 0);
+    const pose = s.an === 'p' ? 'pray' : s.sg != null ? 'sing' : null; // Beten, Singen (andacht.js)
+    if (pose || this.pose) andachtPose(this.mesh, pose);
+    this.pose = pose;
     this.mesh.position.set(this.x, this.y, this.z);
     this.mesh.rotation.y = this.h;
     this.label.position.set(this.x, this.y + 2.55, this.z);
