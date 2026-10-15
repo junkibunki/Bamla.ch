@@ -53,6 +53,7 @@ import { Carry } from './carry.js';
 import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
+import { buildStationenweg, clearStationenweg } from './stationenweg.js';
 import { buildReitzentrum } from './reitzentrum.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
@@ -109,6 +110,7 @@ data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null);
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
+clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -188,6 +190,8 @@ const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Fried
 pedestrians.push(kirche.pfarrer); // Pfarrer läuft wie ein Fußgänger
 const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der Kirche und an den Kapellen, Glockenstube
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
+const stationenweg = buildStationenweg(scene, world, player, pedestrians); // Kreuzweg zum Kalvarienberg: 14 Bildstöcke, Steinkreuz, Passanten erzählen
+pedestrians.push(stationenweg);
 buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
 // ---------- Parken in Hofeinfahrten ----------
@@ -451,6 +455,7 @@ function updateHud(dt) {
   else if (carry.hint(player)) hud.hint.textContent = carry.hint(player) + (nearBar() && !carry.takesE(player) ? ' · ' + barHint(nearBar()) : ''); // Läden, Abgabeorte
   else if (sport.hint(player)) hud.hint.textContent = sport.hint(player); // Golfschläger, Tennisschläger, Schlagen
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
+  else if (stationenweg.hint(player)) hud.hint.textContent = stationenweg.hint(player); // Bildstock am Stationenweg
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
   else if (nearBar()) hud.hint.textContent = barHint(nearBar());

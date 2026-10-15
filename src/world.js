@@ -474,7 +474,7 @@ export class World {
       const tries = Math.min(4000, (maxX - minX) * (maxZ - minZ) * d);
       for (let i = 0; i < tries; i++) {
         const x = minX + r() * (maxX - minX), z = minZ + r() * (maxZ - minZ);
-        if (pointInPolygon(x, z, ring) && !this.nearRoad(x, z)) spots.push([x, z, a.kind === 'orchard' ? 0.6 : 0.8 + r() * 0.6]);
+        if (pointInPolygon(x, z, ring) && !this.nearRoad(x, z) && !this.data.treeFree?.some(([cx, cz, cr]) => (x - cx) ** 2 + (z - cz) ** 2 < cr * cr)) spots.push([x, z, a.kind === 'orchard' ? 0.6 : 0.8 + r() * 0.6]);
       }
     }
     const max = Math.min(spots.length, 9000);
