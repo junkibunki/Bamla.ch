@@ -67,8 +67,9 @@ function nameSprite(text, color, gold) {
 const lerpAngle = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
 
 class RemotePlayer {
-  constructor(scene, id, name) {
+  constructor(scene, id, name, mp) {
     this.scene = scene;
+    this.mp = mp;
     this.id = id;
     this.name = name;
     this.color = COLORS[id % COLORS.length];
@@ -102,8 +103,16 @@ class RemotePlayer {
       if (s.tr) this.mesh.armR.add(this.racket = racket());
       else { this.racket.removeFromParent(); this.racket = null; }
     }
+    // Fahrzeug aus der gemeinsamen Liste (vi): mein eigenes Exemplar fährt mit und bleibt nach dem Aussteigen stehen
+    const mp = this.mp, own = kind && Number.isInteger(s.vi) ? mp.shared?.[s.vi] : null;
+    const local = own && own.kind === kind && own !== mp.me?.car && (!own.remote || own.remote === this) ? own : null;
+    if (local) {
+      if (this.vehicle !== local) { this.disposeVehicle(); this.claim(local); }
+      if ((s.lk ?? null) !== this.lack) this.repaint(s.lk ?? null);
+      return;
+    }
     const paint = s.lk ?? this.color; // Lackierung aus dem Dorfpass
-    if ((this.vehicle?.kind ?? null) !== kind || (kind && this.vehicle.color !== paint)) {
+    if (this.local || (this.vehicle?.kind ?? null) !== kind || (kind && this.vehicle.color !== paint)) {
       this.disposeVehicle();
       if (kind) {
         this.vehicle = new Vehicle(this.scene, kind, this.x, this.z, this.h, paint);
@@ -140,9 +149,44 @@ class RemotePlayer {
     this.label.position.set(this.x, this.y + 2.55, this.z);
   }
 
+  // Fahrzeug aus meiner Welt übernehmen (ein Fahrer aus dem Verkehr steigt aus, wie bei mir selbst)
+  claim(v) {
+    if (v.npc) this.mp.onTakeover?.(v);
+    v.leftBy = null;
+    v.remote = this;
+    v.setRider(true);
+    this.vehicle = v;
+    this.local = true;
+    this.lack = null;
+  }
+
+  // Lackierung aus dem Dorfpass auf mein Exemplar (wie belohnungen.js, eigener Merker)
+  repaint(hex) {
+    const v = this.vehicle;
+    this.lack = hex;
+    if (v.color == null || v.kind === 'horse') return;
+    v.mesh.traverse((o) => {
+      if (!o.isMesh) return;
+      const base = o.material.userData.mpLack ?? o.material.color?.getHex();
+      if (base !== v.color) return;
+      if (hex == null) { o.material.color.setHex(base); delete o.material.userData.mpLack; }
+      else { o.material.userData.mpLack = base; o.material.color.setHex(hex); }
+    });
+  }
+
   disposeVehicle() {
     const v = this.vehicle;
     if (!v) return;
+    if (this.local) { // ausgestiegen: steht jetzt da, wo abgestellt, und ist frei
+      if (this.lack != null) this.repaint(null);
+      v.remote = null;
+      v.leftBy = this.id;
+      v.speed = v.steer = 0;
+      v.setRider(false);
+      this.vehicle = null;
+      this.local = false;
+      return;
+    }
     this.scene.remove(v.mesh);
     if (v.trailer) this.scene.remove(v.trailer.mesh);
     this.vehicle = null;
@@ -207,7 +251,7 @@ export class Multiplayer {
       for (const s of m.p) {
         seen.add(s.id);
         let r = this.remotes.get(s.id);
-        if (!r) { r = new RemotePlayer(this.scene, s.id, s.n); this.remotes.set(s.id, r); }
+        if (!r) { r = new RemotePlayer(this.scene, s.id, s.n, this); this.remotes.set(s.id, r); }
         r.setState(s);
       }
       for (const [id, r] of this.remotes) if (!seen.has(id)) { r.dispose(); this.remotes.delete(id); }
@@ -274,14 +318,15 @@ export class Multiplayer {
   // Jeden Frame: andere Spieler nachführen, alle 100 ms den eigenen Zustand senden.
   // bus: Fahrzeug, in dem man mitfährt (Bus, Zug), sonst der Bus
   update(dt, player, bus, title = '') {
+    this.me = player;
     for (const r of this.remotes.values()) r.update(dt, this.world);
     // Fahrer ausgestiegen oder offline: Beifahrer steigt mit aus
     if (this.riding && (!this.riding.vehicle || !this.remotes.has(this.riding.id))) this.alight();
     this.sendTimer -= dt;
     if (!this.online || this.sendTimer > 0) return;
     this.sendTimer = SEND_EVERY;
-    const v = player.car, r = this.riding;
-    const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind }
+    const v = player.car, r = this.riding, vi = v ? this.shared?.indexOf(v) ?? -1 : -1;
+    const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind, vi: vi >= 0 ? vi : undefined }
       : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };

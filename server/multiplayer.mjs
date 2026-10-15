@@ -14,7 +14,7 @@ import { WebSocketServer } from 'ws';
 const PATH = '/mp';
 const TICK = 100; // ms zwischen zwei Rundsendungen
 const MAX_PLAYERS = 64;
-const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck'];
+const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck', 'horse', 'trike'];
 const OUTFITS = ['helm', 'schuerze', 'golfmuetze', 'motorradjacke', 'schaerpe']; // Kleidung (src/person.js)
 const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn'];                          // Hupen (src/belohnungen.js)
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein
@@ -81,6 +81,7 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
         p.s = {
           x: num(m.x, 5000), y: num(m.y, 1000), z: num(m.z, 5000), h: num(m.h, 100),
           v: VEHICLES.includes(m.v) ? m.v : null,
+          vi: Number.isInteger(m.vi) && m.vi >= 0 && m.vi < 2000 ? m.vi : undefined, // welches Fahrzeug der gemeinsamen Liste
           ti: typeof m.ti === 'string' ? cleanName(m.ti) || undefined : undefined, // Titel aus dem Dorfpass
           ri: Number.isInteger(m.ri) && m.ri >= 0 ? m.ri : undefined, // fährt mit: Id des Fahrers, 0 = im Zug
           o: OUTFITS.includes(m.o) ? m.o : undefined,                                  // Kleidung
