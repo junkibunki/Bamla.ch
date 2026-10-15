@@ -2,7 +2,7 @@
 // in ein kompaktes JSON mit lokalen Metern um (x = Ost, z = Süd).
 import { writeFileSync } from 'node:fs';
 
-const BBOX = { s: 47.7065, w: 7.5300, n: 47.7265, e: 7.5730 };
+const BBOX = { s: 47.7050, w: 7.5300, n: 47.7265, e: 7.5730 };
 const CENTER = { lat: 47.71642, lon: 7.55123 };
 
 const query = `[out:json][timeout:60];
