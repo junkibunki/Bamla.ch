@@ -1,5 +1,7 @@
 // Multiplayer: Name beim Start, eigene Position an den Server (server/multiplayer.mjs),
 // andere Spieler als Figur bzw. Fahrzeug mit Namensschild in der Welt und auf der Minimap.
+// Mitfahren: zu Fuß an das Fahrzeug eines anderen Spielers, E steigt als Beifahrer zu. Der Beifahrer sendet die
+// Position des Fahrzeugs und ri = Id des Fahrers, die anderen zeigen ihn dann nur als Namensschild.
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 import { Vehicle, KINDS } from './vehicles.js';
@@ -8,6 +10,7 @@ import { rng } from './world.js';
 const SEND_EVERY = 0.1; // s
 const COLORS = [0xe74c3c, 0x27ae60, 0xf39c12, 0x8e44ad, 0x16a085, 0xd35400, 0xc2185b, 0x00897b, 0x6d4c41, 0x3949ab];
 const STORE = 'bamla.name';
+const SEATS = ['car', 'ecar', 'tractor', 'moto', 'quad', 'golfcart', 'truck', 'van', 'firetruck']; // Fahrzeuge mit Beifahrerplatz
 
 const store = {
   get() { try { return localStorage.getItem(STORE) || ''; } catch { return ''; } },
@@ -73,6 +76,7 @@ class RemotePlayer {
     this.target = null;
     this.vehicle = null;
     this.walkPhase = 0;
+    this.speed = 0;
   }
 
   setState(s) {
@@ -107,10 +111,11 @@ class RemotePlayer {
     this.y += (s.y - this.y) * t;
     this.z += (s.z - this.z) * t;
     this.h = lerpAngle(this.h, s.h, t);
-    const speed = Math.hypot(this.x - ox, this.z - oz) / Math.max(dt, 1e-3);
+    const speed = this.speed = Math.hypot(this.x - ox, this.z - oz) / Math.max(dt, 1e-3);
 
     const v = this.vehicle;
-    this.mesh.visible = !v;
+    this.mesh.visible = !v && s.ri == null; // Beifahrer: nur das Namensschild über dem Fahrzeug
+    if (s.ri != null && !v) { this.label.position.set(this.x, this.y + 3.6, this.z); return; }
     if (v) {
       v.speed = speed;
       v.x = this.x; v.z = this.z; v.heading = this.h; v.y = this.y;
@@ -170,10 +175,12 @@ export class Multiplayer {
   receive(m) {
     if (m.t === 'welcome') {
       this.online = true;
+      this.id = m.id;
       this.renderStatus();
     } else if (m.t === 'leave') {
       this.remotes.get(m.id)?.dispose();
       this.remotes.delete(m.id);
+      if (this.riding?.id === m.id) this.alight();
       this.renderStatus();
     } else if (m.t === 'state') {
       const seen = new Set();
@@ -205,14 +212,57 @@ export class Multiplayer {
     }
   }
 
+  // ---------- Mitfahren bei einem anderen Spieler (wie Bus und Zug: rider, car, speed, riderAction …) ----------
+
+  // Fahrzeug eines anderen Spielers, neben dem man zu Fuß steht (fast stehend)
+  nearRide(player) {
+    if (player.car || this.riding) return null;
+    for (const r of this.remotes.values()) {
+      const v = r.vehicle;
+      if (!v || !SEATS.includes(r.target?.v) || r.speed > 2) continue;
+      if (Vehicle.boxPush(player.pos.x, player.pos.z, v.x, v.z, v.heading, v.k.halfLen + 1.8, v.k.halfW + 1.8)) return r;
+    }
+    return null;
+  }
+  canBoard(player) { return !!this.nearRide(player); }
+  footHint(player) { const r = this.nearRide(player); return r ? `E: Bei ${r.name} mitfahren` : ''; }
+  board(player) {
+    this.riding = this.nearRide(player);
+    this.player = player;
+    player.setVisible(false);
+  }
+  get rider() { return this.riding ? this.player : null; }
+  get car() { const r = this.riding; return { x: r.x, y: r.y, z: r.z, heading: r.h }; }
+  get speed() { return this.riding?.speed ?? 0; }
+  riderHint() { const r = this.riding; return r.speed < 2 ? `Beifahrer bei ${r.name} – E: Aussteigen` : `Beifahrer bei ${r.name}`; }
+  riderAction() { if (this.riding.speed < 2) this.alight(); }
+  // auf der Beifahrerseite (rechts) aussteigen
+  alight() {
+    const r = this.riding, v = r.vehicle, p = this.player;
+    this.riding = null;
+    const off = (v ? v.k.halfW : 1) + 0.9, h = v ? v.heading : r.h;
+    p.pos.set(r.x + Math.cos(h) * off, 0, r.z - Math.sin(h) * off);
+    p.vy = 0;
+    p.groundY = this.world.groundAt(p.pos.x, p.pos.z, r.y + 1);
+    p.facing = h;
+    p.setVisible(true);
+  }
+
+  // Wer fährt gerade bei mir mit? (Fahrer-Sicht, für Aufgaben)
+  get passengers() { return this.id ? [...this.remotes.values()].filter((r) => r.target?.ri === this.id) : []; }
+
   // Jeden Frame: andere Spieler nachführen, alle 100 ms den eigenen Zustand senden.
+  // bus: Fahrzeug, in dem man mitfährt (Bus, Zug), sonst der Bus
   update(dt, player, bus, title = '') {
     for (const r of this.remotes.values()) r.update(dt, this.world);
+    // Fahrer ausgestiegen oder offline: Beifahrer steigt mit aus
+    if (this.riding && (!this.riding.vehicle || !this.remotes.has(this.riding.id))) this.alight();
     this.sendTimer -= dt;
     if (!this.online || this.sendTimer > 0) return;
     this.sendTimer = SEND_EVERY;
-    const v = player.car;
+    const v = player.car, r = this.riding;
     const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind }
+      : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };
     this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined }));

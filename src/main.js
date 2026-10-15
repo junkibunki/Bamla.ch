@@ -44,6 +44,7 @@ import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows } from './tiles.js';
 import { ElectricCar } from './ecar.js';
 import { Quests } from './quests.js';
+import { Schnellreise } from './schnellreise.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -114,7 +115,7 @@ const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feue
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
-const riding = () => (bus.rider ? bus : railway.rider ? railway : null); // Mitfahrt in Bus oder Zug
+const riding = () => (bus.rider ? bus : railway.rider ? railway : multiplayer.rider ? multiplayer : null); // Mitfahrt in Bus, Zug oder bei einem anderen Spieler
 const input = new Input(renderer.domElement);
 const player = new Player(scene);
 const minimap = new Minimap(document.getElementById('minimap'), world);
@@ -160,6 +161,7 @@ const freeSpot = (x, z, r) => !world.collide(x, z, r) && !vehicles.some((v) => M
 const ecar = new ElectricCar(scene, world);
 vehicles.push(ecar.car);
 const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/), Dorfpass mit Taste J
+const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffis“: G an Haltestellen und Bahnhof
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
@@ -430,7 +432,8 @@ function updateHud(dt) {
     const n = nearestVehicle();
     const verb = n?.kind === 'bike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
-      : n ? `E: ${NAMES[n.kind]} ${n.npc ? 'übernehmen' : verb}` : bus.footHint(player) || railway.footHint(player);
+      : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? 'übernehmen' : verb}` : bus.footHint(player) || railway.footHint(player));
+    if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
   }
   streetTimer -= dt;
   if (streetTimer <= 0) {
@@ -464,21 +467,23 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const clock = new THREE.Clock();
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  const editing = editor.update(dt) || quests.busy || mapKeys(); // Editor, Aushang/Dorfpass oder Vollbildkarte offen: Spielsteuerung ruht
+  const editing = editor.update(dt) || quests.busy || mapKeys() || schnellreise.keys(input, player); // Editor, Aushang/Dorfpass, Vollbildkarte oder Schnellreise offen: Spielsteuerung ruht
   if (!editing && (input.hit('KeyE') || input.hit('KeyF'))) {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
     else if (railway.rider) railway.riderAction();                         // im Zug: an offener Tür aussteigen
+    else if (multiplayer.rider) multiplayer.riderAction();                 // Beifahrer: im Stand aussteigen
     else if (andacht.active) andacht.stop(player);                         // aufstehen, aufhören, Turm hinunter
     else if (quests.nearBoard(player)) quests.read(player);                // Schwarzes Brett, Aushang
     else if (bus.canBoard(player)) bus.board(player);                      // Bus mit offenen Türen in der Nähe
     else if (railway.canBoard(player)) railway.board(player);              // Zug am Bahnsteig Rheinweiler
+    else if (multiplayer.canBoard(player)) multiplayer.board(player);      // bei einem anderen Spieler mitfahren
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
     else if (nearBar()) { const b = nearBar(); player.drink('beer'); b.serve?.(); } // Theke: Bier
