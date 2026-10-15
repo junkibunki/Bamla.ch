@@ -3,7 +3,7 @@
 import { Vehicle } from '../vehicles.js';
 
 const DIST = 100; // m mit Promille am Steuer
-const MOTOR = (v) => v && !['bike', 'forklift', 'excavator'].includes(v.kind);
+const MOTOR = (v) => v && !['bike', 'trike', 'forklift', 'excavator'].includes(v.kind);
 const PARKED = [-58.5, -43.2, 1.66]; // an der Rathausstraße, Ecke Storchengasse, Nase nach Osten
 
 export default {

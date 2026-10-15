@@ -543,16 +543,18 @@ export function buildKigaRheinweiler(scene, world, player) {
 
   return {
     games, teachers, // zum Debuggen (game.pedestrians)
+    trikes: games.filter((g) => g.trike).map((g) => g.trike), // in main.js zu den Fahrzeugen
     update(dt, w, movers) {
       const pl = player, [pu, pv] = toUV(pl.pos.x, pl.pos.z);
       if (Math.hypot(pu - 12, pv + 5) > 300) return; // weit weg: Pause
       const feet = pl.car ? null : [pu, pv];
       const ctx = {
         hAt, feet,
-        blocked: (u, v) => {
+        player: pl,
+        blocked: (u, v, skip) => { // skip: eigenes Dreirad
           if (feet && Math.hypot(u - pu, v - pv) < 0.5) return true;
           const [x, z] = P(u, v);
-          return movers.some((m) => m.pushOut(x, z, 0.3));
+          return movers.some((m) => m !== skip && m.pushOut(x, z, 0.3));
         },
       };
       for (const g of games) g.update(dt, ctx, w);

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { buildPerson, animateWalk, animatePedal } from './person.js';
 import { speechBubble } from './schloss.js';
 import { RideSwing } from './swing.js';
+import { Vehicle } from './vehicles.js';
 
 const RED = 0xd8402c, YELLOW = 0xf2c230, BLUE = 0x2f6fd0;
 const matCache = new Map();
@@ -51,19 +52,6 @@ function buildKid(rand, shirt, girl) {
   kid.body = g;
   kid.head = parts;
   return kid;
-}
-
-// Dreirad
-function trike(color) {
-  const g = new THREE.Group();
-  const wheel = (x, z, r) => { const w = mesh(new THREE.CylinderGeometry(r, r, 0.05, 12), 0x222222, x, r, z, g); w.rotation.z = Math.PI / 2; };
-  wheel(0, 0.42, 0.16); wheel(-0.22, -0.12, 0.12); wheel(0.22, -0.12, 0.12);
-  box(g, 0.06, 0.06, 0.6, color, 0, 0.24, 0.14);
-  box(g, 0.5, 0.05, 0.06, color, 0, 0.14, -0.12);
-  box(g, 0.2, 0.05, 0.22, 0x222222, 0, 0.3, -0.02);
-  box(g, 0.05, 0.3, 0.05, color, 0, 0.4, 0.42);
-  box(g, 0.34, 0.04, 0.04, 0x333333, 0, 0.56, 0.4);
-  return g;
 }
 
 let kidNo = 0;
@@ -303,25 +291,77 @@ export function kitaPeople({ A, P, toUV, dirUV }) {
     }
   }
 
-  // Dreirad: Runde auf der Terrasse
+  // Dreirad: Runde auf der Terrasse. Das Dreirad ist ein Fahrzeug (vehicles.js, in main.js eingereiht), der Spieler
+  // kann es dem Kind wegnehmen (E). Das Kind schimpft, und sobald das Dreirad wieder in der Nähe steht, holt es sich
+  // sein Rad zurück; weiter weg abgestellt bringt es main.js außer Sicht auf den Stammplatz zurück.
   class Rider {
     constructor(scene, dyn, rand, loop, color = RED) {
-      this.loop = loop; this.i = 0; this.t = 0;
+      this.loop = loop; this.i = 0; this.t = 0; this.say = 0;
       this.kid = new Kid(scene, rand, { u: loop[0][0], v: loop[0][1] });
-      this.bike = trike(color);
-      scene.add(this.bike);
+      this.cu = loop.reduce((s, p) => s + p[0], 0) / loop.length; this.cv = loop.reduce((s, p) => s + p[1], 0) / loop.length;
+      const [x, z] = P(...loop[0]), [x1, z1] = P(...loop[1]);
+      this.trike = new Vehicle(scene, 'trike', x, z, Math.atan2(x1 - x, z1 - z), color);
+      this.trike.setHome();
+      this.npc = { update: () => {}, onTakeover: () => this.stolen(true) };
+      this.trike.npc = this.npc;
+      this.bubble = speechBubble(this.kid.mesh, this.kid.name);
+      this.bubble.sprite.position.y = 1.5;
+    }
+
+    stolen(off = false) {
+      const k = this.kid, b = this.trike;
+      k.abs = null; k.y = 0;
+      if (off) { const [du, dv] = dirUV(b.fz * 0.8, -b.fx * 0.8); k.u += du; k.v += dv; } // springt seitlich ab
+      this.bubble.say(['Hey! Das ist mein Dreirad!', 'Gib das zurück! Das ist meins!', 'Das sag ich der Erzieherin!'][this.say++ % 3]);
+      this.sayT = 0;
     }
 
     update(dt, ctx, world) {
-      const k = this.kid, n = this.loop.length, [tu, tv] = this.loop[(this.i + 1) % n];
-      if (k.step(tu, tv, 1.1, dt, ctx) < 0.15) this.i = (this.i + 1) % n;
+      const k = this.kid, b = this.trike, own = { ...ctx, blocked: (u, v) => ctx.blocked(u, v, b) };
+      if (b.npc !== this.npc) return this.bereft(dt, own);
+      if (this.bubble.sprite.visible && (this.sayT += dt) > 3) this.bubble.sprite.visible = false;
+      const n = this.loop.length, [tu, tv] = this.loop[(this.i + 1) % n];
+      if (k.step(tu, tv, 1.1, dt, own) < 0.15) this.i = (this.i + 1) % n;
       k.sitPose();
       animatePedal(k.b, k.phase);
       k.b.armL.rotation.x = k.b.armR.rotation.x = -1.2;
       k.y = 0.3 - HIP + 0.05;
-      const [x, z] = P(k.u, k.v);
-      this.bike.position.set(x, world.heightAt(x, z), z);
-      this.bike.rotation.y = k.facing - A;
+      [b.x, b.z] = P(k.u, k.v);
+      b.heading = k.facing - A;
+      b.speed = k.moving;
+      k.moving = 0;
+    }
+
+    // Ohne Dreirad: zuschauen und schimpfen; steht es wieder im Garten und der Spieler ist weg, hinlaufen und aufsteigen
+    bereft(dt, ctx) {
+      const k = this.kid, b = this.trike, pl = ctx.player, [bu, bv] = toUV(b.x, b.z);
+      const ridden = pl?.car === b, near = Math.hypot(bu - this.cu, bv - this.cv) < 12;
+      const free = !ridden && Math.abs(b.speed) < 0.1 && (!ctx.feet || Math.hypot(ctx.feet[0] - bu, ctx.feet[1] - bv) > 2.5);
+      if (near && free) {
+        k.y = 0;
+        const d = k.step(bu, bv, 1.6, dt, ctx);
+        k.anim();
+        if (this.bubble.sprite.visible && (this.sayT += dt) > 3) this.bubble.sprite.visible = false;
+        if (d > 0.35) return;
+        // wieder aufsteigen und von der nächsten Ecke der Runde weiterfahren
+        this.bubble.say('Meins!');
+        this.sayT = 0;
+        k.u = bu; k.v = bv; k.facing = b.heading + A;
+        b.speed = 0;
+        b.npc = this.npc;
+        let best = Infinity;
+        this.loop.forEach(([u, v], i) => { const dd = Math.hypot(u - bu, v - bv); if (dd < best) { best = dd; this.i = (i + this.loop.length - 1) % this.loop.length; } });
+        return;
+      }
+      // stehen bleiben, dem Dreirad nachschauen, mit den Armen fuchteln
+      k.rest();
+      k.look(bu, bv, dt);
+      this.t += dt;
+      k.b.armL.rotation.x = -2.4 + 0.5 * Math.sin(this.t * 9); k.b.armR.rotation.x = -2.4 - 0.5 * Math.sin(this.t * 9);
+      k.b.armL.rotation.z = -0.4; k.b.armR.rotation.z = 0.4;
+      k.y = 0.04 * Math.abs(Math.sin(this.t * 9)); // stampft auf
+      if ((this.sayT += dt) > 6) this.stolen();
+      if (this.sayT > 3) this.bubble.sprite.visible = false;
     }
   }
 

@@ -57,7 +57,7 @@ const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
-const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
+const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto' };
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -137,8 +137,10 @@ const kienzler = new Kienzler(scene, world, rng(555)); // Kienzler Metalltechnik
 const schule = buildSchule(scene, world, player); // Sonnenrainschule Rheinweiler: Gebäude, Schulhof, spielende Kinder
 vehicles.push(...schule.cars);
 pedestrians.push(schule);
-pedestrians.push(buildKindergarten(scene, world, player)); // Kindergarten Bamlach mit Gemeindehalle: Gebäude, Garten, spielende Kinder
-pedestrians.push(buildKigaRheinweiler(scene, world, player)); // Kindergarten Rheinweiler: Gebäude, Garten, spielende Kinder
+for (const kiga of [buildKindergarten(scene, world, player), buildKigaRheinweiler(scene, world, player)]) { // Kindergärten Bamlach und Rheinweiler: Gebäude, Garten, spielende Kinder
+  pedestrians.push(kiga);
+  vehicles.push(...kiga.trikes); // Dreiräder kann man den Kindern wegnehmen
+}
 pedestrians.push(bahnhof); // Fahrgäste am Bahnhof Rheinweiler, Zugzielanzeiger, Uhren
 vehicles.push(kienzler.forklift);
 vehicles.push(...feuerwehr.trucks); // fahrbares Feuerwehrauto vor dem ersten Hallentor
@@ -442,9 +444,9 @@ function updateHud(dt) {
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
-    const verb = n?.kind === 'bike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
+    const verb = n?.kind === 'bike' || n?.kind === 'trike' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
-      : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? 'übernehmen' : verb}` : bus.footHint(player) || railway.footHint(player));
+      : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
   }
   streetTimer -= dt;
