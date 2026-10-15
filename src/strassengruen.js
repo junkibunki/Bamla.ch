@@ -95,7 +95,7 @@ const onYard = (world, x, z) => (world.data.paving?.at(x, z)[3] ?? 0) > 100 || (
 
 // Linienobjekt aufbereiten: von der Fahrbahn wegschieben, in Gebäuden/vorhandenen Hindernissen und
 // auf eigens gebauten Plätzen weglassen → zusammenhängende Läufe
-function runs(world, edge, f, step, half, soft = false) {
+function runs(world, edge, f, step, half, soft = false, gap = 0) {
   const sm = resample(f.pts, step);
   for (const p of sm) {
     const e = edge(p.x, p.z), need = half + 0.2;
@@ -104,7 +104,7 @@ function runs(world, edge, f, step, half, soft = false) {
   const out = [];
   let cur = [];
   for (const p of sm) {
-    const bad = world.collide(p.x, p.z, Math.max(0.05, half * 0.6)) || onPaved(p.x, p.z) || (soft && onYard(world, p.x, p.z));
+    const bad = world.collide(p.x, p.z, Math.max(0.05, half * 0.6 + gap)) || onPaved(p.x, p.z) || (soft && onYard(world, p.x, p.z));
     if (bad) { if (cur.length > 1) out.push(cur); cur = []; } else cur.push(p);
   }
   if (cur.length > 1) out.push(cur);
@@ -200,7 +200,7 @@ export function buildStrassengruen(scene, world) {
     } else if (f.t === 'wall') {
       const w = f.w ?? 0.3, h = f.h ?? 1, mat = f.mat ?? 'plaster', base = hex(f.color ?? WALL[mat] ?? WALL.plaster);
       const tex = mat === 'stone' || mat === 'gabion';
-      for (const sm of runs(world, edge, f, 0.8, w / 2)) {
+      for (const sm of runs(world, edge, f, 0.8, w / 2, false, 0.25)) { // Mauern: auch knapp neben schon gebauten Mauern weglassen
         const bot = (p) => world.heightAt(p.x, p.z) - 0.4, top = (p) => world.heightAt(p.x, p.z) + h;
         const capped = f.cap !== false && mat !== 'gabion';
         const prof = (p) => [[-w / 2, bot(p)], [-w / 2, top(p)], [w / 2, top(p)], [w / 2, bot(p)]];

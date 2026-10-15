@@ -1152,8 +1152,6 @@ export const GRUEN = [
   { street: 'Rotbergerstraße', t: 'shrub', p: [-1522.5, 677.1], r: 0.6, h: 1.2, kind: 'rose', flower: '#b82030' }, // P18R
   { street: 'Rotbergerstraße', t: 'hedge', pts: [[-1509.2, 692.2], [-1512, 691.4], [-1516.9, 689.1], [-1520.9, 687], [-1525, 684.9], [-1530.1, 680.4], [-1534.4, 676.4], [-1537.1, 673]], h: 2.5, w: 1.2, kind: 'ivy' }, // P18L+P19L+P17R+Luftbild
   { street: 'Rotbergerstraße', t: 'wall', pts: [[-1472.4, 666.3], [-1476.7, 669.9], [-1480.9, 673.5]], h: 1.1, w: 0.4, mat: 'stone', color: '#8a8478', cap: false }, // P16R+P15R+Luftbild
-  { street: 'Rotbergerstraße', t: 'wall', pts: [[-1428.2, 666], [-1433.9, 664.1], [-1439.6, 662.2], [-1444.4, 661.2], [-1448.8, 660.2]], h: 2, w: 0.4, mat: 'plaster', color: '#8e8b84' }, // P23R+Luftbild
-  { street: 'Rotbergerstraße', t: 'hedge', pts: [[-1428, 665.5], [-1433.7, 663.6], [-1439.5, 661.7], [-1444.3, 660.6], [-1448.7, 659.7]], h: 2.8, w: 0.8, kind: 'ivy' }, // P23R
   { street: 'Rotbergerstraße', t: 'planter', p: [-1460.4, 667], r: 0.6, kind: 'trough', color: '#8a8580', colors: ['#c8283c', '#f2f0ea', '#c8283c'] }, // P15L
   { street: 'Rotbergerstraße', t: 'planter', p: [-1460.3, 670.2], r: 0.6, kind: 'trough', color: '#8a8580', colors: ['#c8283c', '#f2f0ea', '#c8283c'] }, // P15L
   { street: 'Rotbergerstraße', t: 'wall', pts: [[-1475.5, 623.4], [-1471, 624], [-1466, 624.6]], h: 0.8, w: 0.8, mat: 'limestone', color: '#b8ab94', cap: false }, // P00R+Luftbild
@@ -1262,6 +1260,7 @@ export const GRUEN = [
   { street: 'Schafgässle', t: 'shrub', p: [-89, 49.2], r: 0.5, h: 1.2, kind: 'rose', flower: '#d02030' }, // P05L
   { street: 'Schafgässle', t: 'shrub', p: [-85.5, 48.5], r: 1, h: 2.2, kind: 'grass' }, // P05L (Pampasgras)
   // ===== Schloßstraße =====
+  // Schlossmauer, Tor und Schlossgarten baut schloss.js
   { street: 'Schloßstraße', t: 'fence', pts: [[-1301.5, 669.9], [-1313.7, 655.4]], h: 1.8, style: 'privacy', color: '#4b4f55' }, // P0L+Luftbild
   { street: 'Schloßstraße', t: 'wall', pts: [[-1313.1, 644.3], [-1320.4, 636]], h: 1.2, w: 0.3, mat: 'plaster', color: '#e9e6de', capColor: '#dcd8ce' }, // P1R+Luftbild
   { street: 'Schloßstraße', t: 'flowers', p: [-1311.4, 638.8], r: 0.8, h: 0.3, colors: ['#f2d33c', '#e8b830'] }, // P1R
@@ -1277,12 +1276,6 @@ export const GRUEN = [
   { street: 'Schloßstraße', t: 'wall', pts: [[-1345.3, 634.6], [-1349.3, 636.1]], h: 1.8, w: 0.3, mat: 'concrete', color: '#a9a59c', cap: false }, // P3L
   { street: 'Schloßstraße', t: 'wall', pts: [[-1365.1, 636.2], [-1368.2, 637.7]], h: 1.1, w: 0.3, mat: 'plaster', color: '#e3d9c6', capColor: '#d6ccb8' }, // P4R+P5R
   { street: 'Schloßstraße', t: 'wall', pts: [[-1369.5, 638.4], [-1371.4, 639.4], [-1388.2, 648.1]], h: 1, w: 0.3, mat: 'plaster', color: '#e3d9c6', capColor: '#d6ccb8' }, // P4R+P5R
-  { street: 'Schloßstraße', t: 'wall', pts: [[-1389.9, 648.8], [-1390.5, 649.1], [-1419.5, 663.7]], h: 1.2, w: 0.4, mat: 'concrete', color: '#a7a49b', capColor: '#9c998f' }, // P5R+P6R+Luftbild
-  { street: 'Schloßstraße', t: 'wall', pts: [[-1422.7, 664.5], [-1428.3, 666], [-1428.3, 666]], h: 1.6, w: 0.4, mat: 'plaster', color: '#8f8d87', cap: false }, // P7R+P10R
-  { street: 'Schloßstraße', t: 'hedge', pts: [[-1422.9, 664.5], [-1428.3, 666], [-1428.3, 666]], h: 2, w: 0.6, kind: 'ivy', color: '#4f6e33' }, // P10R
-  { street: 'Schloßstraße', t: 'hedge', pts: [[-1392.7, 646.8], [-1400.7, 650.9]], h: 0.6, w: 0.5, kind: 'boxwood' }, // P5R+P6R
-  { street: 'Schloßstraße', t: 'flowers', p: [-1391.8, 648.1], r: 0.8, h: 0.5, colors: ['#8e7cc3', '#a3ad8f'] }, // P5R
-  { street: 'Schloßstraße', t: 'shrub', p: [-1420.9, 661.5], r: 1.5, h: 3.5, kind: 'flowering', flower: '#f4f3ea' }, // P7R
   { street: 'Schloßstraße', t: 'flowers', pts: [[-1364, 642.7], [-1368.6, 644.9], [-1372.7, 647.1]], h: 0.5, w: 0.5, colors: ['#6f9a3c', '#b7c94e', '#e3df6e'] }, // P4L
   { street: 'Schloßstraße', t: 'fence', pts: [[-1373.2, 647.7], [-1376.9, 649.7]], h: 1.7, style: 'privacy', color: '#b8946a' }, // P4L
   { street: 'Schloßstraße', t: 'planter', p: [-1384.4, 654.3], r: 0.9, kind: 'trough', color: '#b9ab92', colors: ['#8f9a86', '#8e7cc3'] }, // P5L

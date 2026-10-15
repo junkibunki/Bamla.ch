@@ -173,6 +173,11 @@ const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffi
 const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
 const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
+// Kirche und Schloss vor dem Straßengrün: ihre Mauern sind dann schon Hindernisse, das Grün lässt sie aus
+const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Friedhof, Krippe
+pedestrians.push(kirche.pfarrer); // Pfarrer läuft wie ein Fußgänger
+const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der Kirche und an den Kapellen, Glockenstube
+pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
 // ---------- Parken in Hofeinfahrten ----------
@@ -240,10 +245,6 @@ spawnTraffic('bike', world.graphs.bike, 14, BIKE_COLORS);
 new AutobahnTraffic(scene, world, rng(55), vehicles); // A5: PKW und LKW, je Richtung zwei Fahrstreifen
 
 for (let i = 0; i < 35; i++) pedestrians.push(new Pedestrian(scene, world.graphs.walk, world.graphs.walk.randomSpot(rand), rand));
-const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Friedhof, Krippe
-pedestrians.push(kirche.pfarrer); // Pfarrer läuft wie ein Fußgänger
-const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der Kirche und an den Kapellen, Glockenstube
-pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 // Camper, die auf den Wegen des Campingplatzes spazieren
 for (let i = 0, n = 0; i < 600 && n < 16; i++) {
   const spot = world.graphs.walk.randomSpot(rand);
