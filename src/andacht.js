@@ -2,6 +2,8 @@
 // Vaterunser mit Orgel) oder singen (R, Choral mit Orgelbegleitung). Am Fuß der Treppe in der Turmhalle geht es
 // hinauf in die Glockenstube (T): Blick durch die vier Schallöffnungen, Mausrad als Fernglas.
 // Haken für Aufgaben und Belohnungen (IDEEN.md): onPray, onSing, onTower; towerOpen: Turm erst nach der Aufgabe „Andacht“.
+// Multiplayer (mp): wer singt, sendet sg = Sekunden im Lied, wer betet an = 'p'. Andere Sänger:innen hört man in der Nähe
+// (leiser mit der Entfernung) und sieht sie mit Gesangbuch; R neben jemandem, der singt, stimmt im Gleichklang mit ein.
 import * as THREE from 'three';
 import { KIRCHE } from './kirche.js';
 import { CHAPEL } from './golf-holes.js';
@@ -29,6 +31,7 @@ const G = [43, 55, 59, 62], C = [48, 55, 60, 64], D = [50, 54, 57, 62], Em = [40
 const CHORDS = [G, G, C, D, G, G, D, G, G, C, C, D, G, Em, D, G];
 const SONG = MELODY.reduce((s, [, b]) => s + b, 0) * BEAT;
 const PRAYER_CHORDS = [G, C, G, D, G, C, D, G];
+const HEAR = 60; // m: so weit hört man andere singen
 
 // Schallöffnungen der Glockenstube (Kirchensystem: a nach Osten, b nach Süden), im Uhrzeigersinn
 const OPENINGS = [
@@ -75,13 +78,36 @@ class Sound {
 
   end() {
     if (!this.bus) return;
-    const b = this.bus, t = this.ac.currentTime;
-    b.gain.setTargetAtTime(0, t, 0.15);
-    setTimeout(() => b.disconnect(), 1500);
+    this.fadeOut(this.bus);
     this.bus = null;
   }
 
-  organ(notes, t, dur, vol = 0.05) {
+  // Eigene Spur für eine andere Spielerin / einen anderen Spieler, Lautstärke setzt listen()
+  track() {
+    const b = this.ctx().createGain();
+    b.gain.value = 0;
+    b.connect(this.out);
+    return b;
+  }
+
+  fadeOut(b) {
+    b.gain.cancelScheduledValues(this.ac.currentTime);
+    b.gain.setTargetAtTime(0, this.ac.currentTime, 0.15);
+    setTimeout(() => b.disconnect(), 1500);
+  }
+
+  // Choral mit Orgel ab Sekunde `from` des Lieds (wer später dazukommt, hört ab der richtigen Stelle)
+  song(t0, from = 0, bus = this.bus) {
+    const at = (s, d, fn) => {
+      const a = Math.max(s, from), dur = s + d - a;
+      if (dur > 0.1) fn(t0 + a - from, dur);
+    };
+    let s = 0;
+    for (const [n, b] of MELODY) { at(s, b * BEAT, (t, d) => this.voice(n, t, d, bus)); s += b * BEAT; }
+    CHORDS.forEach((ch, i) => at(i * 2 * BEAT, 2 * BEAT - 0.05, (t, d) => this.organ(ch, t, d, 0.03, bus)));
+  }
+
+  organ(notes, t, dur, vol = 0.05, bus = this.bus) {
     const ac = this.ac;
     for (const n of notes) {
       for (const [mul, g] of [[1, 1], [2, 0.45], [4, 0.12], [0.5, 0.3]]) {
@@ -91,7 +117,7 @@ class Sound {
         e.gain.linearRampToValueAtTime(vol * g, t + 0.08);
         e.gain.setValueAtTime(vol * g, t + dur);
         e.gain.linearRampToValueAtTime(0, t + dur + 0.3);
-        o.connect(e).connect(this.bus);
+        o.connect(e).connect(bus);
         o.start(t);
         o.stop(t + dur + 0.35);
       }
@@ -99,7 +125,7 @@ class Sound {
   }
 
   // Gesungenes „Ah“: Sägezahn mit Vibrato durch zwei Formantfilter
-  voice(n, t, dur) {
+  voice(n, t, dur, bus = this.bus) {
     const ac = this.ac, f = midi(n);
     const o = ac.createOscillator(), lfo = ac.createOscillator(), depth = ac.createGain(), e = ac.createGain();
     o.type = 'sawtooth';
@@ -119,7 +145,7 @@ class Sound {
     e.gain.linearRampToValueAtTime(0.5, t + 0.06);
     e.gain.setValueAtTime(0.45, t + dur - 0.06);
     e.gain.linearRampToValueAtTime(0, t + dur + 0.04);
-    e.connect(this.bus);
+    e.connect(bus);
     for (const x of [o, lfo]) { x.start(t); x.stop(t + dur + 0.1); }
   }
 
@@ -159,6 +185,24 @@ function noteSprite() {
   return s;
 }
 
+// Gesangbuch in der rechten Hand
+export function hymnBook() {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.16), new THREE.MeshLambertMaterial({ color: 0x1e2a4a }));
+  b.position.set(0.12, -0.62, 0.1);
+  return b;
+}
+
+// Haltung: 'sing' (Gesangbuch vor sich), 'pray' (kniend, gefaltete Hände), null (Arme und Beine gerade)
+export function andachtPose(m, mode) {
+  if (mode === 'pray') {
+    m.legL.rotation.set(1.0, 0, 0); m.legR.rotation.set(1.0, 0, 0);       // Knie am Boden, Unterschenkel nach hinten
+    m.armL.rotation.set(-1.25, 0, 0.5); m.armR.rotation.set(-1.25, 0, -0.5); // gefaltete Hände vor der Brust
+  } else if (mode === 'sing') {
+    m.legL.rotation.set(0, 0, 0); m.legR.rotation.set(0, 0, 0);
+    m.armL.rotation.set(-0.95, 0, 0.3); m.armR.rotation.set(-0.95, 0, -0.3);
+  } else for (const l of [m.legL, m.legR, m.armL, m.armR]) l.rotation.set(0, 0, 0);
+}
+
 function segDist(px, pz, [ax, az], [bx, bz]) {
   const dx = bx - ax, dz = bz - az, l = dx * dx + dz * dz || 1;
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l));
@@ -188,6 +232,8 @@ export class Andacht {
     this.mode = null;       // 'pray' | 'sing' | 'climb' | 'tower' | 'descend'
     this.towerOpen = true;  // quests/andacht.js schließt ab, bis die Aufgabe erledigt ist
     this.onPray = this.onSing = this.onTower = null;
+    this.mp = null;          // Multiplayer (main.js)
+    this.choir = new Map();  // id -> { bus, sg }: andere, die gerade singen und zu hören sind
     this.sound = new Sound();
     this.t = 0;
     this.view = 0;
@@ -197,10 +243,9 @@ export class Andacht {
     this.dir = new THREE.Vector3();
     this.look = new THREE.Vector3();
 
-    this.notes = Array.from({ length: 8 }, () => { const s = noteSprite(); s.life = 0; scene.add(s); return s; });
+    this.notes = Array.from({ length: 16 }, () => { const s = noteSprite(); s.life = 0; scene.add(s); return s; });
     this.noteT = 0;
-    this.book = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.16), new THREE.MeshLambertMaterial({ color: 0x1e2a4a }));
-    this.book.position.set(0.12, -0.62, 0.1);
+    this.book = hymnBook();
     this.book.visible = false;
 
     this.fade = document.createElement('div');
@@ -264,28 +309,33 @@ export class Andacht {
     const m = player.mesh;
     m.position.y = player.groundY - KNEEL;
     m.rotation.set(0, player.facing, 0);
-    m.legL.rotation.set(1.0, 0, 0); m.legR.rotation.set(1.0, 0, 0);       // Knie am Boden, Unterschenkel nach hinten
-    m.armL.rotation.set(-1.25, 0, 0.5); m.armR.rotation.set(-1.25, 0, -0.5); // gefaltete Hände vor der Brust
+    andachtPose(m, 'pray');
     const t0 = this.sound.begin(), step = (VATERUNSER.length * LINE) / PRAYER_CHORDS.length;
     PRAYER_CHORDS.forEach((ch, i) => this.sound.organ(ch, t0 + i * step, step - 0.1, 0.035));
   }
 
+  // Singt jemand in der Nähe: dort einstimmen statt von vorn anfangen
+  joinAt(player) {
+    let best = 0, bd = 12;
+    for (const r of this.mp?.remotes.values() ?? []) {
+      const sg = r.target?.sg, d = Math.hypot(r.x - player.pos.x, r.z - player.pos.z);
+      if (sg != null && sg < SONG - 3 && d < bd) { best = sg + 0.15; bd = d; }
+    }
+    return best;
+  }
+
   sing(player, place) {
     this.mode = 'sing';
-    this.t = 0;
+    this.t = this.joinAt(player);
     this.noteT = 0;
     this.face(player, place, false);
     const m = player.mesh;
     m.position.y = player.groundY;
     m.rotation.set(0, player.facing, 0);
-    m.legL.rotation.set(0, 0, 0); m.legR.rotation.set(0, 0, 0);
-    m.armL.rotation.set(-0.95, 0, 0.3); m.armR.rotation.set(-0.95, 0, -0.3); // Gesangbuch vor sich
+    andachtPose(m, 'sing');
     m.armR.add(this.book);
     this.book.visible = true;
-    const t0 = this.sound.begin();
-    let t = t0;
-    for (const [n, b] of MELODY) { this.sound.voice(n, t, b * BEAT); t += b * BEAT; }
-    CHORDS.forEach((ch, i) => this.sound.organ(ch, t0 + i * 2 * BEAT, 2 * BEAT - 0.05, 0.03));
+    this.sound.song(this.sound.begin(), this.t);
   }
 
   climb(player) {
@@ -321,12 +371,47 @@ export class Andacht {
     this.sound.end();
     this.book.visible = false;
     const m = player.mesh;
-    for (const l of [m.legL, m.legR, m.armL, m.armR]) l.rotation.set(0, 0, 0);
+    andachtPose(m, null);
     if (this.ret) { player.pos.set(this.ret[0], 0, this.ret[1]); this.ret = null; } // zurück in den Mittelgang
     m.position.set(player.pos.x, player.groundY + player.pos.y, player.pos.z);
   }
 
+  noteAt(x, y, z) {
+    const s = this.notes.find((n) => n.life <= 0);
+    if (!s) return;
+    s.life = 2.4;
+    s.seed = Math.random() * 6;
+    s.visible = true;
+    s.position.set(x + (Math.random() - 0.5) * 0.5, y + 2.0, z + (Math.random() - 0.5) * 0.5);
+  }
+
+  // Andere, die singen: eigene Spur je Person, leiser mit der Entfernung; Noten über dem Kopf
+  listen(dt, player) {
+    const me = this.mode === 'tower' ? null : player.pos;
+    for (const [id, c] of this.choir) {
+      const r = this.mp.remotes.get(id), sg = r?.target?.sg;
+      const d = r && me ? Math.hypot(r.x - me.x, r.z - me.z) : Infinity;
+      if (sg == null || sg < c.sg - 1 || d > HEAR + 10) { this.sound.fadeOut(c.bus); this.choir.delete(id); continue; } // aufgehört, neu angefangen, zu weit weg
+      c.sg = sg;
+      c.bus.gain.setTargetAtTime(Math.min(1, 8 / (d + 4)), this.sound.ac.currentTime, 0.2);
+    }
+    for (const r of this.mp.remotes.values()) {
+      const sg = r.target?.sg;
+      if (sg == null || !r.mesh.visible) continue;
+      if ((r.noteT = (r.noteT ?? 0) - dt) <= 0) { r.noteT = BEAT * 1.5; this.noteAt(r.x, r.y, r.z); }
+      if (this.choir.has(r.id) || !me || Math.hypot(r.x - me.x, r.z - me.z) > HEAR || sg > SONG - 0.5) continue;
+      const bus = this.sound.track();
+      this.sound.song(this.sound.ac.currentTime + 0.05, sg + 0.1, bus);
+      this.choir.set(r.id, { bus, sg });
+    }
+  }
+
   update(dt, input, player) {
+    if (this.mp) {
+      this.mp.extra.sg = this.mode === 'sing' ? Math.min(SONG, this.t) : undefined;
+      this.mp.extra.an = this.mode === 'pray' ? 'p' : undefined;
+      this.listen(dt, player);
+    }
     for (const s of this.notes) {
       if (s.life <= 0) continue;
       s.life -= dt;
@@ -347,16 +432,7 @@ export class Andacht {
       if (this.mode === 'pray' && this.t >= VATERUNSER.length * LINE) { this.stop(player); this.onPray?.(); return; }
       if (this.mode === 'sing') {
         if (this.t >= SONG + 0.3) { this.stop(player); this.onSing?.(); return; }
-        if ((this.noteT -= dt) <= 0) {
-          this.noteT = BEAT * 1.5;
-          const s = this.notes.find((n) => n.life <= 0);
-          if (s) {
-            s.life = 2.4;
-            s.seed = Math.random() * 6;
-            s.visible = true;
-            s.position.set(player.pos.x + (Math.random() - 0.5) * 0.5, player.groundY + 2.0, player.pos.z + (Math.random() - 0.5) * 0.5);
-          }
-        }
+        if ((this.noteT -= dt) <= 0) { this.noteT = BEAT * 1.5; this.noteAt(player.pos.x, player.groundY, player.pos.z); }
       }
       return;
     }
