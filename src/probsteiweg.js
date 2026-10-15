@@ -118,8 +118,8 @@ export function buildProbsteiweg(scene, world) {
 
   // ================= Marienheim =================
   const gMax = Math.max(...MH_RING.map(([x, z]) => H(x, z)));
-  const [nx0, nz0, nLen] = unit(MH_NE, MH_NW), nN = [nz0, -nx0];           // Nordwand NE→NW, Normale nach Norden
-  const [ex0, ez0, eLen] = unit(MH_NE, MH_SE), nE = [-ez0, ex0];           // Ostwand NE→SE, Normale nach Osten
+  const [nx0, nz0, nLen] = unit(MH_NE, MH_NW), nN = [-nz0, nx0];           // Nordwand NE→NW, Normale nach Norden
+  const [ex0, ez0, eLen] = unit(MH_NE, MH_SE), nE = [ez0, -ex0];           // Ostwand NE→SE, Normale nach Osten
   const along = (a, [dx, dz], s, n, o) => [a[0] + dx * s + n[0] * o, a[1] + dz * s + n[1] * o];
   // auskragende Dachplatte an Nord- und Ostseite
   for (const [dir, n, len] of [[[nx0, nz0], nN, nLen], [[ex0, ez0], nE, eLen]]) {
@@ -144,9 +144,9 @@ export function buildProbsteiweg(scene, world) {
     for (let s = nLen * 0.55; s < nLen - 0.2; s += 0.42) {
       const g0 = H(...along(MH_NE, [nx0, nz0], s, nN, 1)), top = MH_TOP - 0.5 - Math.abs(Math.sin(s * 0.7)) * 3 * (s < nLen * 0.65 ? 1 : 0.3);
       for (let y = g0; y < top; y += 0.45) {
-        if (r() < 0.12) continue;
+        if (r() < 0.25) continue;
         const [x, z] = along(MH_NE, [nx0, nz0], s + (r() - 0.5) * 0.2, nN, 0.08);
-        P.add(r() < 0.6 ? 'ivy' : 'ivy2', new THREE.IcosahedronGeometry(0.3 + r() * 0.12, 0).scale(1, 1, 0.35).rotateY(ry).translate(x, y + r() * 0.2, z));
+        P.add(r() < 0.6 ? 'ivy' : 'ivy2', new THREE.IcosahedronGeometry(0.2 + r() * 0.1, 0).scale(1, 1.1, 0.3).rotateY(ry).translate(x, y + r() * 0.2, z));
       }
     }
   }
@@ -159,8 +159,8 @@ export function buildProbsteiweg(scene, world) {
     box('glass', 3.2, 0.03, 1.5, cx, gy + 2.82, cz, ry);
     for (const o of [-1.5, 1.5]) { const [px, pz] = along(MH_NE, [nx0, nz0], s + o, nN, 1.55); box('steel', 0.08, 2.75, 0.08, px, gy + 1.37, pz); }
     box('white', 1.9, 2.6, 0.08, x0 + nN[0] * 0.04, gy + 1.3, z0 + nN[1] * 0.04, ry);
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.85), lambert(0xffffff, { map: marienheimSignTex() }));
-    sign.position.set(x0 + nN[0] * 0.09, gy + 2.1, z0 + nN[1] * 0.09);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.62), lambert(0xffffff, { map: marienheimSignTex() })); // über der Glastür
+    sign.position.set(x0 + nN[0] * 0.09, gy + 2.25, z0 + nN[1] * 0.09);
     sign.rotation.y = ry;
     scene.add(sign);
     box('dark', 1.0, 1.9, 0.04, x0 + nN[0] * 0.1, gy + 0.95, z0 + nN[1] * 0.1, ry); // Glastür
