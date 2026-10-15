@@ -9,7 +9,7 @@
 // Gärkörbchen und Waienblech, Bistrotisch unter dem Fenster, Brotschieber am Ofen.
 // Backen: E heizt an, ab 200 °C schießt E Bauernbrot bzw. R Zwiebelwaie ein, E holt es heraus (in den Beutel, G: essen).
 import * as THREE from 'three';
-import { O, E, P, W, L, LEAN, tileTexture } from './museum.js';
+import { O, E, N, P, W, L, LEAN, tileTexture } from './museum.js';
 
 // Lokales System wie im Museum: a nach Osten, b nach Norden; Gruppe: (a, y, -b), y absolut
 const LB = LEAN.b1;                                     // Nordwand des Anbaus (Nischenrückwand)
@@ -170,7 +170,10 @@ export function buildBackofen(scene, world, carry) {
 
   // ---------- Dach: Westfläche und Nordfläche, Grat von der Nordwestecke zur Anbauwand ----------
   const aW = AW - OVH, bN = BN + OVH;                          // Traufkanten
-  const eave = gy + 2.15;                                      // Traufkante (Unterkante Rinne ≈ 2,1 m)
+  // Traufkante: Pfetten ≥ 2,35 m über dem höchsten Boden unter dem Dach (der Hof fällt nach Norden ab)
+  let gMax = -Infinity;
+  for (let a = aW; a <= A_END; a += 1) for (let b = LB; b <= bN; b += 1) if (a < -W || b > L) gMax = Math.max(gMax, world.heightAt(...P(a, b)));
+  const eave = gMax + 2.7;
   const roofY = (a, b) => eave + ROOF_T * Math.min(a - aW, bN - b);
   const aH = aW + (bN - LB);                                   // Grat trifft die Anbauwand
   const sec = Math.sqrt(1 + ROOF_T * ROOF_T);
@@ -433,7 +436,14 @@ export function buildBackofen(scene, world, carry) {
   world.addObstacle(rect(ta0, ta1, tB - 0.33, tB + 0.33), 0.8);
   for (const [a, b] of posts) world.addObstacle(rect(a - 0.16, a + 0.16, b - 0.16, b + 0.16), 2.5);
 
-  return new Backofen({ g, oven, door, needle, fire, flames, glowMat, smoke, peel, baskets, slots }, carry);
+  // Kamera bleibt unter dem Dach (Unterkante der Sparren), solange sie oder die Figur darunter ist
+  const ceilingAt = (x, z) => {
+    const dx = x - O[0], dz = z - O[1], a = dx * E[0] + dz * E[1], b = dx * N[0] + dz * N[1];
+    if (a < aW || a > A_END || b > bN || b < (a < -W ? LB : L)) return null;
+    return roofY(a, b) - 0.12 - 0.13 - 0.25;
+  };
+
+  return new Backofen({ g, oven, door, needle, fire, flames, glowMat, smoke, peel, baskets, slots, ceilingAt }, carry);
 }
 
 // ---------- Backen ----------

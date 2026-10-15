@@ -41,7 +41,7 @@ import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
-import { tileInstances, pruneSmallShadows } from './tiles.js';
+import { tileInstances, pruneSmallShadows, StaticBatcher } from './tiles.js';
 import { ElectricCar } from './ecar.js';
 import { Quests } from './quests.js';
 import { Schnellreise } from './schnellreise.js';
@@ -69,8 +69,8 @@ document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
-const FOG_FAR = 1100;
-scene.fog = new THREE.Fog(SKY, 250, FOG_FAR);
+const FOG_FAR = 750;
+scene.fog = new THREE.Fog(SKY, 180, FOG_FAR);
 
 // Hinter dem Nebelende ist alles Himmelfarbe – dort muss nichts mehr gezeichnet werden.
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.3, FOG_FAR + 50);
@@ -331,7 +331,7 @@ function updateCamera(dt) {
   const px = camTarget.x + (cx - camTarget.x) * k, pz = camTarget.z + (cz - camTarget.z) * k;
   // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt), in der Kirche nicht durch die Decke
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
-  const ceil = kirche.innen.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz);
+  const ceil = kirche.innen.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
   if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
   camera.position.lerp(camPos, Math.min(1, dt * 12));
   camera.lookAt(camTarget);
@@ -474,6 +474,7 @@ function mapKeys() {
 
 tileInstances(scene); // Reben, Bäume, Büsche in 200-m-Kacheln, damit Culling greift
 pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
+const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu wenigen Meshes zusammenfassen
 
 // ---------- Hauptschleife ----------
 document.getElementById('loading').remove();
@@ -481,6 +482,7 @@ const multiplayer = new Multiplayer(scene, world, await playerName);
 
 window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
 quests.start(window.game);
+window.game.statics = statics;
 const clock = new THREE.Clock();
 
 function frame() {
@@ -558,6 +560,7 @@ function frame() {
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, cam.yaw, vehicles, multiplayer.others, quests.markers);
   if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, multiplayer.others, quests.markers);
 
+  statics.update();
   renderer.render(scene, camera);
   drunk.afterRender();
   input.endFrame();
