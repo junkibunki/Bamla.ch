@@ -510,9 +510,9 @@ const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
-andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
 multiplayer.onTakeover = takeOver;
+andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
 window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
