@@ -320,6 +320,44 @@ export class Multiplayer {
     p.setVisible(true);
   }
 
+  // ---------- Schubsen: jede:r schiebt nur sich selbst aus den anderen heraus (eigene Position gehört dem eigenen Client) ----------
+
+  // Fahrzeuge der anderen als Hindernisse (movers): wer zu Fuß ist, wird hinausgeschoben, kann sie aber nicht bewegen
+  get cars() { return [...this.remotes.values()].filter((r) => r.vehicle && r.target && !r.local).map((r) => r.vehicle); } // eigene Exemplare stehen schon in vehicles
+
+  // Zu Fuß gegen Fußgänger:innen, Fahrzeug gegen Fahrzeug. Wer schneller ist, gibt weniger nach – so schiebt man den anderen vor sich her.
+  // Vor player.update bzw. vor dem Fahrzeug-sync aufrufen, dort folgen noch die Kollisionen mit Gebäuden.
+  push(player, dt) {
+    const v = player.car;
+    if (!v && player.pos.y > 1.6) return; // drüber gesprungen
+    const mine = v ? Math.abs(v.speed) : Math.hypot(player.vel.x, player.vel.y);
+    for (const r of this.remotes.values()) {
+      const w = r.vehicle;
+      if (!r.target || r.target.ri != null || !!v !== !!w) continue; // Beifahrer:innen schweben nur als Namensschild mit
+      const give = (r.speed + 0.5) / (mine + r.speed + 1); // Anteil, um den ich ausweiche
+      if (!v) {
+        if (Math.abs(r.y - player.mesh.position.y) > 1.6) continue;
+        const dx = player.pos.x - r.x, dz = player.pos.z - r.z, d = Math.hypot(dx, dz), min = 0.75;
+        if (d >= min) continue;
+        const k = ((min - d) * give) / (d || 1);
+        player.pos.x += (d ? dx : 1) * k;
+        player.pos.z += d ? dz * k : 0;
+        continue;
+      }
+      // drei Punkte auf der eigenen Längsachse gegen die Box des anderen Fahrzeugs
+      const reach = Math.max(0, v.k.halfLen - v.k.halfW);
+      let q = null;
+      for (const s of [-1, 0, 1]) {
+        const p = w.pushOut(v.x + v.fx * reach * s, v.z + v.fz * reach * s, v.k.halfW, v.y);
+        if (p && (!q || Math.hypot(...p) > Math.hypot(...q))) q = p;
+      }
+      if (!q) continue;
+      v.x += q[0] * give;
+      v.z += q[1] * give;
+      v.speed *= Math.pow(0.15, dt * (1 - give)); // Schieben bremst
+    }
+  }
+
   // Wer fährt gerade bei mir mit? (Fahrer-Sicht, für Aufgaben)
   get passengers() { return this.id ? [...this.remotes.values()].filter((r) => r.target?.ri === this.id) : []; }
 
