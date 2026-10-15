@@ -574,8 +574,9 @@ function frame() {
     const q = c.pushOut(v.x, v.z, v.k.halfW, v.y);
     if (q) { v.x += q[0]; v.z += q[1]; v.speed *= 0.3; }
   }
+  if (player.car || (!riding() && !ridingSwing() && !andacht.active && !sport.busy)) multiplayer.push(player, dt); // andere schubsen
   for (const v of vehicles) v.sync(dt, world);
-  const movers = [...vehicles, ...railway.cars, ...bus.cars];
+  const movers = [...vehicles, ...railway.cars, ...bus.cars, ...multiplayer.cars];
   for (const p of pedestrians) p.update(dt, world, movers);
 
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
