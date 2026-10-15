@@ -20,10 +20,10 @@ const ISLAND = { u: 5.9, v: 0.9, au: 1.0, av: 1.8 }; // Mitte, Halbachsen (au l�
 const LAMP = P(5.45, 0.4);
 const SPLIT_U = 13;                                    // hier teilt sich der Kirschgarten in die zwei Äste
 
-// Parkmauer: beginnt am Probsteiweg (Südseite, 3,35 m neben der Achse) an der gepflasterten Zufahrt vor der Kurve,
+// Parkmauer: beginnt am Probsteiweg (Südseite, 2,85 m neben der berichtigten Achse, siehe fixProbsteiweg) an der gepflasterten Zufahrt vor der Kurve,
 // läuft nach Westen, biegt mit r = 2,5 m um die Ecke und dann auf der Ostseite der Alten Weinstraße
 // (3,8 m neben der Achse, 0,55 m Rinne/Unkraut davor) nach Süden. Links der Laufrichtung liegt der Park.
-const PARK_WALL = [[-127.5, 105.85], [-131.42, 105.85], [-144.61, 101.69], [-171.5, 93.2], [-196.38, 85.44],
+const PARK_WALL = [[-127.5, 105.87], [-130.93, 106.27], [-138.86, 105.16], [-151.07, 99.05], [-171.5, 93.2], [-196.38, 85.44],
   [-206.15, 81.08], [-206.91, 80.88], [-207.69, 80.92], [-208.42, 81.2], [-209.03, 81.69],   // Ecke
   [-212.92, 86], [-218.72, 91.98], [-223.41, 99.16], [-241.0, 143.2]];
 const CORNER_AT = 7; // Index der Eckmitte
@@ -66,7 +66,7 @@ export function canvasTex(w, h, draw) {
 }
 
 // Bruchstein: flache, unregelmäßige hellgraue Kalksteine, einzelne ockerfarben, dicht in grauem Mörtel; 256 px = 2 m
-const rubbleTex = () => {
+export const rubbleTex = () => {
   const t = canvasTex(256, 256, (g) => {
     g.fillStyle = '#9d9a92';
     g.fillRect(0, 0, 256, 256);

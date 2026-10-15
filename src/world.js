@@ -43,7 +43,7 @@ export const ROAD_STYLE = {
 };
 const DEFAULT_ROAD = { w: 3, color: 0x777777, y: 0.12 };
 const roadStyle = (r) => (isUnpavedWay(r) ? ROAD_STYLE.track : ROAD_STYLE[r.type] || DEFAULT_ROAD);
-const roadWidth = (r) => (r.type === 'motorway' ? MOTORWAY_W : roadStyle(r).w); // A5: 2 Fahrstreifen + Standstreifen
+const roadWidth = (r) => (r.type === 'motorway' ? MOTORWAY_W : r.width ?? roadStyle(r).w); // A5: 2 Fahrstreifen + Standstreifen
 
 const AREA_STYLE = {
   water: [0x4f8fc0, 9], swimming_pool: [0x5fc0e0, 9],
