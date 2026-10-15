@@ -9,6 +9,8 @@ import { Input } from './input.js';
 import { Minimap, BigMap } from './minimap.js';
 import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
+import { splitKirschgartenMouth, buildKirschgartenEcke } from './kirschgarten-ecke.js';
+import { buildProbsteiweg } from './probsteiweg.js';
 import { buildFeuerwehr } from './feuerwehr.js';
 import { buildMuseum, buildBusStop } from './museum.js';
 import { buildOrtseingaenge } from './ortseingang.js';
@@ -93,11 +95,14 @@ data.roofs = await fetch('/roofs.json').then((r) => r.json()).catch(() => null);
 data.paving = await loadPaving().catch(() => null); // Pflaster/Höfe aus dem Luftbild, scripts/detect-paving.mjs
 data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/build-golf.mjs)
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
+splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
 buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
+buildKirschgartenEcke(scene, world); // Bruchsteinmauer, Verkehrsinsel mit Laterne, Betonmauer an der Einmündung Kirschgarten
+buildProbsteiweg(scene, world); // Marienheim und Probstei gegenüber: Fassadendetails, Statue, Hofmauer, Pflaster
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
 buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus)
 const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang)

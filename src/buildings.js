@@ -50,6 +50,7 @@ function wallTexture(variant) {
   const [look, shutterHex] = variant.split('-');
   if (look === 'fachwerk') return finishWall(drawFachwerk(c, g));
   if (look === 'modern') return finishWall(drawModern(c, g));
+  if (look === 'band') return finishWall(drawBand(c, g));
   if (look === 'small') return finishWall(drawSmall(c, g));
   if (look === 'stone') return finishWall(drawSmall(c, drawStone(g)));
   const wx = 81, wy = 65, ww = 94, wh = 110;
@@ -156,6 +157,28 @@ function drawModern(c, g) {
   for (let x = wx + 12; x < wx + ww - 8; x += 6) g.fillRect(x, wy + 8, 1, wh - 16);
   g.fillStyle = '#d0d0cc';
   g.fillRect(wx - 4, wy + wh, ww + 8, 6);             // Fensterbank
+  return c;
+}
+
+// Bandfenster (Bau der 1970er): durchgehendes Fensterband je Geschoss mit Alu-Sprossen, darunter Betonbrüstung,
+// oben die Kante der Geschossdecke. Kacheln stoßen ohne Lücke aneinander.
+function drawBand(c, g) {
+  g.fillStyle = '#dcdcd6';
+  g.fillRect(0, 0, 256, 14);                          // Deckenkante
+  g.fillStyle = '#8d9296';
+  g.fillRect(0, 40, 256, 135);                        // Rahmen
+  const grd = g.createLinearGradient(0, 46, 0, 169);
+  grd.addColorStop(0, '#5a6a78');
+  grd.addColorStop(1, '#2c3640');
+  g.fillStyle = grd;
+  g.fillRect(0, 46, 256, 123);                        // Glas
+  g.fillStyle = '#8d9296';
+  for (let x = 0; x < 256; x += 64) g.fillRect(x, 40, 5, 135); // Pfosten
+  g.fillRect(0, 128, 256, 4);                         // Kämpfer
+  g.fillStyle = 'rgba(230,230,224,0.55)';
+  for (let x = 12; x < 256; x += 64) g.fillRect(x, 50, 18, 74); // Vorhänge
+  g.fillStyle = '#c8c8c2';
+  g.fillRect(0, 175, 256, 5);                         // Fensterbank
   return c;
 }
 

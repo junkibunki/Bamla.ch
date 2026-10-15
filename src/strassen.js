@@ -783,11 +783,14 @@ export const STREET_OVERRIDES = [
   // nicht sichtbar: c:[-205.1,222.3], c:[-186,195.7] (vermutlich baugleich mit den beiden obigen)
   // ===== Probsteiweg =====
   // Quelle: Google Street View Apr 2022. Abschnitt 1 (Stichweg nach Süden) ohne Abdeckung; Haus bei c:[-115.1,92.7] in Street View verpixelt.
-  { c: [-141.6, 77.2], wall: 0xf4f2ec, roof: 0x7a4a3a, look: 'shutter', shutters: 0x6a3a26 },                  // Probstei: großer dreigeschossiger weißer Bau, rotbraune Klappläden
-  { c: [-109.1, 87.2], wall: 0xb8b0a4, roof: 0x7a4a3a, look: 'plain' },                                        // Nr. 3: Scheune, grauer Rauputz-Giebel zur Straße
+  { c: [-141.6, 77.2], wall: 0xf3ede0, roof: 0x7a4a3a, look: 'shutter', shutters: 0x6a4434 },   // Probstei (Nr. 1/1): cremeweißer Rauputz, braune Läden; Sockel, Statue usw. in probsteiweg.js
+  { c: [-109.1, 87.2], wall: 0xb3aa98, roof: 0x7a4a3a, look: 'plain' },                                        // Nr. 3: Scheune, grauer Rauputz-Giebel zur Straße
+  { c: [-142.9, 147.6], wall: 0xb2b0a8, roof: 0x8e8b84, look: 'band', lodRoof: true },                         // Marienheim (Nr. 2, 1975): Sichtbeton, Fensterbänder; Details in probsteiweg.js
+  { c: [-106.9, 153.9], wall: 0x8fbc5f, roof: 0x7c7d7a, look: 'plain', lodRoof: true,                          // Weingut Marienheim: grün gestrichene Halle, graues Wellplattendach
+    front: [{ t: 'garage', face: 'N', x: 0, w: 3.4, h: 3.0, color: 0x9a9c9e, style: 'sectional' }] },          // graues Rolltor im Nordgiebel
   { c: [-91.8, 85.9], wall: 0xf4f2ec, roof: 0x8a4430, look: 'roller',                                          // weiß, Gauben, PV, brauner Holzbalkon im Giebel
     front: [{ t: 'balcony', x: 0, w: 4, y: 5.4, d: 1.2, rail: 'wood', color: 0x6a4630 }] },
-  // nicht sichtbar: c:[-115.1,92.7] (verpixelt), c:[-100.9,80.7], c:[-88.1,98.3], c:[-79.9,133], c:[-106.9,153.9], c:[-193,78.5], c:[-183.7,66.8], c:[-120.8,228.7]
+  // nicht sichtbar: c:[-115.1,92.7] (verpixelt), c:[-100.9,80.7], c:[-88.1,98.3], c:[-79.9,133], c:[-193,78.5], c:[-183.7,66.8], c:[-120.8,228.7]
   // ===== Quellenhof =====
   // KEINE Street-View-Abdeckung im Hof; vom Panorama Römerstraße 2 (Apr 2022) nur ein Gebäude in ~40 m hinter Bäumen erkennbar,
   // Zuordnung unsicher (evtl. c:[1137.5,-88.1], nicht in dieser Liste) -> nichts eingetragen.
