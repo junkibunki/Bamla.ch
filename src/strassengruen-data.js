@@ -592,8 +592,7 @@ export const GRUEN = [
   { street: 'Im Grund', t: 'hedge', pts: [[-285.2, -538.1], [-289.5, -534], [-293.7, -529.4], [-297.7, -524.9], [-301.7, -520.4], [-306.7, -514.9]], h: 2.6, w: 1.3, kind: 'mixed', color: '#33422c' }, // P01R+P02R+P03R+Luftbild
   { street: 'Im Grund', t: 'hedge', pts: [[-307.6, -503.3], [-311.6, -498.8], [-315.6, -494.3], [-319.6, -489.9], [-323.6, -485.4], [-328, -480.4]], h: 2.8, w: 1.3, kind: 'mixed', color: '#34402c' }, // P03R+P04R+P05R+Luftbild
   // ===== Im Kirschgarten =====
-  { street: 'Im Kirschgarten', t: 'wall', pts: [[-245.8, 81.2], [-251.9, 78.3], [-253.9, 77.1]], h: 1.8, w: 0.3, mat: 'plaster', color: '#e6d9c3', capColor: '#b9b2a6' }, // P01L
-  { street: 'Im Kirschgarten', t: 'wall', pts: [[-255.3, 76.4], [-262.9, 72.1]], h: 0.5, w: 0.3, mat: 'concrete', color: '#bdb8ad' }, // P01L
+  // Mauern vor Nr. 1 (Auffahrt, Garagenbrüstung) baut ecar.js
   { street: 'Im Kirschgarten', t: 'planter', p: [-257.8, 63.2], r: 1.2, kind: 'trough', color: '#a7a39b', colors: ['#d1495b', '#e2683c'], rot: -0.5 }, // P01R+Luftbild
   { street: 'Im Kirschgarten', t: 'shrub', p: [-257.8, 63.2], r: 0.5, h: 1.4, kind: 'grass', color: '#b8b27a' }, // P01R
   { street: 'Im Kirschgarten', t: 'shrub', p: [-269.3, 59.2], r: 0.4, h: 0.6, kind: 'green', color: '#8e2f2f' }, // P02R
