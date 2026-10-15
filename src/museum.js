@@ -12,20 +12,21 @@ export const MUSEUM_OVERRIDES = [{ c: [-146.6, -103.8], skip: 12 }];
 
 export const MUSEUM_PAVED = [
   { color: '#8f8b84', pts: [[-152.5, -95.2], [-137.4, -95.8], [-135.8, -90.6], [-152.5, -90.2]] },                // Platz vor dem Südgiebel
+  { color: '#8f8b84', pts: [[-153.3, -107.9], [-153.5, -112.8], [-143.4, -113.2], [-143.3, -110], [-148.1, -109.8], [-148, -108.1]] }, // Backofen-Unterstand
   { color: '#a3958a', pts: [[-130.6, -89], [-127.6, -89], [-127.2, -78], [-125, -73.5], [-124.6, -66.2],       // Gehweg an der Haltestelle
     [-126.5, -64.6], [-129.8, -65.8], [-130.4, -75]] },
 ];
 
 // Lokales Gebäudesystem: Ursprung an der Südostecke, a = nach Osten (entlang der Südwand), b = nach Norden
 // (entlang der Ostwand, also zur Alten Weinstraße). Im Group-System liegt (a, b) bei (a, y, -b); y ist absolut.
-const O = [-137.6, -95.4], E = [0.9989, -0.047], N = [-0.047, -0.9989];
-const P = (a, b) => [O[0] + E[0] * a + N[0] * b, O[1] + E[1] * a + N[1] * b];
+export const O = [-137.6, -95.4], E = [0.9989, -0.047], N = [-0.047, -0.9989];
+export const P = (a, b) => [O[0] + E[0] * a + N[0] * b, O[1] + E[1] * a + N[1] * b];
 
-const W = 9.8, L = 14.9, MID = 11;              // Hauptbau: Breite, Länge, Übergang zum niedrigeren Nordteil
+export const W = 9.8, L = 14.9, MID = 11;              // Hauptbau: Breite, Länge, Übergang zum niedrigeren Nordteil
 const EAVE = -11.7, EAVE_W = -10.7;             // Traufe Ost / Westwand (dort schließt der Anbau an), aus LoD2
 const RIDGE_S = -5.4, RIDGE_N = -6.5;           // First Süd- und Nordteil (LoD2)
 const FLOOR = -14.6;                            // Erdgeschoss: Hochparterre über dem Kellersockel
-const LEAN = { a0: -14.1, b1: 13.2, top: -10.6, slope: 0.62 }; // Pultdachanbau im Westen
+export const LEAN = { a0: -14.1, b1: 13.2, top: -10.6, slope: 0.62 }; // Pultdachanbau im Westen
 // Begehbarer Eingangsbereich hinter der Haustür: Mauerstärke, Nordwand des Raums, Decke; Tür (Mitte a, Breite)
 const T = 0.4, RB = 6.0, CEIL = FLOOR + 2.75, DOOR = { a: -5.9, w: 1.0, h: 2.2 };
 const toLocal = (x, z) => { const dx = x - O[0], dz = z - O[1]; return [dx * E[0] + dz * E[1], dx * N[0] + dz * N[1]]; };
@@ -59,7 +60,7 @@ function prism(g, pts, b0, b1, material, holes = []) {
 }
 
 // Biberschwanz-Ziegel, 1 Textureinheit = 1 m; Reihen laufen entlang v (parallel zum First)
-function tileTexture() {
+export function tileTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
@@ -257,13 +258,16 @@ export function buildMuseum(scene, world) {
   for (const b of [1.8, 5.0, 8.4, 12.2]) windowAt(east, b, FLOOR + 0.7, 0.85, 1.25);
   box(east, 0.1, EAVE - base, 0.1, mat(0x6a5a50), 0.25, (EAVE + base) / 2, 0.12);  // Fallrohr
 
-  // Nordgiebel: Fenster im Erdgeschoss und im Giebel, Kellerfenster
+  // Nordgiebel: Fenster im Erdgeschoss und im Giebel, Kellerfenster. Das westliche Fenster liegt unter dem Dach des
+  // Backofen-Unterstands auf Brusthöhe über dem Hof (Fotos vom Backstündchen), daneben ein Schaltkasten.
   const north = face(g, Math.PI, 0, L);
   for (const x of [2.5, 7.3]) {
-    windowAt(north, x, FLOOR + 0.7, 0.85, 1.25);
     windowAt(north, x + (x < 5 ? 0.5 : -0.5), -11.0, 0.75, 1.05);
+    if (x > 5) { windowAt(north, x, ground(-x, L) + 1.35, 0.85, 1.15, { shutters: false }); continue; }
+    windowAt(north, x, FLOOR + 0.7, 0.85, 1.25);
     box(north, 0.6, 0.35, 0.06, mat(GLASS), x, ground(-x, L) + 0.35, 0.03);
   }
+  box(north, 0.42, 0.7, 0.16, mat(0x9a9d9f), 6.25, ground(-6.25, L) + 1.85, 0.08);
 
   // Westseite (Anbau): Seiteneingang (OSM) und kleine Fenster
   const west = face(g, -Math.PI / 2, LEAN.a0, 0);

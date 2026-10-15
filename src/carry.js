@@ -90,6 +90,14 @@ export const ITEMS = {
     cyl(g, 0.012, 0.03, 0.08, 0x5a2d0c, 0, 0.12, 0);
     cyl(g, 0.033, 0.033, 0.06, 0xf2ecd8, 0, 0, 0);                 // Etikett
   } },
+  brot: { name: 'Bauernbrot aus dem Holzofen', icon: '🍞', hold: 'hand', eat: 'essen', build(g) {
+    const b = ball(g, 0.1, 0xa8642c, 0, 0.02, 0); b.scale.set(1, 0.62, 1);
+    box(g, 0.012, 0.004, 0.12, 0xe6cf9e, 0, 0.083, 0);              // Einschnitt
+  } },
+  waie: { name: 'Zwiebelwaie', icon: '🥧', hold: 'hand', eat: 'essen', build(g) {
+    cyl(g, 0.1, 0.1, 0.025, 0xc08440, 0, 0, 0);
+    cyl(g, 0.088, 0.088, 0.01, 0xd8b45a, 0, 0.015, 0);
+  } },
   wein: { name: 'Flasche Gutedel', icon: '🍾', hold: 'hand', eat: 'trinken', drink: 'schorle', build(g) {
     cyl(g, 0.036, 0.036, 0.22, 0x2a4a22, 0, 0, 0);
     cyl(g, 0.013, 0.034, 0.1, 0x2a4a22, 0, 0.16, 0);

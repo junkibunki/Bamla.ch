@@ -46,6 +46,7 @@ import { ElectricCar } from './ecar.js';
 import { Quests } from './quests.js';
 import { Schnellreise } from './schnellreise.js';
 import { Carry } from './carry.js';
+import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
 
@@ -168,6 +169,7 @@ const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/)
 const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffis“: G an Haltestellen und Bahnhof
 const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
+const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
 
 // ---------- Parken in Hofeinfahrten ----------
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
@@ -477,7 +479,7 @@ pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 document.getElementById('loading').remove();
 const multiplayer = new Multiplayer(scene, world, await playerName);
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const clock = new THREE.Clock();
 
@@ -544,6 +546,7 @@ function frame() {
   kirche.innen.update(dt, player); // Portaltüren
   carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
   museum.update(dt, player); // Museumstür
+  backofen.update(dt); // Holzfeuer, Temperatur, Backen, Brotschieber
 
   drunk.update(dt);
   camera.layers[!player.car && baracke.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER);
