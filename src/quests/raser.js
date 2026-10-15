@@ -4,7 +4,7 @@ import { AB_HALF } from '../autobahn.js';
 const KMH = 120;
 
 export default {
-  id: 'raser', nr: 21, title: 'Raser', // Zettel am Weg „Im Grund“ kurz vor der Unterführung, die A5 liegt 50 m westlich gleich hinter den Bäumen
+  id: 'raser', nr: 21, title: 'Raser:in', // Zettel am Weg „Im Grund“ kurz vor der Unterführung, die A5 liegt 50 m westlich gleich hinter den Bäumen
   board: { id: 'im-grund', name: 'Zettel am Weg Im Grund', x: -522.1, z: -323.0, heading: 2.57, style: 'zettel' },
   text: `Gleich hinter den Bäumen rauscht die A5. Zeig, was in deinem Fahrzeug steckt: Bring es auf der Autobahn auf ${KMH} km/h. ` +
     'Ein gewöhnliches Auto schafft das kaum – ein Motorrad schon eher.',

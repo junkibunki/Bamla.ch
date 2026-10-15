@@ -40,10 +40,10 @@ function flowers(scene, world, [x, z]) {
 export default {
   id: 'gaertnerei-lieferung', nr: 16, title: 'Gärtnerei-Lieferung',
   board: { id: 'gaertnerei-verkauf', name: 'Zettel am Verkaufshaus', x: bx, z: bz, heading: BOARD_H, style: 'zettel' },
-  text: 'Gärtnerei Hugenschmidt: Fahrer gesucht! Eine Kiste Sommerblumen soll auf den Friedhof an der Kirche – oder, wenn dir das lieber ist, in den Garten vom Pflegeheim im Schloss Rheinweiler.',
+  text: 'Gärtnerei Hugenschmidt: Fahrer:in gesucht! Eine Kiste Sommerblumen soll auf den Friedhof an der Kirche – oder, wenn dir das lieber ist, in den Garten vom Pflegeheim im Schloss Rheinweiler.',
   goal: 'Pflanzen am Ziel abgeben',
   steps: ['Pflanzkiste am Verkaufshaus abholen (E)', 'Pflanzen auf den Friedhof oder in den Schlossgarten bringen (E)'],
-  reward: { ansehen: 15, title: 'Blumenbote', text: 'Die Blumen bleiben stehen · 5 € Trinkgeld' },
+  reward: { ansehen: 15, title: 'Blumenbot:in', text: 'Die Blumen bleiben stehen · 5 € Trinkgeld' },
   setup({ scene, world, carry }, q) {
     const plant = (ziel) => { for (const b of ZIELE[ziel].beds) flowers(scene, world, b); };
     if (q.done && q.data.ziel) plant(q.data.ziel);

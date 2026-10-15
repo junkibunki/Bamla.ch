@@ -237,7 +237,7 @@ export class Belohnungen {
       const ol = el('ol');
       for (const e of d.top) {
         const li = el('li', e.n === this.mp.name ? 'me' : '', `${e.n} – ${e.c}`);
-        if (d.ehren.includes(e.n)) li.textContent += ' · Ehrenbürger';
+        if (d.ehren.includes(e.n)) li.textContent += ' · Ehrenbürger:in';
         ol.append(li);
       }
       if (!d.top.length) ol.append(el('li', null, 'Noch niemand – sei der Erste!'));

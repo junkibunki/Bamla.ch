@@ -220,13 +220,13 @@ export class Tennisspiel {
     if (b.bounces === 1) {
       const inside = Math.sign(b.x) === recv && Math.abs(b.x) <= BASE && Math.abs(b.z) <= SINGLES;
       if (b.by === 'me') {
-        if (!inside) return this.point('op', 'Aus! Punkt für den Gegner');
+        if (!inside) return this.point('op', 'Aus! Punkt für Gegner:in');
         this.hits = (this.hits ?? 0) + 1;
         if (this.hits <= 3) this.quests.toast(this.hits === 1 ? '🎾 Drin! Der Ball landet im gegnerischen Feld.' : `🎾 Drin! (${this.hits} gute Bälle)`);
         this.quests.emit('tennis-treffer', { hits: this.hits });
       } else if (!inside) this.point('me', 'Aus! Punkt für dich');
     } else if (b.bounces === 2) {
-      this.point(b.by === 'me' ? 'me' : 'op', b.by === 'me' ? '🎾 Nicht erreicht – Punkt für dich' : 'Zweimal aufgesprungen – Punkt für den Gegner');
+      this.point(b.by === 'me' ? 'me' : 'op', b.by === 'me' ? '🎾 Nicht erreicht – Punkt für dich' : 'Zweimal aufgesprungen – Punkt für Gegner:in');
     }
   }
 
@@ -336,7 +336,7 @@ export class Tennisspiel {
     const on = this.playing || !!this.mode;
     if (on !== this.hudOn) { this.hudOn = on; this.hud.hidden = !on; } // Golf teilt sich die Anzeige
     if (!on) return;
-    const opp = this.remoteOpponent()?.name ?? 'Gegner';
+    const opp = this.remoteOpponent()?.name ?? 'Gegner:in';
     let html = `<b>Tennis</b> · Du ${this.score.me} : ${this.score.op} ${opp}`;
     if (this.mode) {
       const dl = 2 + this.depth * 12.5;
@@ -388,7 +388,7 @@ export class Tennisspiel {
           b.netted = true;
           b.vx *= -0.15; b.vz *= 0.3;
           b.x = px;
-          if (this.playing) this.point(b.by === 'me' ? 'op' : 'me', b.by === 'me' ? 'Netz! Punkt für den Gegner' : 'Netz! Punkt für dich');
+          if (this.playing) this.point(b.by === 'me' ? 'op' : 'me', b.by === 'me' ? 'Netz! Punkt für Gegner:in' : 'Netz! Punkt für dich');
         }
         if (b.y <= R) {
           b.y = R;
@@ -399,8 +399,8 @@ export class Tennisspiel {
       if (b.over) b.over += dt;
       if (b.over > 1.5 || b.t > 8 || Math.abs(b.x) > 19 || Math.abs(b.z) > 9.3) {
         // Ball verlässt den Platz, ohne dass jemand ihn erreicht hat
-        if (!b.over && b.bounces === 0) this.point(b.by === 'me' ? 'op' : 'me', b.by === 'me' ? 'Aus! Punkt für den Gegner' : 'Aus! Punkt für dich');
-        else if (!b.over && b.bounces === 1) this.point(b.by === 'me' ? 'me' : 'op', b.by === 'me' ? '🎾 Nicht erreicht – Punkt für dich' : 'Nicht erreicht – Punkt für den Gegner');
+        if (!b.over && b.bounces === 0) this.point(b.by === 'me' ? 'op' : 'me', b.by === 'me' ? 'Aus! Punkt für Gegner:in' : 'Aus! Punkt für dich');
+        else if (!b.over && b.bounces === 1) this.point(b.by === 'me' ? 'me' : 'op', b.by === 'me' ? '🎾 Nicht erreicht – Punkt für dich' : 'Nicht erreicht – Punkt für Gegner:in');
         this.b = null; this.ball.visible = false; return;
       }
     }

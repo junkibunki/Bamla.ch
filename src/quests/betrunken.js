@@ -14,7 +14,7 @@ export default {
     'Das Auto steht gleich um die Ecke an der Storchengasse. (Nur im Spiel – im echten Leben bleibt der Schlüssel stecken!)',
   goal: `Betrunken ${DIST} m Auto fahren`,
   steps: ['Ein Bier oder eine Weinschorle trinken (Storchen, Baracke, Kiosk)', `Betrunken ${DIST} m Auto fahren`],
-  reward: { ansehen: 5, title: 'Promillepilot' },
+  reward: { ansehen: 5, title: 'Promillepilot:in' },
   setup({ scene, vehicles, drunk, player }, q) {
     const car = new Vehicle(scene, 'car', PARKED[0], PARKED[1], PARKED[2], 0x7f8c8d);
     car.setHome();

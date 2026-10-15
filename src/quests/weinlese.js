@@ -43,7 +43,7 @@ export default {
   text: 'Herbschte! Die Gutedel-Trauben sind reif. Wer hilft beim Lesen? Schneid die Trauben ab und bring die volle Kiste zum Gasthof Storchen – der Wirt zahlt gut und zeigt dir seinen Weinkeller.',
   goal: 'Trauben im Storchen abgeben',
   steps: ['Trauben in den Rebzeilen lesen (E)', 'Die volle Kiste zum Storchen bringen (E)'],
-  reward: { ansehen: 15, title: 'Winzer', unlock: { id: 'weinkeller', text: 'Der Weinkeller am Storchen ist offen' } },
+  reward: { ansehen: 15, title: 'Winzer:in', unlock: { id: 'weinkeller', text: 'Der Weinkeller am Storchen ist offen' } },
   setup(ctx, q) {
     const { scene, world, carry, quests } = ctx;
     const keller = buildWeinkeller(ctx);

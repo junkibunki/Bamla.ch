@@ -66,7 +66,7 @@ export default {
   text: 'Das Pflegeheim im Schloss sucht Hilfe: Bitte beim Metzger Dosenbach an der Burgunderstraße ein Fleischpaket für den Sonntagsbraten holen und hier abgeben. Das Geld gibt es zurück!',
   goal: 'Fleisch vom Metzger im Pflegeheim abgeben',
   steps: ['Fleischpaket beim Metzger Dosenbach kaufen (12 €)', 'Fleischpaket ins Pflegeheim bringen (Turmportal im Schlosshof)'],
-  reward: { ansehen: 15, title: 'Essensbote', unlock: { id: 'freiessen', text: 'Gutschein: 2× Freiessen beim Metzger' }, text: 'Die Senioren winken dir zu' },
+  reward: { ansehen: 15, title: 'Essensbot:in', unlock: { id: 'freiessen', text: 'Gutschein: 2× Freiessen beim Metzger' }, text: 'Die Senior:innen winken dir zu' },
   setup(ctx, q) {
     const { carry, quests } = ctx;
     if (q.done) seniors(ctx);

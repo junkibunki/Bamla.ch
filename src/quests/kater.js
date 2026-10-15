@@ -11,7 +11,7 @@ export default {
   text: 'Zu tief ins Glas geschaut? Lass das Auto stehen und schlaf deinen Rausch aus – am Kiosk vom Campingplatz „Lug ins Land“ gibt’s Bier, und gleich dahinter Zelte und Schlaffässer. Der Rausch hält nur eine halbe Minute, also nicht trödeln!',
   goal: 'Betrunken schlafen und nüchtern aufwachen',
   steps: ['Am Kiosk vom Campingplatz ein Bier trinken', 'Schnell ins nächste Zelt oder Schlaffass und ausschlafen (E)'],
-  reward: { ansehen: 5, title: 'Langschläfer' },
+  reward: { ansehen: 5, title: 'Langschläfer:in' },
   setup({ camping, drunk, carry, player }, q) {
     const night = document.createElement('div');
     Object.assign(night.style, { position: 'fixed', inset: '0', background: '#000', opacity: '0', pointerEvents: 'none',

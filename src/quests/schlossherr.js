@@ -4,12 +4,12 @@ import { VIEWPOINT } from '../schloss.js';
 const LOOK = 1.5; // so lange (s) in Richtung Rhein schauen
 
 export default {
-  id: 'schlossherr', nr: 10, title: 'Schlossherr',
+  id: 'schlossherr', nr: 10, title: 'Schlossherr:in',
   // Zettel an der Hofmauer neben dem Schlosstor (Schloßstraße), zur Straße hin
   board: { id: 'schlosstor', name: 'Zettel am Schlosstor', x: -1394.45, z: 650.5, heading: 0.468, style: 'zettel' },
   text: 'Vom Schloss Rheinweiler hat man einen schönen Blick über den Rhein bis ins Elsass. Geh am Gartensaal vorbei zum Aussichtspunkt mit dem Fernrohr und schau auf den Rhein.',
   steps: ['Zum Aussichtspunkt am Schloss gehen', 'Auf den Rhein schauen (Kamera Richtung Rhein)'],
-  reward: { ansehen: 10, title: 'Schlossherr' },
+  reward: { ansehen: 10, title: 'Schlossherr:in' },
   setup({ player, camera }, q) {
     const [lx, lz] = VIEWPOINT.look;
     let t = 0;

@@ -3,10 +3,10 @@ const DIST = 200; // m gemeinsam gefahren
 
 export default {
   id: 'nachbarschaftshilfe', nr: 27, title: 'Nachbarschaftshilfe', board: 'kirche',
-  text: 'Die Nachbarschaftshilfe sucht Fahrer und Mitfahrer: Nimm einen anderen Spieler in deinem Fahrzeug mit – ' +
+  text: 'Die Nachbarschaftshilfe sucht Fahrer:innen und Mitfahrer:innen: Nimm eine:n andere:n Spieler:in in deinem Fahrzeug mit – ' +
     'oder steig bei jemandem ein (zu Fuß ans Fahrzeug, E). Gemeinsam ein Stück fahren genügt.',
-  goal: `Mit einem anderen Spieler ${DIST} m im selben Fahrzeug fahren`,
-  reward: { ansehen: 15, title: 'Guter Nachbar' },
+  goal: `Mit einer:einem anderen Spieler:in ${DIST} m im selben Fahrzeug fahren`,
+  reward: { ansehen: 15, title: 'Gute:r Nachbar:in' },
   setup({ multiplayer, player }, q) {
     let last = null;
     return () => {

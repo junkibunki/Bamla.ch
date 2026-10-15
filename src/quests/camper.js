@@ -16,12 +16,12 @@ function rhineDist(world, x, z) {
 }
 
 export default {
-  id: 'camper', nr: 20, title: 'Camper',
+  id: 'camper', nr: 20, title: 'Camper:in',
   board: { id: 'camping-rezeption', name: 'Zettel an der Rezeption', x: -310.6, z: 526.53, heading: 0.99, style: 'zettel' },
   text: 'Sommer, Sonne, Rhein! Hol dir an der Eistruhe vor dem Kiosk ein Eis oder eine Weinschorle to go und genieß sie unten am Rheinufer. Aber beeil dich – Eis schmilzt!',
   goal: 'Kiosk-Ware am Rheinufer verzehren',
   steps: ['An der Eistruhe vor dem Kiosk Eis oder Weinschorle kaufen', 'Am Rheinufer genießen (G)'],
-  reward: { ansehen: 10, title: 'Camper' },
+  reward: { ansehen: 10, title: 'Camper:in' },
   setup({ carry, world }, q) {
     const kiosk = (id) => id === 'eis' || id === 'schorle';
     carry.on('eat', (id, player) => {

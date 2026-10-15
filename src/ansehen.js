@@ -1,5 +1,5 @@
 // Dorf-Ansehen in der Welt (quests.js, LEVELS): ab „Bekanntes Gesicht“ grüßen Fußgänger mit Winken und Sprechblase,
-// ab „Bamlacher“ feiert das Dorf ein Fest vor der Gemeindehalle (Brückleweg 2) mit Feuerwerk beim ersten Besuch.
+// ab „Bamlacher:in“ feiert das Dorf ein Fest vor der Gemeindehalle (Brückleweg 2) mit Feuerwerk beim ersten Besuch.
 // Wer betrunken fährt (drunk.js), verliert Ansehen und wird von Fußgängern beschimpft; mit schlechtem Ruf murren sie.
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';

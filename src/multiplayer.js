@@ -90,7 +90,7 @@ class RemotePlayer {
     if ((s.ti || '') !== (this.title || '')) { // Titel aus dem Dorfpass (quests.js) im Namensschild
       this.title = s.ti || '';
       const old = this.label;
-      this.label = nameSprite(this.title ? `${this.name} · ${this.title}` : this.name, this.color, this.title === 'Ehrenbürger');
+      this.label = nameSprite(this.title ? `${this.name} · ${this.title}` : this.name, this.color, this.title === 'Ehrenbürger:in');
       this.label.position.copy(old.position);
       this.scene.remove(old);
       old.material.map.dispose();

@@ -16,7 +16,7 @@ export default {
     + 'vor Tor 1 stehen. Nimm dort den Gabelstapler (E, Gabel mit R/Q), lad die Palette auf und bring sie zu uns auf den Hof.',
   goal: 'Palette Gitterroste per Stapler auf den Hof der Gärtnerei bringen',
   steps: ['Palette bei Kienzler vor Tor 1 mit dem Stapler aufnehmen', 'Zur Gärtnerei fahren und auf dem Hof absetzen'],
-  reward: { ansehen: 15, title: 'Staplerfahrer', unlock: { id: 'gabelstapler', text: 'Eigener Gabelstapler bei Kienzler' } },
+  reward: { ansehen: 15, title: 'Staplerfahrer:in', unlock: { id: 'gabelstapler', text: 'Eigener Gabelstapler bei Kienzler' } },
   setup({ kienzler, vehicles, quests }, q) {
     let own = null;
     quests.onUnlock('gabelstapler', () => {

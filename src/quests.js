@@ -39,16 +39,24 @@ export const BOARDS = [
 function xz([x, z]) { return { x, z }; }
 
 // Dorf-Ansehen: Stufen (ab 30 grüßen Fußgänger, ab 150 Dorffest, siehe ansehen.js)
-export const LEVELS = [[-Infinity, 'Dorfschreck'], [0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar'], [150, 'Bamlacher'], [250, 'Ehrenbürger']];
+export const LEVELS = [[-Infinity, 'Dorfschreck'], [0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar:in'], [150, 'Bamlacher:in'], [250, 'Ehrenbürger:in']];
 const EHREN = 250;
 
 const defs = Object.values(import.meta.glob('./quests/*.js', { eager: true }))
   .map((m) => m.default).filter(Boolean).sort((a, b) => a.nr - b.nr);
 
+// Gespeicherte Titel aus der Zeit vor dem Gendern (sonst wäre der gewählte Titel weg)
+const OLD_TITLES = { Essensbote: 'Essensbot:in', Blumenbote: 'Blumenbot:in', 'Guter Nachbar': 'Gute:r Nachbar:in', Ortskundiger: 'Ortskundige:r' };
+const genderTitle = (t) => OLD_TITLES[t] ?? t;
+
 function loadState() {
-  try { return { quests: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) }; }
-  catch { return { quests: {}, unlocks: [], ansehen: 0, title: '' }; }
+  try {
+    const s = { quests: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) };
+    if (s.title && !titleExists(s.title)) s.title = genderTitle(s.title) === s.title ? s.title + ':in' : genderTitle(s.title);
+    return s;
+  } catch { return { quests: {}, unlocks: [], ansehen: 0, title: '' }; }
 }
+const titleExists = (t) => t === 'Ehrenbürger:in' || defs.some((d) => d.reward?.title === t);
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -241,7 +249,7 @@ export class Quests {
     if (this.level() !== before) this.toast(`Dein Ansehen im Dorf: ${this.level()}`, 6);
     if (defs.length && defs.every((x) => this.state.quests[x.id]?.status === 'done')) {
       this.unlock('dorfpass-voll');
-      this.toast('Dorfpass voll! Titel „Ehrenbürger“ freigeschaltet', 8);
+      this.toast('Dorfpass voll! Titel „Ehrenbürger:in“ freigeschaltet', 8);
     }
     this.save();
     this.renderTrack();
@@ -266,7 +274,7 @@ export class Quests {
   // Wählbare Titel: aus erledigten Aufgaben, Ansehen-Stufe und vollem Dorfpass
   titles() {
     const t = defs.filter((d) => this.state.quests[d.id]?.status === 'done' && d.reward?.title).map((d) => d.reward.title);
-    if (this.unlocked('dorfpass-voll') || this.state.ansehen >= EHREN) t.push('Ehrenbürger');
+    if (this.unlocked('dorfpass-voll') || this.state.ansehen >= EHREN) t.push('Ehrenbürger:in');
     if (this.postkarten?.complete) t.push('Heimatkundler');
     return [...new Set(t)];
   }

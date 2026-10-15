@@ -21,7 +21,7 @@ export default {
   board: { id: 'ortstafel', name: 'Zettel an der Ortstafel', x: -195.0, z: -248.8, heading: 1.081, style: 'zettel' },
   text: 'Wer hier mitreden will, muss sich auskennen: Besuche alle Ortsteile – Bamlach, Rheinweiler, Am Buck, Im Grund und das Schafgässle.',
   steps: [0, 1, 2, 3, 4, 5].map((n) => `Alle Ortsteile besuchen (${n}/5)`),
-  reward: { ansehen: 15, title: 'Ortskundiger' },
+  reward: { ansehen: 15, title: 'Ortskundige:r' },
   setup({ world, player }, q) {
     for (const a of AREAS) {
       if (!a.street) continue;

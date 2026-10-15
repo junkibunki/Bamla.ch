@@ -8,7 +8,7 @@ export default {
     + 'Nimm das HLF vom Hof, fahr hin und lösch sie mit dem Wasserwerfer auf dem Dach: R gedrückt halten, mit T/G zielst du höher oder tiefer.',
   goal: 'Feuertonne an der Baracke mit dem Feuerwehrauto löschen',
   steps: ['Ins Feuerwehrauto (HLF) steigen', 'Zur Baracke fahren', 'Feuertonne mit dem Wasserwerfer löschen (R)'],
-  reward: { ansehen: 15, title: 'Feuerwehr-Anwärter' },
+  reward: { ansehen: 15, title: 'Feuerwehr-Anwärter:in' },
   setup({ feuerwehr, baracke, player }, q) {
     const truck = feuerwehr.trucks[0], fire = baracke.fire, F = fire.g.position;
     return () => {

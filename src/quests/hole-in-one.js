@@ -15,7 +15,7 @@ export default {
   text: 'Schnuppergolf im Drei Thermen Golfresort! Leihschläger stehen gleich hier am Ständer. Üb auf dem Grün neben dem Clubhaus oder geh an einen Abschlag – und loch einen Ball ein.',
   goal: 'Auf dem Golfplatz einen Ball einlochen',
   steps: ['Golfschläger am Ständer vor dem Pro-Shop nehmen', 'Einen Ball einlochen (E: ansprechen, Leertaste: Schlagkraft)'],
-  reward: { ansehen: 15, title: 'Golfer' },
+  reward: { ansehen: 15, title: 'Golfer:in' },
   setup({ quests, sport }, q) {
     quests.on('golf-eingelocht', ({ strokes }) => {
       if (!q.active) return;

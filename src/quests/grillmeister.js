@@ -14,12 +14,12 @@ const [bx, bz] = SHELTER.P(-3.0, 3.15); // vorderer Eckpfosten der Hütte, zur F
 const COOK = 12; // Sekunden auf dem Rost
 
 export default {
-  id: 'grillmeister', nr: 19, title: 'Grillmeister',
+  id: 'grillmeister', nr: 19, title: 'Grillmeister:in',
   board: { id: 'grillhuette', name: 'Zettel an der Grillhütte', x: bx, z: bz, heading: Math.atan2(-SHELTER.U[0], -SHELTER.U[1]), style: 'zettel' },
   text: 'Grillfest! Wer bringt die Würste? Beim Metzger Dosenbach in Rheinweiler gibt es frische Bratwürste – ab damit auf den Schwenkgrill.',
   goal: 'Wurst am Grillplatz grillen',
   steps: ['Bratwürste beim Metzger Dosenbach kaufen (4 €)', 'Würste am Grillplatz auf den Rost legen (E)', 'Warten, bis die Würste braun sind', 'Würste vom Grill nehmen (E)'],
-  reward: { ansehen: 10, title: 'Grillmeister' },
+  reward: { ansehen: 10, title: 'Grillmeister:in' },
   setup({ scene, world, carry }, q) {
     // Würste auf dem Rost (Rosthöhe wie in grillplatz.js)
     const gy = world.heightAt(...FIRE.P(0, 0)) - 0.05 + 0.78 + 0.05;
