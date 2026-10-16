@@ -471,8 +471,10 @@ export function buildFusstunnel(scene, world) {
   }
   for (const [s, dir] of [[S0, 1], [S1, -1]]) // Gebüsch und Jungbäume am Hang über den Portalen
     for (let k = 0; k < 16; k++) {
-      const [x, z] = P(s + dir * (1.2 + r() * 6), (r() - 0.5) * 14), rad = 0.6 + r() * 0.9;
-      add(new THREE.IcosahedronGeometry(rad, 1).scale(1, 0.8, 1).translate(x, world.heightAt(x, z) + rad * 0.5, z), k % 3 ? 'ivy' : 'crown2');
+      const bs = s + dir * (1.2 + r() * 6), bn = (r() - 0.5) * 14, [x, z] = P(bs, bn), rad = 0.6 + r() * 0.9, y = world.heightAt(x, z);
+      // nicht durch das Gewölbe: kurz hinter dem Portal ist der Damm noch niedrig
+      if (Math.abs(bn) < HW + 0.5 + rad && y - 0.3 * rad < tunnel.floor(bs) + CROWN + 0.6) continue;
+      add(new THREE.IcosahedronGeometry(rad, 1).scale(1, 0.8, 1).translate(x, y + rad * 0.5, z), k % 3 ? 'ivy' : 'crown2');
     }
   const [vault, floor] = tubeGeometry();
   add(vault, 'inner');
