@@ -152,6 +152,8 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 | Mausrad | Kamera-Zoom |
 | H | Hilfe ein/aus |
 
+Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der ersten Berührung): links ziehen = Stick zum Laufen/Fahren (weit ziehen: rennen), rechts wischen = Kamera, zwei Finger = Zoom; rechts unten Aktion (E) und Springen (Leertaste), darüber die Tasten, die der Hinweis gerade nennt (z. B. R, T/G); oben Dorfpass, Hupe, Steuerung und Vollbild. Die Knöpfe drücken virtuelle Tasten in `Input`, die PC-Steuerung bleibt unverändert.
+
 ## Aufbau
 
 - `scripts/fetch-osm.mjs` – lädt Gebäude, Straßen, Flächen und wandelt Lat/Lon in lokale Meter um

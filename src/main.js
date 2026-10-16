@@ -6,6 +6,7 @@ import { Vehicle, separateVehicles } from './vehicles.js';
 import { Player } from './player.js';
 import { Pedestrian } from './pedestrians.js';
 import { Input } from './input.js';
+import { Touch } from './touch.js';
 import { Minimap, BigMap } from './minimap.js';
 import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
@@ -134,6 +135,7 @@ const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellinge
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
 const riding = () => (bus.rider ? bus : railway.rider ? railway : multiplayer.rider ? multiplayer : null); // Mitfahrt in Bus, Zug oder bei einem anderen Spieler
 const input = new Input(renderer.domElement);
+const touch = new Touch(renderer.domElement, input); // Smartphone/Tablet: Stick, Wischen, Knöpfe
 const player = new Player(scene);
 const minimap = new Minimap(document.getElementById('minimap'), world);
 const bigmap = new BigMap(minimap); // Vollbildkarte: Taste M oder Klick auf die Minimap
@@ -515,7 +517,7 @@ multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -594,6 +596,7 @@ function frame() {
   updateCamera(dt);
   returnVehicles(dt);
   updateHud(dt);
+  touch.update(editing, hud.hint.textContent);
   quests.update(dt, input, player, camera);
   multiplayer.update(dt, player, riding() || bus, quests.title);
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, cam.yaw, vehicles, multiplayer.others, quests.markers);
