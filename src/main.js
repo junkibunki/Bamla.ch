@@ -76,6 +76,14 @@ import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
+// Ladeanzeige im Namensdialog und auf dem Startbildschirm; wartet ein Bild, damit der Text
+// vor dem nächsten blockierenden Abschnitt auch wirklich zu sehen ist (im Hintergrund-Tab
+// gibt es kein Bild, dann nach 100 ms weiter)
+async function loadStatus(text) {
+  for (const el of document.querySelectorAll('.load-text')) el.textContent = text;
+  await new Promise((r) => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
+}
+
 const SKY = 0x9cc7e8;
 const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 0x1a1a1a, 0x7f8c8d, 0x8e2b2b];
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
@@ -115,6 +123,7 @@ sun.shadow.camera.layers.enable(ROOF_LAYER);
 scene.add(sun, sun.target);
 
 // ---------- Welt laden ----------
+loadStatus('Lade Karten- und Geländedaten …');
 const [data, terrain, vineyards, camp, golfData] = await Promise.all([
   fetch('/bamlach.json').then((r) => r.json()), Terrain.load(), fetch('/vineyards.json').then((r) => r.json()),
   fetch('/camping.json').then((r) => r.json()), loadGolf(),
@@ -124,6 +133,7 @@ data.roofs = await fetch('/roofs.json').then((r) => r.json()).catch(() => null);
 data.paving = await loadPaving().catch(() => null); // Pflaster/Höfe aus dem Luftbild, scripts/detect-paving.mjs
 data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/build-golf.mjs)
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
+await loadStatus('Baue das Dorf auf … gleich geht\'s los'); // ab hier rechnet der Browser am Stück, Eingaben hängen kurz
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
 fixStAlban(data); // Hofgut im St. Alban: Umrisse nach LoD2 statt OSM
@@ -553,6 +563,8 @@ const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu
 
 // ---------- Hauptschleife ----------
 document.getElementById('loading').remove();
+document.getElementById('join-status')?.classList.add('ready');
+loadStatus('Bamlach ist bereit – los geht\'s!');
 const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
