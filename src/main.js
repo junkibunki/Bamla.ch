@@ -12,6 +12,7 @@ import { buildBelchenstrasse } from './belchenstrasse.js';
 import { buildStrassen } from './strassen.js';
 import { splitKirschgartenMouth, buildKirschgartenEcke } from './kirschgarten-ecke.js';
 import { buildProbsteiweg, fixProbsteiweg } from './probsteiweg.js';
+import { buildStAlban, fixStAlban } from './stalban.js';
 import { fixMariahuegelWeg } from './kapelle-mariahuegel.js';
 import { buildStrassengruen } from './strassengruen.js';
 import { buildFeuerwehr } from './feuerwehr.js';
@@ -114,6 +115,7 @@ data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/buil
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
+fixStAlban(data); // Hofgut im St. Alban: Umrisse nach LoD2 statt OSM
 fixFusstunnel(data); // Fußgängertunnel unter der Bahn: Röhre bis zu den Portalen, Stufenweg mit eigenem Mesh
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
@@ -125,6 +127,7 @@ buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
 buildKirschgartenEcke(scene, world); // Bruchsteinmauer, Verkehrsinsel mit Laterne, Betonmauer an der Einmündung Kirschgarten
 buildProbsteiweg(scene, world); // Marienheim und Probstei gegenüber: Fassadendetails, Statue, Hofmauer, Pflaster
+buildStAlban(scene, world); // Hofgut im St. Alban: Wohnhaus mit Tordurchfahrt, Scheune, Kastanienhof
 const fusstunnel = buildFusstunnel(scene, world); // Fußgängertunnel unter der Rheintalbahn, Stufenweg mit Bärlauch hinauf ins Dorf
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
 const museum = buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus), Eingangsbereich begehbar

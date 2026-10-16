@@ -1328,11 +1328,13 @@ export const GRUEN = [
   { street: 'St.Alban', t: 'wall', pts: [[-182.8, 19], [-182.8, 15], [-184, 13.4], [-189, 12.6]], h: 0.8, w: 0.4, mat: 'stone', color: '#a49c8c', fence: 'metal', fenceH: 0.8 }, // P00L+Luftbild (Eckgrundstück an der Gabelung)
   { street: 'St.Alban', t: 'shrub', p: [-186, 15.5], r: 2, h: 3.5, kind: 'green' }, // P00L+Luftbild
   { street: 'St.Alban', t: 'shrub', p: [-183.5, 17], r: 1.5, h: 3, kind: 'green' }, // P00L
-  { street: 'St.Alban', t: 'wall', pts: [[-184, 5.6], [-193.5, 4.3], [-203.3, 2.6]], h: 0.2, w: 0.3, mat: 'concrete', color: '#b8b4aa' }, // P00R+P01R
-  { street: 'St.Alban', t: 'fence', pts: [[-184, 5.5], [-193.5, 4.2], [-203.3, 2.5]], h: 1, style: 'wood', color: '#b0603a' }, // P00R+P01R (orangebraune Bretter mit runden Köpfen)
-  { street: 'St.Alban', t: 'shrub', p: [-186.5, 3.8], r: 0.9, h: 1.6, kind: 'green' }, // P00R
-  { street: 'St.Alban', t: 'shrub', p: [-190.5, 3.2], r: 1, h: 2, kind: 'green' }, // P00R
-  { street: 'St.Alban', t: 'shrub', p: [-202, 2], r: 1.2, h: 2.5, kind: 'green', color: '#b8b040' }, // P01R (gelb verfärbter Strauch an der Scheune)
+  // Hofgut (stalban.js): Zaun nur an der Scheunenecke und vor dem Garten am Ostgiebel, dazwischen offene Kies-Einfahrt (Photospheres 2024)
+  { street: 'St.Alban', t: 'fence', pts: [[-200.1, 3.4], [-197.4, 3.95]], h: 1, style: 'wood', color: '#b0603a' }, // P01R (orangebraune Bretter mit runden Köpfen)
+  { street: 'St.Alban', t: 'fence', pts: [[-197.0, 3.95], [-195.2, 4.3]], h: 0.8, style: 'wood', color: '#8a847a' }, // P02R (alter grauer Bretterzaun)
+  { street: 'St.Alban', t: 'fence', pts: [[-185, 5.2], [-179.6, 7.1], [-176.5, 8.3]], h: 1, style: 'wood', color: '#b0603a' }, // P00R
+  { street: 'St.Alban', t: 'shrub', p: [-185.6, 3.9], r: 0.9, h: 1.6, kind: 'green' }, // P00R
+  { street: 'St.Alban', t: 'hedge', pts: [[-182.8, -2.3], [-180.3, -7.2]], h: 1.5, w: 0.9, kind: 'mixed', color: '#34502a' }, // P00R+P06R (vor dem Ostgiebel)
+  { street: 'St.Alban', t: 'shrub', p: [-201.4, 3.8], r: 1.0, h: 2.5, kind: 'green', color: '#b8b040' }, // P01R (gelb verfärbter Strauch vor der Scheunenecke)
   { street: 'St.Alban', t: 'shrub', p: [-203.5, 9.6], r: 1.5, h: 3, kind: 'green' }, // P01L+Luftbild
   { street: 'St.Alban', t: 'shrub', p: [-221.9, -3], r: 0.5, h: 0.9, kind: 'green' }, // P02R
   { street: 'St.Alban', t: 'hedge', pts: [[-236, 2], [-233, 3.2]], h: 1.5, w: 1.2, kind: 'mixed' }, // P02L+Luftbild
