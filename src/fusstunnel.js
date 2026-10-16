@@ -29,9 +29,11 @@ export const local = (x, z) => { const dx = x - A[0], dz = z - A[1]; return [dx 
 export const WEST = P(S0), EAST = P(S1);
 const WAY = 'Fußweg Bamlach - Rhein';
 
-// Höhle: Mund in der Sandsteinwand oben an der Böschung jenseits des Waldwegs (vom Westportal aus schräg rechts gegenüber),
-// schaut hinunter zum Weg; der Gang führt waagrecht in den Hang
-export const CAVE = { a: P(-19, -3.4), u: [U[1], -U[0]], s0: 0, s1: 5.5, sA: -0.3, sB: 5.8, hw: 0.62, top: 2.17, dead: true, f0: 0, f1: 0 };
+// Höhle: Mund in einer kleinen Sandsteinwand hinter der Böschungskante jenseits des Waldwegs, ein gutes Stück vom Westportal
+// weg; leicht vom Tunnel abgewandt, so dass man sie beim Herauskommen nur schräg oben zwischen den Bäumen sieht. Der Gang führt
+// waagrecht in den Hang.
+const CAVE_TURN = 0.5; // Mund schaut zum Weg, um so viel (rad) vom Tunnel weggedreht
+export const CAVE = { a: P(-31, -5.6), u: [U[1] * Math.cos(CAVE_TURN) + U[0] * Math.sin(CAVE_TURN), -U[0] * Math.cos(CAVE_TURN) + U[1] * Math.sin(CAVE_TURN)], s0: 0, s1: 5.5, sA: -0.3, sB: 5.8, hw: 0.62, top: 2.17, dead: true, f0: 0, f1: 0 };
 const CAVE_SPRING = CAVE.top - CAVE.hw;
 
 // Bodenhöhe der Röhre (geradlinig zwischen den Portalen); F0/F1 setzt carveFusstunnel
@@ -57,7 +59,7 @@ export function fixFusstunnel(data) {
     r.pts = r.pts.map((p) => (near(p, A) ? WEST : near(p, B) ? EAST : p));
     if (r.name === WAY) r.ownMesh = true;
   }
-  (data.treeFree ||= []).push([...P(S0 - 4), 7], [...P(S1 + 3), 4], [...boreAt(CAVE, -2.5, 0), 4.5], [...boreAt(CAVE, 3, 0), 6.5]); // Vorplätze und Höhlenfels frei von Waldbäumen
+  (data.treeFree ||= []).push([...P(S0 - 4), 7], [...P(S1 + 3), 4], [...boreAt(CAVE, -1.2, 0), 2], [...boreAt(CAVE, 3, 0), 3.5]); // Vorplätze und Höhlenfels frei von Waldbäumen
 }
 
 // Gelände: vor den Portalen auf Bodenhöhe, über der Röhre bis zur Mauerkrone (zur Seite hin auslaufend)
@@ -79,15 +81,13 @@ export function carveFusstunnel(T) {
       T.h[k] = y;
     }
   // Höhle: davor eine Rampe bis knapp unter den Höhlenboden; den Rest deckt der Felskörper
-  const F = (CAVE.f0 = CAVE.f1 = T.heightAt(...boreAt(CAVE, 3, 0)) - 2.6); // Gang so tief, dass die Kuppe ihn deckt
+  const F = (CAVE.f0 = CAVE.f1 = T.heightAt(...boreAt(CAVE, 3, 0)) - 2.45); // Gang so tief, dass die Kuppe ihn deckt
   const [mx, mz] = CAVE.a;
   for (let r = Math.floor((mz - 14 - T.minZ) / T.step); r <= Math.ceil((mz + 14 - T.minZ) / T.step); r++)
     for (let c = Math.floor((mx - 14 - T.minX) / T.step); c <= Math.ceil((mx + 14 - T.minX) / T.step); c++) {
       const [s, n0] = boreLocal(CAVE, T.minX + c * T.step, T.minZ + r * T.step), n = Math.abs(n0), k = r * T.cols + c;
-      if (s > -6 && s < 0.5 && n < 3.5) { // Rampe hinauf zum Mund, nirgends über dem Höhlenboden
-        const ramp = F - 0.05 - Math.max(0, -s - 0.3) * 0.9;
-        T.h[k] = n < 2.5 ? ramp : Math.max(T.h[k], ramp - (n - 2.5) * 0.8);
-      }
+      // schmaler Einschnitt vor dem Mund, der zur Böschung hin ansteigt; nur absenken, der Weg unten bleibt, wie er ist
+      if (s > -4 && s < 0.5 && n < 2.2) T.h[k] = Math.min(T.h[k], F - 0.05 + Math.max(0, -s - 0.3) * 0.6 + Math.max(0, n - 1) * 0.8);
     }
 }
 
@@ -513,7 +513,8 @@ function trees(world, add, sm, r) {
 // hinten abfallend, damit nur die Wand zu sehen ist); der Gang ist als Rundbogen herausgeschnitten und liegt links in der
 // Wand (vom Weg aus gesehen). Außenhaut, Gangwände und Rückwand hängen zusammen, nirgends ein Spalt.
 // Kontur in Wandkoordinaten (x nach links vom Weg aus gesehen, y über dem Gangboden; der Gang liegt bei x = 0)
-const ROCK = [[-3.0, -1.8], [-3.1, 1.2], [-2.9, 2.55], [-2.5, 2.95], [1.0, 2.95], [1.45, 2.6], [1.6, 1.3], [1.5, -1.8]];
+const ROCK = [[-1.8, -1.6], [-2.0, 0.2], [-1.85, 1.0], [-1.95, 1.7], [-1.6, 2.3], [-1.1, 2.55], [-0.4, 2.68], [0.3, 2.6], [0.9, 2.66], [1.25, 2.2],
+  [1.15, 1.5], [1.35, 0.8], [1.2, -1.6]];
 function hoehle(world, add, r) {
   const b = CAVE, F = b.f0, W = (s, n, y) => { const [x, z] = boreAt(b, s, n); return [x, F + y, z]; };
   const front = -0.25, BEV = 0.25, front2 = b.s1 - front, back2 = 0.8, end = front2 + 2 * BEV + back2 + BEV;
@@ -534,7 +535,7 @@ function hoehle(world, add, r) {
       const z = p.getZ(i);
       if (!(Math.abs(x) < b.hw + 0.35 && y > -0.3 && y < b.top + 0.35 && z < front2 + 0.1)) { // Gang und Eingang bleiben glatt
         const key = `${Math.round(x * 50)},${Math.round(y * 50)},${Math.round(z * 50)}`;
-        if (!off.has(key)) off.set(key, [(r() - 0.5) * 0.14, (r() - 0.5) * 0.1]);
+        if (!off.has(key)) off.set(key, [(r() - 0.5) * 0.22, (r() - 0.5) * 0.14]);
         const [ex, ey] = off.get(key);
         x += ex; y += ey;
       }
@@ -562,14 +563,13 @@ function hoehle(world, add, r) {
     add(new THREE.ConeGeometry(0.05, l, 5).deleteAttribute('uv').rotateX(Math.PI).translate(...W(s, n, Math.sqrt(b.hw * b.hw - n * n) + CAVE_SPRING - l / 2 + 0.02)), 'cave');
   for (let k = 0; k < 7; k++) add(new THREE.DodecahedronGeometry(0.06 + r() * 0.08, 0).translate(...W(1 + r() * 4, (r() - 0.5) * 0.9, 0.05)), 'sandstein');
   // bewachsen: Gebüsch auf der Wandkrone und dahinter, Farn am Fuß
-  for (let k = 0; k < 9; k++) {
-    const rad = 0.45 + r() * 0.5, [x, z] = boreAt(b, front + 0.2 + r() * 2.5, (r() - 0.35) * 4.2);
-    add(new THREE.IcosahedronGeometry(rad, 1).scale(1, 0.75, 1).translate(x, Math.max(world.heightAt(x, z), F + 2.75) + rad * 0.4, z), k % 3 ? 'ivy' : 'crown2');
+  for (let k = 0; k < 16; k++) { // dicht: die Wand schaut nur zwischen Büschen hervor
+    const rad = 0.5 + r() * 0.6, side = k < 6 ? (k % 2 ? 1 : -1) * (1.5 + r() * 1.2) : (r() - 0.5) * 3.6, [x, z] = boreAt(b, k < 6 ? front - 0.3 - r() * 0.8 : front + 0.2 + r() * 2.5, side);
+    add(new THREE.IcosahedronGeometry(rad, 1).scale(1, 0.8, 1).translate(x, (k < 6 ? world.heightAt(x, z) : Math.max(world.heightAt(x, z), F + 2.5)) + rad * 0.45, z), k % 3 ? 'ivy' : 'crown2');
   }
-  for (const n of [-1.6, 2.2, 3.0]) fern(add, ...boreAt(b, -0.7 - r() * 0.5, n), r, world.heightAt(...boreAt(b, -0.9, n)));
   // Fels neben dem Gang und dahinter: Hindernis (oben begehbar)
   const L = front + end;
-  for (const [n0, n1] of [[b.hw + 0.05, 1.7], [-b.hw - 0.05, -3.2]])
+  for (const [n0, n1] of [[b.hw + 0.05, 1.9], [-b.hw - 0.05, -1.4]])
     world.addObstacle([boreAt(b, front - BEV, n0), boreAt(b, front - BEV, n1), boreAt(b, L, n1), boreAt(b, L, n0)], 3.2, F + 3);
   world.addObstacle([boreAt(b, b.s1 + 0.05, -b.hw - 0.1), boreAt(b, b.s1 + 0.05, b.hw + 0.1), boreAt(b, L, b.hw + 0.1), boreAt(b, L, -b.hw - 0.1)], 3.2, F + 3);
 }
@@ -583,7 +583,7 @@ function dichterWald(scene, world, add, r) {
   const other = world.data.areas.filter((a) => NOT_FOREST.includes(a.kind) && a.pts.some(([x, z]) => Math.hypot(x - cx, z - cz) < R + 150));
   const free = (x, z) => {
     const [s, n] = local(x, z), [hs, hn] = boreLocal(CAVE, x, z);
-    return s < S0 + 2 && !(s > S0 - 4 && Math.abs(n) < 9) && !(hs > -5 && hs < CAVE.s1 + 3 && Math.abs(hn) < 4.5)
+    return s < S0 + 2 && !(s > S0 - 4 && Math.abs(n) < 9) && !(hs > -2.5 && hs < CAVE.s1 + 2.5 && Math.abs(hn) < 2.4)
       && !pointInPolygon(x, z, TUNNEL_PAVED[0].pts) && !world.nearRoad(x, z) && !nearRail(world, x, z, 10)
       && !other.some((a) => pointInPolygon(x, z, a.pts));
   };
