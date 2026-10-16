@@ -40,6 +40,7 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 25 | Kater | Nach dem Bier ausnüchtern, z. B. im Camping-Zelt schlafen. | betrunken geschlafen und nüchtern aufgewacht | erledigt |
 | 26 | Stammgast | Im Storchen und in der Baracke je ein Bier trinken. | an beiden Orten ein Bier getrunken | erledigt |
 | 27 | Nachbarschaftshilfe | Einen anderen Spieler im Auto mitnehmen (Multiplayer). | zwei Spieler im selben Fahrzeug gefahren | erledigt |
+| 28 | Mutprobe | Einmal ganz durch den dunklen Fußgängertunnel unter der Bahn gehen, wo „de Tunnelgeischt“ haust (Hall, Zug über einem, Fledermaus). | zu Fuß am anderen Portal wieder heraus, ohne umzukehren | erledigt |
 
 ## Belohnungen
 

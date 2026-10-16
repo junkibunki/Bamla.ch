@@ -20,6 +20,7 @@ import { ECKE_PAVED } from './kirschgarten-ecke.js';
 import { PROBSTEI_PAVED } from './probsteiweg.js';
 import { KNEIPP_PAVED, carveKneipp } from './wassertretanlage.js';
 import { REIT_PAVED, carveReit } from './reitzentrum-site.js';
+import { TUNNEL_PAVED, carveFusstunnel } from './fusstunnel.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
 import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
 import { surfaceAt, samplesAlong } from './paving.js';
@@ -168,6 +169,7 @@ export class World {
     this.grid = new Map();
     this.decks = [];          // begehbare Flächen über dem Gelände (addDeck)
     this.walkTop = new Map(); // Hindernis-Index → Oberkante, auf der man stehen kann (addObstacle)
+    this.tunnels = [];        // begehbare Röhren unter dem Gelände: floorAt(x, z, prevY), push(x, z, r, y) (fusstunnel.js)
     this.buildingSrc = data.buildings.filter((b) => openRing(b.pts).length >= 3);
     // LoD2-Gebäude (public/roofs.json): den OSM-Umrissen zugeordnet, in OSM fehlende Gebäude ergänzt
     const roofs = data.roofs;
@@ -197,6 +199,7 @@ export class World {
     carveBaracke(terrain); // Jugendtreff Baracke: Boden unter Haus und Vordach
     carveKneipp(terrain); // Wassertretanlage: ebener Kiesplatz ums Becken
     carveReit(terrain); // Reitkunstzentrum: Reithalle und Vorplatz eben
+    carveFusstunnel(terrain); // Fußgängertunnel unter der Bahn: Vorplätze an den Portalen, Damm über der Röhre
     smoothRoads(terrain, underpassWays(data.roads), this.bridges, roadWidth, true); // Rampenkuppen abrunden
     this.autobahn = prepareAutobahn(this); // A5: Achse, Unterführungen (Gelände + Brücken)
 
@@ -229,6 +232,7 @@ export class World {
   // (prevY = bisherige Fußhöhe; ohne Angabe immer das Gelände).
   groundAt(x, z, prevY = -Infinity) {
     let h = groundHeight(this.bridges, this.terrain, x, z, prevY);
+    for (const t of this.tunnels) h = t.floorAt(x, z, prevY) ?? h; // wer unter der Decke ist, läuft auf dem Röhrenboden
     for (const d of this.decks) { // Dachterrassen, Treppen: nur wer von oben (oder knapp darunter) kommt
       if (x < d.minX || x > d.maxX || z < d.minZ || z > d.maxZ || !pointInPolygon(x, z, d.ring)) continue;
       const y = d.h(x, z);
@@ -282,11 +286,12 @@ export class World {
     // Reben: aus dem Luftbild erkannt (OSM-Rebflächen sind teils veraltet und bleiben Wiese)
     if (this.vineyards) paintVineyards(g, this.vineyards, t.minX, t.minZ);
     if (this.data.golf) paintGolf(g, this.data.golf, t.minX, t.minZ); // Golfplatz aus dem Luftbild
-    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
+    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
-    this.scene.add(t.buildMesh(tex));
+    this.ground = t.buildMesh(tex); // fusstunnel.js schneidet die Röhre heraus
+    this.scene.add(this.ground);
 
     // Weite Fläche außerhalb des Geländeausschnitts, damit am Horizont nichts fehlt.
     const far = new THREE.Mesh(new THREE.PlaneGeometry(20000, 20000).rotateX(-Math.PI / 2),
@@ -351,6 +356,7 @@ export class World {
       // Gepflasterte Gassen (src/surfaces.js) und laut Luftbild gepflasterte OSM-Einfahrten als Pflasterband
       const pw = pavedWay(r);
       const sf = paving && (pw || MASK_DECIDES.includes(r.service)) ? surfaceAt(paving, samplesAlong(r.pts)) : null;
+      if (r.ownMesh || r.bored) continue; // Stufenweg und Röhre baut fusstunnel.js
       const h = this.wayHeight(r);
       if (sf && (pw || sf.paved)) { this.ribbon(r.pts, w, s.y, toHex(pw?.color || sf.color), this.paverRibbons, h); continue; }
       this.ribbon(r.pts, w, s.y, s.color, out, h);
@@ -504,7 +510,11 @@ export class World {
   // Schiebt einen Kreis (x, z, Radius) aus Gebäuden heraus.
   // Gibt die Korrektur [dx, dz] zurück oder null. Mit Fußhöhe y zählen auch Brückengeländer und Widerlager.
   collide(x, z, radius, y) {
-    const b = y === undefined ? null : bridgePush(this.bridges, this.terrain, x, z, radius, y);
+    let b = y === undefined ? null : bridgePush(this.bridges, this.terrain, x, z, radius, y);
+    for (const t of this.tunnels) {
+      const q = y === undefined ? null : t.push(x + (b?.[0] || 0), z + (b?.[1] || 0), radius, y);
+      if (q) b = [(b?.[0] || 0) + q[0], (b?.[1] || 0) + q[1]];
+    }
     const p = this.collideBuildings(x + (b?.[0] || 0), z + (b?.[1] || 0), radius, y);
     return b || p ? [(b?.[0] || 0) + (p?.[0] || 0), (b?.[1] || 0) + (p?.[1] || 0)] : null;
   }

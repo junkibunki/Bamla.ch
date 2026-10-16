@@ -84,7 +84,7 @@ export function findBridges(rails, roads, terrain, widthOf) {
   // Unterführungen: jede Straße und jedes Gleis, das ein tunnel=yes-Stück kreuzt, liegt dort auf einer Brücke.
   const uppers = [...roads.filter((r) => !r.tunnel), ...rails.filter((r) => !r.tunnel)];
   for (const low of roads) {
-    if (!low.tunnel) continue;
+    if (!low.tunnel || low.bored) continue; // bored: Röhre unter dem Damm (fusstunnel.js), keine Brücke
     for (let i = 1; i < low.pts.length; i++) {
       const p = low.pts[i - 1], q = low.pts[i], ll = Math.hypot(q[0] - p[0], q[1] - p[1]);
       const vx = (q[0] - p[0]) / ll, vz = (q[1] - p[1]) / ll;
