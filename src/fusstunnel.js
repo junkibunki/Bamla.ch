@@ -8,8 +8,9 @@
 // Das DGM ist ein Höhenraster ohne Hohlräume: Der Damm bleibt über der Röhre, vor den Portalen wird das Gelände abgesenkt
 // und über der Röhre bis zur Mauerkrone aufgefüllt; im Lichtraum der Röhre verwirft der Geländeshader seine Pixel.
 // Boden und Wände der Röhre regelt world.tunnels (floorAt, push), die Kamera tunnelCamera.
-// Unten am Westportal dichter Laubwald (außer auf den Wegen) und schräg rechts gegenüber ganz oben auf der Hügelkante ein
-// Felsbuckel aus beigem Sandstein mit einer kleinen Höhle, in die man gerade so hineingeht.
+// Unten am Westportal dichter Laubwald (außer auf den Wegen) und schräg rechts gegenüber oben an der Böschungskante eine
+// senkrechte, bewachsene Wand aus beigem Sandstein (Photosphäre vom Waldweg vor dem Portal) mit einer kleinen Höhle links
+// darin, in die man gerade so hineingeht.
 import * as THREE from 'three';
 import { Parts, canvasTex, sample } from './kirschgarten-ecke.js';
 import { pointInPolygon } from './world.js';
@@ -28,9 +29,9 @@ export const local = (x, z) => { const dx = x - A[0], dz = z - A[1]; return [dx 
 export const WEST = P(S0), EAST = P(S1);
 const WAY = 'Fußweg Bamlach - Rhein';
 
-// Höhle: Mund oben an der Kante der Böschung jenseits des Waldwegs (vom Westportal aus schräg rechts gegenüber), schaut
-// hinunter zum Weg; die Achse führt in den Sandsteinbuckel auf dem Hügel
-export const CAVE = { a: P(-24, -5.2), u: [U[1], -U[0]], s0: 0, s1: 5.5, sA: -0.3, sB: 5.8, hw: 0.62, top: 2.17, dead: true, f0: 0, f1: 0 };
+// Höhle: Mund in der Sandsteinwand oben an der Böschung jenseits des Waldwegs (vom Westportal aus schräg rechts gegenüber),
+// schaut hinunter zum Weg; der Gang führt waagrecht in den Hang
+export const CAVE = { a: P(-19, -3.4), u: [U[1], -U[0]], s0: 0, s1: 5.5, sA: -0.3, sB: 5.8, hw: 0.62, top: 2.17, dead: true, f0: 0, f1: 0 };
 const CAVE_SPRING = CAVE.top - CAVE.hw;
 
 // Bodenhöhe der Röhre (geradlinig zwischen den Portalen); F0/F1 setzt carveFusstunnel
@@ -77,8 +78,8 @@ export function carveFusstunnel(T) {
       if (s >= S0 + 1.5 && s <= S1 - 1.5 && n < 7) y = Math.max(y, tunnel.floor(s) + COVER - Math.max(0, n - 2.5) * 0.6);
       T.h[k] = y;
     }
-  // Höhle: davor höchstens Bodenhöhe, darüber ein Buckel bis gut über die Decke (der Sandsteinfels obenauf)
-  const F = (CAVE.f0 = CAVE.f1 = T.heightAt(...boreAt(CAVE, 3, 0))); // Bodenhöhe = Hügelkuppe
+  // Höhle: davor eine Rampe bis knapp unter den Höhlenboden; den Rest deckt der Felskörper
+  const F = (CAVE.f0 = CAVE.f1 = T.heightAt(...boreAt(CAVE, 3, 0)) - 2.6); // Gang so tief, dass die Kuppe ihn deckt
   const [mx, mz] = CAVE.a;
   for (let r = Math.floor((mz - 14 - T.minZ) / T.step); r <= Math.ceil((mz + 14 - T.minZ) / T.step); r++)
     for (let c = Math.floor((mx - 14 - T.minX) / T.step); c <= Math.ceil((mx + 14 - T.minX) / T.step); c++) {
@@ -87,8 +88,6 @@ export function carveFusstunnel(T) {
         const ramp = F - 0.05 - Math.max(0, -s - 0.3) * 0.9;
         T.h[k] = n < 2.5 ? ramp : Math.max(T.h[k], ramp - (n - 2.5) * 0.8);
       }
-      if (s >= 2.5 && s < CAVE.s1 + 5 && n < 6.5) // vorn deckt der Sandsteinfels die Röhre
-        T.h[k] = Math.max(T.h[k], F + CAVE.top + 1.3 - Math.max(0, n - 2) * 0.45 - Math.max(0, s - CAVE.s1 - 1) * 0.6);
     }
 }
 
@@ -510,31 +509,50 @@ function trees(world, add, sm, r) {
     }
 }
 
-// Höhle: rauer Felsschlauch mit runder Rückwand, Boden, Tropfsteine; um den Mund Felsblöcke, Farn und Efeu
+// Höhle: Sandsteinwand als Stirnseite eines geschlossenen Felskörpers, der im Hang steckt (oben bündig mit der Kuppe, nach
+// hinten abfallend, damit nur die Wand zu sehen ist); der Gang ist als Rundbogen herausgeschnitten und liegt links in der
+// Wand (vom Weg aus gesehen). Außenhaut, Gangwände und Rückwand hängen zusammen, nirgends ein Spalt.
+// Kontur in Wandkoordinaten (x nach links vom Weg aus gesehen, y über dem Gangboden; der Gang liegt bei x = 0)
+const ROCK = [[-3.0, -1.8], [-3.1, 1.2], [-2.9, 2.55], [-2.5, 2.95], [1.0, 2.95], [1.45, 2.6], [1.6, 1.3], [1.5, -1.8]];
 function hoehle(world, add, r) {
   const b = CAVE, F = b.f0, W = (s, n, y) => { const [x, z] = boreAt(b, s, n); return [x, F + y, z]; };
-  const prof = [[b.hw, -0.05], [b.hw, CAVE_SPRING]];
-  for (let i = 1; i < 10; i++) { const a = (i / 10) * Math.PI; prof.push([Math.cos(a) * b.hw, CAVE_SPRING + Math.sin(a) * b.hw]); }
-  prof.push([-b.hw, CAVE_SPRING], [-b.hw, -0.05]);
-  const ss = []; for (let s = -0.3; s < b.s1; s += 0.5) ss.push(s); ss.push(b.s1);
-  // Wand nach außen ausbeulen (nie in den Lichtraum hinein)
-  const ring = ss.map((s) => prof.map(([n, y], i) => {
-    const e = i === 0 || i === prof.length - 1 ? 0.06 * r() : 0.04 + 0.16 * r(), l = Math.hypot(n, y - CAVE_SPRING * 0.6) || 1;
-    return W(s, n + (n / l) * e, y + Math.max(0, (y - CAVE_SPRING * 0.6) / l) * e);
-  }));
-  const pos = [];
-  for (let k = 1; k < ss.length; k++)
-    for (let i = 1; i < prof.length; i++) pos.push(...ring[k - 1][i - 1], ...ring[k][i - 1], ...ring[k][i], ...ring[k - 1][i - 1], ...ring[k][i], ...ring[k - 1][i]);
-  const end = W(b.s1 + 0.4, 0, CAVE_SPRING * 0.7), last = ring[ring.length - 1];
-  for (let i = 1; i < prof.length; i++) pos.push(...last[i - 1], ...end, ...last[i]);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  add(g, 'cave');
+  const front = -0.25, BEV = 0.25, front2 = b.s1 - front, back2 = 0.8, end = front2 + 2 * BEV + back2 + BEV;
+  const outline = () => new THREE.Shape(ROCK.map(([x, y]) => new THREE.Vector2(x, y)));
+  const shape = outline(), hole = new THREE.Path();
+  // gegen den Uhrzeigersinn, sonst baut ExtrudeGeometry die Gangwände nicht
+  hole.moveTo(b.hw, 0); hole.lineTo(b.hw, CAVE_SPRING); hole.absarc(0, CAVE_SPRING, b.hw, 0, Math.PI, false); hole.lineTo(-b.hw, 0); hole.lineTo(b.hw, 0);
+  shape.holes.push(hole);
+  const mtx = new THREE.Matrix4().makeRotationY(Math.atan2(b.u[0], b.u[1])).setPosition(...W(front, 0, 0)), off = new Map();
+  // Zwei Körper: vorn mit Gang, hinten ohne (dessen Stirnfläche ist die Rückwand des Gangs). Wand leicht verwittert
+  // (gleiche Position → gleicher Versatz, keine Risse); hinter der Wand sinkt die Oberseite in den Hang.
+  const body = (sh, z0, d) => {
+    const g = new THREE.ExtrudeGeometry(sh, { depth: d, steps: Math.max(1, Math.round(d / 0.8)), bevelEnabled: true, bevelSize: 0.2, bevelThickness: BEV, bevelSegments: 2, curveSegments: 10 });
+    g.translate(0, 0, z0);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i), y = p.getY(i);
+      const z = p.getZ(i);
+      if (!(Math.abs(x) < b.hw + 0.35 && y > -0.3 && y < b.top + 0.35 && z < front2 + 0.1)) { // Gang und Eingang bleiben glatt
+        const key = `${Math.round(x * 50)},${Math.round(y * 50)},${Math.round(z * 50)}`;
+        if (!off.has(key)) off.set(key, [(r() - 0.5) * 0.14, (r() - 0.5) * 0.1]);
+        const [ex, ey] = off.get(key);
+        x += ex; y += ey;
+      }
+      if (y > b.top + 0.35) y -= Math.max(0, z - 1) * 0.3; // Oberseite verschwindet nach hinten im Hang
+      p.setXYZ(i, x, y, z);
+    }
+    g.computeVertexNormals();
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 2, uv.getY(i) / 2); // Texturkachel = 2 m
+    add(g.applyMatrix4(mtx), 'sandstein');
+  };
+  body(shape, 0, front2);
+  body(outline(), front2 + BEV, back2);
+  // Boden, Tropfsteine, Steinchen
   const fl = [];
-  for (let s = -0.3; s < b.s1 + 0.3; s += 0.5) {
-    const t = Math.min(b.s1 + 0.3, s + 0.5);
-    fl.push(...W(s, -b.hw - 0.05, 0.02), ...W(s, b.hw + 0.05, 0.02), ...W(t, b.hw + 0.05, 0.02), ...W(s, -b.hw - 0.05, 0.02), ...W(t, b.hw + 0.05, 0.02), ...W(t, -b.hw - 0.05, 0.02));
+  for (let s = -0.3; s < b.s1; s += 0.5) {
+    const t = Math.min(b.s1, s + 0.5);
+    fl.push(...W(s, -b.hw, 0.02), ...W(s, b.hw, 0.02), ...W(t, b.hw, 0.02), ...W(s, -b.hw, 0.02), ...W(t, b.hw, 0.02), ...W(t, -b.hw, 0.02));
   }
   const fg = new THREE.BufferGeometry();
   fg.setAttribute('position', new THREE.Float32BufferAttribute(fl, 3));
@@ -542,21 +560,18 @@ function hoehle(world, add, r) {
   add(fg, 'caveFloor');
   for (const [s, n, l] of [[3.6, 0.2, 0.32], [4.3, -0.25, 0.22], [4.8, 0.1, 0.4], [2.7, -0.3, 0.18]]) // Tropfsteine
     add(new THREE.ConeGeometry(0.05, l, 5).deleteAttribute('uv').rotateX(Math.PI).translate(...W(s, n, Math.sqrt(b.hw * b.hw - n * n) + CAVE_SPRING - l / 2 + 0.02)), 'cave');
-  for (let k = 0; k < 7; k++) add(new THREE.DodecahedronGeometry(0.06 + r() * 0.08, 0).translate(...W(1 + r() * 4, (r() - 0.5) * 0.9, 0.05)), 'sandstein'); // Steinchen
-  // Sandsteinblöcke (flach geschichtet) um den Mund und als Kappe auf dem Buckel; keiner ragt in die Öffnung
-  const rock = (s, n, y, rad, flat = 0.7) => {
-    const geo = new THREE.DodecahedronGeometry(rad, 0), p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) { const f = 0.9 + r() * 0.15; p.setXYZ(i, p.getX(i) * f * 1.15, p.getY(i) * f * flat, p.getZ(i) * f); }
-    add(geo.rotateY(r() * 3).translate(...W(s, n, y)), 'sandstein');
-  };
-  for (const sd of [-1, 1]) {
-    for (const [n, y, rad] of [[0.62, 0.3, 0.55], [0.64, 0.95, 0.55], [0.62, 1.6, 0.55], [0.6, 2.2, 0.5], [1.6, 0.4, 0.8], [1.7, 1.4, 0.8], [1.6, 2.3, 0.7], [2.8, 0.5, 0.9], [2.9, 1.5, 0.8]])
-      rock(0.3 + r() * 0.3, sd * (b.hw + n), y, rad);
-    world.addObstacle([boreAt(b, -0.3, sd * b.hw), boreAt(b, -0.3, sd * (b.hw + 3.5)), boreAt(b, 1, sd * (b.hw + 3.5)), boreAt(b, 1, sd * b.hw)], 2.8, F + 2.8);
-    fern(add, ...boreAt(b, -0.9 - r() * 0.6, sd * (b.hw + 0.9 + r())), r, F);
+  for (let k = 0; k < 7; k++) add(new THREE.DodecahedronGeometry(0.06 + r() * 0.08, 0).translate(...W(1 + r() * 4, (r() - 0.5) * 0.9, 0.05)), 'sandstein');
+  // bewachsen: Gebüsch auf der Wandkrone und dahinter, Farn am Fuß
+  for (let k = 0; k < 9; k++) {
+    const rad = 0.45 + r() * 0.5, [x, z] = boreAt(b, front + 0.2 + r() * 2.5, (r() - 0.35) * 4.2);
+    add(new THREE.IcosahedronGeometry(rad, 1).scale(1, 0.75, 1).translate(x, Math.max(world.heightAt(x, z), F + 2.75) + rad * 0.4, z), k % 3 ? 'ivy' : 'crown2');
   }
-  for (const n of [-1.3, -0.6, 0, 0.6, 1.3]) rock(0.35, n, b.top + 0.55, 0.6);                       // Sturz
-  for (let k = 0; k < 14; k++) rock(0.8 + r() * (b.s1 + 1), (r() - 0.5) * 5, b.top + 1.2 + r() * 0.9, 0.8 + r() * 0.7, 0.55); // Kappe
+  for (const n of [-1.6, 2.2, 3.0]) fern(add, ...boreAt(b, -0.7 - r() * 0.5, n), r, world.heightAt(...boreAt(b, -0.9, n)));
+  // Fels neben dem Gang und dahinter: Hindernis (oben begehbar)
+  const L = front + end;
+  for (const [n0, n1] of [[b.hw + 0.05, 1.7], [-b.hw - 0.05, -3.2]])
+    world.addObstacle([boreAt(b, front - BEV, n0), boreAt(b, front - BEV, n1), boreAt(b, L, n1), boreAt(b, L, n0)], 3.2, F + 3);
+  world.addObstacle([boreAt(b, b.s1 + 0.05, -b.hw - 0.1), boreAt(b, b.s1 + 0.05, b.hw + 0.1), boreAt(b, L, b.hw + 0.1), boreAt(b, L, -b.hw - 0.1)], 3.2, F + 3);
 }
 
 // Dichter Laubwald unten am Westportal (laut Luftbild ist dort westlich der Bahn alles Wald): Buchen und Eschen in engem
@@ -568,7 +583,7 @@ function dichterWald(scene, world, add, r) {
   const other = world.data.areas.filter((a) => NOT_FOREST.includes(a.kind) && a.pts.some(([x, z]) => Math.hypot(x - cx, z - cz) < R + 150));
   const free = (x, z) => {
     const [s, n] = local(x, z), [hs, hn] = boreLocal(CAVE, x, z);
-    return s < S0 + 2 && !(s > S0 - 4 && Math.abs(n) < 9) && !(hs > -5 && hs < CAVE.s1 + 4 && Math.abs(hn) < (hs < 1.2 ? 3.5 : 5.5))
+    return s < S0 + 2 && !(s > S0 - 4 && Math.abs(n) < 9) && !(hs > -5 && hs < CAVE.s1 + 3 && Math.abs(hn) < 4.5)
       && !pointInPolygon(x, z, TUNNEL_PAVED[0].pts) && !world.nearRoad(x, z) && !nearRail(world, x, z, 10)
       && !other.some((a) => pointInPolygon(x, z, a.pts));
   };
@@ -628,7 +643,7 @@ export function buildFusstunnel(scene, world) {
     earth: lambert({ map: earthTex() }), log: lambert({ color: 0x5b4330 }), ivy: lambert({ color: 0x2f5a26 }), fern: lambert({ color: 0x4f8a35, side: THREE.DoubleSide }),
     rock: lambert({ color: 0xa9a59a, flatShading: true }), pole: lambert({ color: 0x6b5236 }), sign: lambert({ map: signTex() }),
     cave: lambert({ color: 0xc2a97f, flatShading: true, side: THREE.DoubleSide }), caveFloor: lambert({ color: 0x8a7656 }),
-    sandstein: lambert({ map: beigeTex(), color: 0xf0e2c4, flatShading: true }),
+    sandstein: lambert({ map: beigeTex(), color: 0xf0e2c4, flatShading: true, side: THREE.DoubleSide }),
     bark: lambert({ color: 0x8a8378 }), crown: lambert({ color: 0x4d7a35 }), crown2: lambert({ color: 0x5c8a3e }),
     web: new THREE.MeshBasicMaterial({ map: webTex(), transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }),
   };
