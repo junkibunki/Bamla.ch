@@ -592,6 +592,47 @@ export function carveBahnhofBB(T, data) {
   }
 }
 
+// Bahnsteig 2: die Lärmschutzwand ist zugleich Stützmauer zur höher liegenden Hertinger Straße, davor ist der Bahnsteig
+// eben bis an die Wand. Das 4-m-Geländemesh kann die Stufe an der Wand nicht abbilden und steigt schon über dem Bahnsteig
+// an; auf der Bahnsteigfläche verwirft der Geländeshader deshalb seine Pixel (verkettet mit fusstunnel.js), Figuren
+// laufen dort auf der Bahnsteigoberkante statt auf dem Gelände.
+function cutPlatformTerrain(world, pf, holes) {
+  const mat = world.ground?.children[0]?.material;
+  if (!mat) return;
+  const ks = [];
+  for (let i = 0; i < pf.S.length - 1; i += 3) ks.push(i);
+  ks.push(pf.S.length - 1);
+  const ring = [...ks.map((i) => pf.inner[i]), ...ks.slice().reverse().map((i) => pf.outer[i])];
+  const xs = ring.map((p) => p[0]), zs = ring.map((p) => p[1]), N = ring.length;
+  const box = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+  const prev = mat.onBeforeCompile, prevKey = mat.customProgramCacheKey;
+  mat.customProgramCacheKey = () => (prevKey ? prevKey.call(mat) : '') + '|bahnsteigBB';
+  mat.onBeforeCompile = (sh, renderer) => {
+    prev?.call(mat, sh, renderer);
+    sh.uniforms.bpRing = { value: ring.map(([x, z]) => new THREE.Vector2(x, z)) };
+    sh.uniforms.bpBox = { value: new THREE.Vector4(...box) };
+    sh.vertexShader = 'varying vec3 vBpW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvBpW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = `varying vec3 vBpW;\nuniform vec2 bpRing[${N}];\nuniform vec4 bpBox;\n` + sh.fragmentShader.replace('void main() {', `void main() {
+  if (vBpW.x > bpBox.x && vBpW.x < bpBox.z && vBpW.z > bpBox.y && vBpW.z < bpBox.w) {
+    bool bpIn = false;
+    for (int i = 0; i < ${N}; i++) {
+      vec2 a = bpRing[i], b = bpRing[i == 0 ? ${N - 1} : i - 1];
+      if ((a.y > vBpW.z) != (b.y > vBpW.z) && vBpW.x < (b.x - a.x) * (vBpW.z - a.y) / (b.y - a.y) + a.x) bpIn = !bpIn;
+    }
+    if (bpIn) discard;
+  }`);
+  };
+  mat.needsUpdate = true;
+  world.tunnels.push({
+    floorAt(x, z, prevY) {
+      if (x < box[0] || x > box[2] || z < box[1] || z > box[3] || !pointInPolygon(x, z, ring) || holes.some((h) => pointInPolygon(x, z, h))) return null;
+      const y = pf.top(x, z);
+      return prevY >= y - 0.5 && world.terrain.heightAt(x, z) > y ? y : null;
+    },
+    push() { return null; },
+  });
+}
+
 export function buildBahnhofBB(scene, world, railway, r = Math.random) {
   const tracks = railway.tracks;
   if (tracks.length < 2) return { update() {} };
@@ -607,12 +648,15 @@ export function buildBahnhofBB(scene, world, railway, r = Math.random) {
   });
 
   // Bahnsteige
-  const pfs = PLATFORMS_BB.map((P, k) => makePlatform(P, tracks[k], WALLS_BB));
+  // Bahnsteig 2 im Nordteil eben bis an die Lärmschutzwand (2,5–3 m hinter der OSM-Kante); im Südteil steht die Wand
+  // 5–8 m weiter oben an der Hertinger Straße, dazwischen bewachsene Böschung (Street View Mai 2022)
+  const pfs = PLATFORMS_BB.map((P, k) => makePlatform(P, tracks[k], WALLS_BB, k === 1 ? { reach: 3.6, maxW: 11 } : {}));
   const topTex = platformTexture();
   const p2Top = pfs[1].top(...U.east.top), p1Top = pfs[0].top(470.6, -1600);
   const under = buildUnderpass(scene, world, p2Top, r);
   buildPlatformBB(scene, world, pfs[0], topTex);
   buildPlatformBB(scene, world, pfs[1], topTex, [under.opening]);
+  cutPlatformTerrain(world, pfs[1], [under.opening]);
   buildWalls(scene, world, tracks, r, WALLS_BB, bbWallTexture(), false);
 
   const pav = paverTex(), grey = canvasTex(64, 64, (g) => { g.fillStyle = '#6f7174'; g.fillRect(0, 0, 64, 64); for (let y = 0; y < 64; y += 8) for (let x = (y / 8) % 2 ? 0 : 8; x < 64; x += 16) { const v = 100 + Math.random() * 16; g.fillStyle = `rgb(${v},${v + 1},${v + 4})`; g.fillRect(x + 1, y + 1, 14, 6); } }, true);
