@@ -267,9 +267,14 @@ export function buildWalls(scene, world, tracks, r, walls = WALLS, tex = wallTex
     }
     pts.push(W.pts[W.pts.length - 1]);
     const L = poly(pts);
-    const info = pts.map(([x, z]) => {
+    const info = pts.map(([x, z], i) => {
       const rt = railTop(x, z), g = world.heightAt(x, z);
-      const top = W.low ? Math.max(g, rt.y - 0.4) + 1.1 : rt.y + 3.25;
+      let top = W.low ? Math.max(g, rt.y - 0.4) + 1.1 : rt.y + 3.25;
+      if (W.above) { // auf einer Böschungskante: mindestens so hoch über dem höchsten Gelände 2,5 m beiderseits
+        const [qx, qz] = pts[Math.min(i + 1, pts.length - 1)], [px, pz] = pts[Math.max(i - 1, 0)], l = Math.hypot(qx - px, qz - pz) || 1;
+        const nx = (-(qz - pz) / l) * 2.5, nz = ((qx - px) / l) * 2.5;
+        top = Math.max(top, Math.max(world.heightAt(x + nx, z + nz), world.heightAt(x - nx, z - nz)) + W.above);
+      }
       const bottom = W.bridge || g < rt.y - 3 ? rt.y - 0.6 : Math.min(g, rt.y) - 0.4;
       return { x, z, top, bottom, g };
     });
