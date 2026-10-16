@@ -20,7 +20,7 @@ const UP = V(0, 1, 0);
 const PROBSTEI = [983, 991], FLUEGEL = [984], SCHEUNE_NO = [996], SCHEUNE_O = [994];
 
 // ---------- Texturen ----------
-const roughcastTex = () => {
+export const roughcastTex = () => {
   const t = canvasTex(256, 256, (g) => {
     g.fillStyle = '#f4f4f4';
     g.fillRect(0, 0, 256, 256);
@@ -38,7 +38,7 @@ const roughcastTex = () => {
   return t;
 };
 // Biberschwanz: 128 px = 1 m, 6 Reihen je Meter, runde Enden
-const tileTex = () => {
+export const tileTex = () => {
   const t = canvasTex(128, 128, (g) => {
     g.fillStyle = '#5a5a5a';
     g.fillRect(0, 0, 128, 128);
@@ -53,14 +53,14 @@ const tileTex = () => {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 };
-const louverTex = () => canvasTex(32, 128, (g) => {
+export const louverTex = () => canvasTex(32, 128, (g) => {
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, 32, 128);
   g.fillStyle = '#9a9a9a';
   for (let y = 10; y < 122; y += 6) g.fillRect(4, y, 24, 2);
   g.fillRect(0, 0, 3, 128); g.fillRect(29, 0, 3, 128); g.fillRect(0, 0, 32, 4); g.fillRect(0, 124, 32, 4); g.fillRect(0, 62, 32, 3);
 });
-const boardTex = () => {
+export const boardTex = () => {
   const t = canvasTex(128, 128, (g) => {
     for (let x = 0; x < 128; x += 16) {
       const v = 200 + Math.random() * 55;
@@ -88,7 +88,7 @@ const corrugatedTex = () => {
 const ptsOf = (arr) => { const p = []; for (let k = 0; k < arr.length; k += 3) p.push(V(arr[k], arr[k + 1], arr[k + 2])); return p; };
 
 // Wände aus den LoD2-Dreiecken, Fuß bis unter das Spielgelände; UV in Metern (u entlang der Wand, v = Höhe)
-function lodWalls(P, world, recs, keyAt) {
+export function lodWalls(P, world, recs, keyAt) {
   for (const rec of recs) {
     const w = ptsOf(rec.wall);
     for (let k = 0; k < w.length; k += 3) {
@@ -173,8 +173,9 @@ function wallAbove(walls, m) {
 
 // Dachplatten mit Überstand: freie Kanten in der Dachebene nach außen versetzen (Traufe eave, Ortgang verge),
 // Kanten zu Nachbarflächen (First, Grat, Kehle) und an höheren Wänden bleiben. Oben Ziegel, unten Holz, Stirnbrett.
-function roofSlabs(P, recs, { key, eave = 0.6, verge = 0.35, thick = 0.16, ridgeKey }) {
-  const faces = roofFaces(recs), walls = recs.flatMap((r) => ptsOf(r.wall));
+// also: Nachbardächer, an deren Flächen die Kanten ebenfalls ohne Überstand anstoßen (Kehlen zwischen Gebäudeteilen)
+export function roofSlabs(P, recs, { key, eave = 0.6, verge = 0.35, thick = 0.16, ridgeKey, also = [] }) {
+  const faces = roofFaces(recs), walls = recs.flatMap((r) => ptsOf(r.wall)), near = [...faces, ...roofFaces(also)];
   for (const f of faces) {
     const { loop, n } = f;
     let h = new THREE.Vector3().crossVectors(n, UP);
@@ -185,7 +186,7 @@ function roofSlabs(P, recs, { key, eave = 0.6, verge = 0.35, thick = 0.16, ridge
     const p2 = loop.map(to2), N = loop.length;
     const offs = loop.map((a, i) => {
       const b = loop[(i + 1) % N], m = a.clone().add(b).multiplyScalar(0.5);
-      const shared = faces.some((g) => g !== f && g.loop.some((c, j) => distPtSeg(m, c, g.loop[(j + 1) % g.loop.length]) < 0.25));
+      const shared = near.some((g) => g !== f && g.loop.some((c, j) => distPtSeg(m, c, g.loop[(j + 1) % g.loop.length]) < 0.25));
       if (shared) {
         if (ridgeKey && Math.abs(a.y - b.y) < 0.1 && Math.min(a.y, b.y) >= Math.max(...loop.map((q) => q.y)) - 0.05) // First
           P.add(ridgeKey, new THREE.CylinderGeometry(0.12, 0.12, a.distanceTo(b) + 0.2, 8).rotateZ(Math.PI / 2)
@@ -235,7 +236,7 @@ function roofSlabs(P, recs, { key, eave = 0.6, verge = 0.35, thick = 0.16, ridge
 }
 
 // Höhe der Dachfläche über (x, z)
-function roofAt(faces, x, z) {
+export function roofAt(faces, x, z) {
   for (const { loop, n } of faces) {
     let inside = false;
     for (let i = 0, j = loop.length - 1; i < loop.length; j = i++) {
@@ -249,15 +250,15 @@ function roofAt(faces, x, z) {
 
 // ---------- Fassaden ----------
 // Fassade von a nach b, außen liegt rechts der Laufrichtung (n = (-tz, tx)); u entlang, y absolut, o nach außen
-function facade(a, b) {
+export function facade(a, b) {
   const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), t = [dx / len, dz / len], n = [-t[1], t[0]];
   return { a, t, n, len, ry: Math.atan2(n[0], n[1]), at: (u, o = 0) => [a[0] + t[0] * u + n[0] * o, a[1] + t[1] * u + n[1] * o] };
 }
-const fbox = (P, F, key, w, h, d, u, y, o) => { const [x, z] = F.at(u, o); return P.add(key, new THREE.BoxGeometry(w, h, d).rotateY(F.ry).translate(x, y, z)); };
-const fshape = (P, F, key, shape, u, y, o) => { const [x, z] = F.at(u, o); return P.add(key, new THREE.ShapeGeometry(shape, 12).rotateY(F.ry).translate(x, y, z)); };
+export const fbox = (P, F, key, w, h, d, u, y, o) => { const [x, z] = F.at(u, o); return P.add(key, new THREE.BoxGeometry(w, h, d).rotateY(F.ry).translate(x, y, z)); };
+export const fshape = (P, F, key, shape, u, y, o) => { const [x, z] = F.at(u, o); return P.add(key, new THREE.ShapeGeometry(shape, 12).rotateY(F.ry).translate(x, y, z)); };
 
 // Fenster: Gewände, Glas mit Vorhängen, Kreuzstock, Bank, offene Klappläden
-function windowAt(P, F, u, y0, w, h, { shutters = true, surround = 'sand', frame = 'frame', cross = true } = {}) {
+export function windowAt(P, F, u, y0, w, h, { shutters = true, surround = 'sand', frame = 'frame', cross = true } = {}) {
   const yc = y0 + h / 2;
   fbox(P, F, 'glass', w, h, 0.02, u, yc, 0.01);
   for (const s of [-1, 1]) fbox(P, F, 'curtain', w * 0.22, h * 0.86, 0.01, u + s * w * 0.3, yc + h * 0.02, 0.025);
@@ -272,7 +273,7 @@ function windowAt(P, F, u, y0, w, h, { shutters = true, surround = 'sand', frame
   if (cross) { fbox(P, F, frame, 0.05, h, 0.05, u, yc, 0.045); fbox(P, F, frame, w, 0.05, 0.05, u, y0 + h * 0.68, 0.045); }
   if (shutters) for (const s of [-1, 1]) fbox(P, F, 'shutter', w / 2 + 0.02, h + 0.04, 0.04, u + s * (w / 2 + 0.16 + w / 4 + 0.01), yc, 0.06);
 }
-function doorAt(P, F, u, y0, w, h, key = 'door', surround = 'sand') {
+export function doorAt(P, F, u, y0, w, h, key = 'door', surround = 'sand') {
   fbox(P, F, key, w, h, 0.05, u, y0 + h / 2, 0.025);
   if (surround) {
     for (const s of [-1, 1]) fbox(P, F, surround, 0.14, h + 0.14, 0.07, u + s * (w / 2 + 0.07), y0 + h / 2 + 0.07, 0.035);
@@ -280,7 +281,7 @@ function doorAt(P, F, u, y0, w, h, key = 'door', surround = 'sand') {
   }
 }
 // Fachwerk: Schwelle, Riegel, Rähm, Ständer, Streben (Balken 0,16 m) über u0..u1, y0..y1
-function fachwerk(P, F, u0, u1, y0, y1, { posts = 1.6, rails = [0.5], braces = true } = {}) {
+export function fachwerk(P, F, u0, u1, y0, y1, { posts = 1.6, rails = [0.5], braces = true } = {}) {
   const bw = 0.16, w = u1 - u0;
   for (const y of [y0 + bw / 2, ...rails.map((r) => y0 + (y1 - y0) * r), y1 - bw / 2]) fbox(P, F, 'beam', w, bw, 0.06, (u0 + u1) / 2, y, 0.03);
   const n = Math.max(1, Math.round(w / posts));
@@ -294,13 +295,13 @@ function fachwerk(P, F, u0, u1, y0, y1, { posts = 1.6, rails = [0.5], braces = t
   }
 }
 // Scheunentor aus senkrechten Brettern mit Querriegeln
-function barnDoor(P, F, u, y0, w, h, key = 'door') {
+export function barnDoor(P, F, u, y0, w, h, key = 'door') {
   fbox(P, F, key, w, h, 0.06, u, y0 + h / 2, 0.03);
   for (const y of [0.25, 0.5, 0.75]) fbox(P, F, 'beam', w, 0.12, 0.04, u, y0 + h * y, 0.07);
   fbox(P, F, 'beam', 0.05, h, 0.04, u, y0 + h / 2, 0.075);
 }
 // Rundbogenkellerfenster mit Gitter, Unterkante auf y
-function cellarArch(P, F, u, y, r = 0.34) {
+export function cellarArch(P, F, u, y, r = 0.34) {
   const s = new THREE.Shape();
   s.moveTo(-r, 0); s.lineTo(r, 0); s.absarc(0, 0, r, 0, Math.PI, false);
   fshape(P, F, 'cellar', s, u, y, 0.012);

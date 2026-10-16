@@ -1007,8 +1007,9 @@ export const STREET_OVERRIDES = [
   { c: [-212.6, -1.3], wall: 0x9a5a32, roof: 0x9a4a32, look: 'plain', plinth: 0xe8e4dc,                                   // Holzschuppen, senkrechte orangebraune Bretter, roter Ziegel
     front: [{ t: 'panel', x: 0, w: 6, y0: 0.6, y1: 'eave', color: 0x9a5a32, boards: true }] },
   { c: [-226.2, -7], wall: 0xeeeae2, roof: 0x6a3a2e, look: 'modern' },                                                    // weiß, Holzfenster
-  { c: [-196.8, -8.6], wall: 0xcbbca0, roof: 0x8a4a36, look: 'stone',                                                     // lange Bruchstein-/Rauputz-Scheune, Holzschalung oben, Efeu
-    front: [{ t: 'ivy', x: -6, w: 8, h: 3 }, { t: 'panel', x: 0, w: 20, y0: 5.5, y1: 'eave', color: 0x5a4a3c, boards: true }] },
+  { c: [-197.0, -11.2], skip: 12 }, // Hofgut mit Wohnhaus, Scheune und Kastanienhof: eigenes Modell in stalban.js (Umriss nach LoD2, fixStAlban)
+  { c: [-213.0, -2.0], skip: 4 },   // Holzschopf an der Straße: eigenes Modell in stalban.js
+  { c: [-208.6, -11.15], skip: 4 },  // Pultdach-Anbau an der Westseite der Scheune: eigenes Modell in stalban.js
   { c: [-184.1, -15.8], wall: 0xf2f0ea, roof: 0x9a4a32, look: 'shutter', shutters: 0x6a2e2a },                            // weiß, dunkelrote Läden, PV (hinter Baum, Zuordnung unsicher)
   { c: [-205.3, 11.7], wall: 0xeceae4, roof: 0x6a6866, look: 'plain' },                                                   // weiße Garage
   { c: [-250.3, 1.4], wall: 0xf0e2b8, roof: 0x7a4a36, look: 'roller', plinth: 0xc8964a },                                 // blassgelb, ockerfarbene Fensterfaschen/Sockel
