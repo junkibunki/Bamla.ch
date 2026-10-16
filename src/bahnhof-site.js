@@ -101,6 +101,8 @@ export const BUS_STOP_RW = [
   { name: 'Rheinweiler Ort', dir: 'west', sign: [-1481.4, 727.8], stop: [-1480.3, 731.4] },
 ];
 
+import { BB_OVERRIDES } from './bahnhof-bb-site.js';
+
 // skip: baut bahnhof.js (Wert = Höhe für Kollision/Kamera); steht in ALL_OVERRIDES vor STREET_OVERRIDES
 export const BAHNHOF_OVERRIDES = [
   { c: [-1505.3, 793.1], skip: 2.9 },  // Wartehalle Bahnsteig 2
@@ -108,4 +110,5 @@ export const BAHNHOF_OVERRIDES = [
   { c: [-1460.6, 776.0], skip: 2.4 },  // Fahrradunterstand
   { c: [-1472.5, 781.5], skip: 1.6 },  // Fahrradboxen
   { c: ESTW, wall: 0xd6d4ce, roof: 0x9a9a96, look: 'plain', eave: 3.4, pitch: 0 }, // ESTW: hellgrauer Flachbau
+  ...BB_OVERRIDES, // Bahnhof Bad Bellingen (bahnhof-bb.js)
 ];

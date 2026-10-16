@@ -36,8 +36,9 @@ const scaleUV = (geo, su, sv) => {
   return geo;
 };
 
-// tracks: die beiden Streckengleise (train.js), mastOffset(x, z, k): Mastabstand an der Stelle (Bahnsteige)
-export function buildFahrleitung(scene, world, tracks, mastOffset = () => MAST_OFF) {
+// tracks: die beiden Streckengleise (train.js), mastOffset(x, z, k): Mastabstand an der Stelle (Bahnsteige),
+// adjust(s, T0): Joch an eine andere Stelle schieben (z. B. nicht vor ein Empfangsgebäude)
+export function buildFahrleitung(scene, world, tracks, mastOffset = () => MAST_OFF, adjust = (s) => s) {
   if (tracks.length < 2) return;
   const lattice = [], solid = [], wires = [];
   const mastAt = (x, z, top, ry, railY) => {
@@ -59,7 +60,8 @@ export function buildFahrleitung(scene, world, tracks, mastOffset = () => MAST_O
   const T0 = tracks[0], T1 = tracks[1];
   const supports = [[], []]; // je Gleis: { s, x, z, y (Schienenoberkante), zig }
   let zig = 1;
-  for (let s = 20; s < T0.length - 10; s += SPAN) {
+  for (let s0 = 20; s0 < T0.length - 10; s0 += SPAN) {
+    const s = adjust(s0, T0);
     const [x0, h0, z0] = T0.at(s), [dx, dz] = T0.dir(s);
     const p1 = T1.project(x0, z0);
     if (Math.abs(p1.d) > 9) continue; // Gleise laufen hier auseinander (Überholgleis), dort keine Joche
