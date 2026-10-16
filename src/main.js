@@ -69,6 +69,7 @@ import { buildKurparkplatz } from './kurparkplatz.js';
 import { prepareKurparkplatz } from './kurparkplatz-site.js';
 import { buildRathausBB } from './rathaus-bb.js';
 import { buildKurhaus } from './kurhaus.js';
+import { buildKurmittelhaus } from './kurmittelhaus.js';
 import { buildRheinstrasse } from './rheinstrasse.js';
 import { prepareRheinstrasse } from './rheinstrasse-site.js';
 import { buildLeodegar } from './leodegar.js';
@@ -350,6 +351,7 @@ pedestrians.push(kurpark);
 sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und Tennis (E, Figur steht still)
 buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
 buildKurhaus(scene, world); // Kurhaus Bad Bellingen mit Café „DasPark“, Kursaal, Vorplatz und Sonnenterrasse
+buildKurmittelhaus(scene, world); // Kurmittelhaus zwischen Therme und Kurhaus, Pavillon, Container „Bike-Zentrum“
 buildRheinstrasse(scene, world, { vehicles, rng: rng(1604) }); // verkehrsberuhigte Rheinstraße in Bad Bellingen: Pflaster, Möblierung, Häuser
 const leodegar = buildLeodegar(scene, world); // Kirche St. Leodegar Bad Bellingen: außen und innen, Turmuhr, Portaltüren
 buildLeodegarUmfeld(scene, world, { vehicles, rng: rng(1797) }); // Freitreppe, Vorplatz, Hanggarten, Parkplatz, Friedhof, Aussegnungshalle
