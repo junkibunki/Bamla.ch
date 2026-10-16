@@ -707,7 +707,7 @@ function buildInterior(X, M, G) {
   X.reveal('inWall', [I.a1, 0], [0, 1], [1, 0], NAVE.a1 - I.a1, chArch, FL);
   X.onWall('stucco', frameGeo(archPts(8.0, 6.55), chArch), I.a1, FL, 0, -1, 0, 0.02);
   // Turmhalle: Wände, Decke, Weihwasserbecken
-  X.wall('inWall', [HALL.a0, -HALL.hw], [HALL.a0, HALL.hw], FL, FL + 3.6, [{ c: [HALL.a0, 0], y: 0, pts: archPts(DOOR.w, DOOR.h) }]);
+  X.wall('inWall', [HALL.a0, -HALL.hw], [HALL.a0, HALL.hw], FL, FL + 3.6, [{ c: [HALL.a0, 0], y: FL, pts: archPts(DOOR.w, DOOR.h) }]);
   for (const s of [-1, 1]) X.wall('inWall', [HALL.a0, s * HALL.hw], [HALL.a1, s * HALL.hw], FL, FL + 3.6);
   X.wall('inWall', [HALL.a1, -HALL.hw], [HALL.a1, HALL.hw], FL, FL + 3.6, [{ c: [HALL.a1, 0], y: FL, pts: archPts(2.0, 3.0) }]);
   X.box('ceil', HALL.a0, HALL.a1, FL + 3.6, FL + 3.7, -HALL.hw, HALL.hw);

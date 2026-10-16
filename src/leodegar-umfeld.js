@@ -166,15 +166,17 @@ export function buildLeodegarUmfeld(scene, world, { vehicles, rng = Math.random 
   stepBox(f1b, f2a, STAIR.land);
   for (let k = 0; k < n2; k++) stepBox(f2a + ((f2b - f2a) * k) / n2, f2a + ((f2b - f2a) * (k + 1)) / n2, STAIR.land + ((FC - STAIR.land) * (k + 1)) / n2);
   stepBox(f2b, STAIR.top, FC);
-  // Wangen (Beton) und Geländer beiderseits
-  const prof = (s) => stairY(s, y0);
+  // Wangen (Beton) und Geländer beiderseits: Oberkante folgt der Linie über die Stufenkanten, auf dem Podest waagrecht
+  const run1 = (f1b - f1a) / n1, run2 = (f2b - f2a) / n2;
+  const nosing = [[0, y0 + (STAIR.land - y0) / n1], [f1b - run1, STAIR.land], [f2a - run2, STAIR.land], [f2b - run2, FC], [STAIR.top, FC]];
   for (const t of [-1, 1]) {
-    const line = [];
-    for (const s of [0, f1b, f2a, f2b, STAIR.top]) line.push(SP(s, t * (hw - 0.08), prof(s - 0.01) + (s === 0 ? (STAIR.land - y0) / n1 : 0)));
+    const line = nosing.map(([s, y]) => SP(s, t * (hw - 0.08), y));
     for (let i = 1; i < line.length; i++) {
       const a = line[i - 1], b = line[i], L = Math.hypot(b[0] - a[0], b[2] - a[2]);
-      X.add('concrete', new THREE.BoxGeometry(0.22, Math.abs(b[1] - a[1]) + 0.25 + (y0 - 0.8 < a[1] ? Math.min(a[1], b[1]) - (y0 - 0.8) : 0), L).translate(0, 0, 0)
-        .rotateY(Math.atan2(b[0] - a[0], b[2] - a[2])).translate((a[0] + b[0]) / 2, (Math.max(a[1], b[1]) + 0.25 + y0 - 0.8) / 2, (a[2] + b[2]) / 2));
+      const g = new THREE.BoxGeometry(0.22, 1, L), p = g.attributes.position;
+      for (let k = 0; k < p.count; k++) p.setY(k, p.getY(k) > 0 ? a[1] + (b[1] - a[1]) * (p.getZ(k) / L + 0.5) + 0.25 : y0 - 0.8);
+      g.computeVertexNormals();
+      X.add('concrete', g.rotateY(Math.atan2(b[0] - a[0], b[2] - a[2])).translate((a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2));
     }
     railing(line.map(([x, y, z]) => [x, y + 0.1, z]), 0.95);
     const [p0, p1] = [ST.P(0, t * (hw + 0.05)), ST.P(STAIR.top - 0.2, t * (hw + 0.05))], [q0, q1] = [ST.P(0, t * (hw - 0.15)), ST.P(STAIR.top - 0.2, t * (hw - 0.15))];
@@ -218,8 +220,8 @@ export function buildLeodegarUmfeld(scene, world, { vehicles, rng = Math.random 
   // Rutsche (Edelstahl) mit Sandsteinstufen daneben
   { const a = [506.0, H(506.0, -1749.9) + 0.6, -1749.9], b = [501.3, H(501.3, -1750.6) + 0.3, -1750.6];
     const L = Math.hypot(b[0] - a[0], b[2] - a[2]), ry = Math.atan2(b[0] - a[0], b[2] - a[2]), slope = Math.atan2(a[1] - b[1], L);
-    X.add('slide', new THREE.BoxGeometry(0.55, 0.04, L + 0.3).rotateX(-slope).rotateY(ry).translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 0.25, (a[2] + b[2]) / 2));
-    for (const s of [-1, 1]) X.add('slide', new THREE.BoxGeometry(0.04, 0.25, L + 0.3).rotateX(-slope).rotateY(ry).translate((a[0] + b[0]) / 2 + Math.cos(ry) * s * 0.28, (a[1] + b[1]) / 2 + 0.37, (a[2] + b[2]) / 2 - Math.sin(ry) * s * 0.28));
+    X.add('slide', new THREE.BoxGeometry(0.55, 0.04, L + 0.3).rotateX(slope).rotateY(ry).translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 0.25, (a[2] + b[2]) / 2));
+    for (const s of [-1, 1]) X.add('slide', new THREE.BoxGeometry(0.04, 0.25, L + 0.3).rotateX(slope).rotateY(ry).translate((a[0] + b[0]) / 2 + Math.cos(ry) * s * 0.28, (a[1] + b[1]) / 2 + 0.37, (a[2] + b[2]) / 2 - Math.sin(ry) * s * 0.28));
     for (const [p, h] of [[a, 0.6], [b, 0.3]]) X.rod('steel', [p[0], p[1] - h - 0.4, p[2]], [p[0], p[1] + 0.2, p[2]], 0.04, 6); // Stützen
     boxObst((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, 0.7, L, ry, 0.8);
   }
