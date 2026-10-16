@@ -64,9 +64,13 @@ Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 Bestenliste und Lieferzähler schreibt der eigenständige Server nach `~deploy/bamla-dorf.json` (anderer Pfad über
 `DORF_STATE`); im Dev-Server leben sie nur im Speicher und sind nach einem Neustart weg.
 
-Jede Anmeldung schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name` nach `~deploy/bamla-joins.log`
-(anderer Pfad über die Umgebungsvariable `JOIN_LOG`); im Spiel wird das nicht angezeigt. Ansehen: `cat ~/bamla-joins.log`.
-Auch ein Neuladen der Seite oder ein Wiederverbinden nach Verbindungsabbruch erzeugt eine Zeile.
+Jede Anmeldung schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name <Tab> an` nach `~deploy/bamla-joins.log`
+(anderer Pfad über die Umgebungsvariable `JOIN_LOG`), jede Abmeldung als `Zeitpunkt (UTC) <Tab> Name <Tab> ab <Tab> Dauer <Tab> aktiv Dauer`
+(Dauern als h:mm:ss); im Spiel wird das nicht angezeigt. Ansehen: `cat ~/bamla-joins.log`. Ältere Zeilen ohne `an` sind ebenfalls Anmeldungen.
+Auch ein Neuladen der Seite oder ein Wiederverbinden nach Verbindungsabbruch erzeugt eine An- und eine Abmeldung.
+Aktiv ist die Zeit, in der der Tab sichtbar war (nur dann schickt das Spiel seinen Zustand) und die Figur sich in den letzten
+30 s bewegt, gesungen oder gebetet hat. Ein geschlossener Tab wird erst nach bis zu 30 s abgemeldet; bei einem Neustart des
+Servers (Deploy) werden alle Angemeldeten noch abgemeldet.
 
 ## Rohdaten
 

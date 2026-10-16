@@ -5,6 +5,7 @@
 // Im Dev-Server hängt er sich an Vite (vite.config.js), im Betrieb läuft er eigenständig:
 //   PORT=8787 node server/multiplayer.mjs   (Caddy leitet /mp dorthin weiter)
 import { createServer } from 'node:http';
+import { appendFileSync } from 'node:fs';
 import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -20,11 +21,17 @@ const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn'];                      
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein
 const TOP = 10;         // Plätze in der Bestenliste
 const MAX_NAMES = 500;  // gemerkte Namen (die mit den wenigsten Aufgaben fliegen zuerst)
+const RUHE = 30000;     // ms ohne Bewegung, ab denen jemand im Anmeldeprotokoll nicht mehr als aktiv zählt
 
 const num = (v, lim) => (Number.isFinite(v) ? Math.max(-lim, Math.min(lim, v)) : 0);
 const cleanName = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 20);
+const dauer = (ms) => { // Aufenthaltsdauer als h:mm:ss
+  const s = Math.round(ms / 1000), zwei = (n) => String(n).padStart(2, '0');
+  return `${Math.floor(s / 3600)}:${zwei(Math.floor(s / 60) % 60)}:${zwei(s % 60)}`;
+};
 
-// joinLog: Datei, in die jede Anmeldung als Zeile „Zeitpunkt (UTC) <Tab> Name“ angehängt wird (nur auf dem Server, nicht im Spiel)
+// joinLog: Datei, in die jede Anmeldung als Zeile „Zeitpunkt (UTC) <Tab> Name <Tab> an“ und jede Abmeldung als
+//   „Zeitpunkt (UTC) <Tab> Name <Tab> ab <Tab> Dauer (h:mm:ss) <Tab> aktiv Dauer“ angehängt wird (nur auf dem Server, nicht im Spiel)
 // stateFile: kleine JSON-Datei für Bestenliste und Lieferzähler; ohne sie gehen beide beim Neustart verloren
 export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
@@ -60,6 +67,16 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
   });
 
   const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+  const protokoll = (zeile, sync) => {
+    if (!joinLog) return;
+    const z = `${new Date().toISOString()}\t${zeile}\n`;
+    const fehler = (e) => console.error('Anmeldeprotokoll:', e.message);
+    if (!sync) return appendFile(joinLog, z).catch(fehler);
+    try { appendFileSync(joinLog, z); } catch (e) { fehler(e); }
+  };
+  const abmelden = (p, sync) => protokoll(`${p.name}\tab\t${dauer(Date.now() - p.seit)}\taktiv ${dauer(p.aktiv)}`, sync);
+  // Beim Beenden des Servers (Deploy, Neustart) alle noch Angemeldeten mit ihrer Dauer abmelden
+  wss.alleAbmelden = () => { for (const p of players.values()) abmelden(p, true); players.clear(); };
 
   wss.on('connection', (ws) => {
     ws.alive = true;
@@ -73,11 +90,18 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
         if (!name) return ws.close(4000, 'Name fehlt');
         if (players.size >= MAX_PLAYERS) return ws.close(4001, 'Server voll');
         const id = nextId++;
-        players.set(ws, { id, name, s: null, lastHorn: 0 });
+        players.set(ws, { id, name, s: null, lastHorn: 0, seit: Date.now(), aktiv: 0, bewegt: 0, zuletzt: 0 });
         send(ws, { t: 'welcome', id });
         send(ws, dorfMsg());
-        if (joinLog) appendFile(joinLog, `${new Date().toISOString()}\t${name}\n`).catch((e) => console.error('Anmeldeprotokoll:', e.message));
+        protokoll(`${name}\tan`);
       } else if (m.t === 'state' && p) {
+        // Aktive Zeit: Zustände kommen nur bei sichtbarem Tab (Spielschleife); aktiv heißt bewegt, gesungen oder
+        // gebetet in den letzten RUHE ms. Lücken über 1 s (Tab im Hintergrund) zählen nicht.
+        const now = Date.now(), alt = p.s;
+        if (!alt || Math.hypot(num(m.x, 5000) - alt.x, num(m.z, 5000) - alt.z) > 0.05 || Math.abs(num(m.h, 100) - alt.h) > 0.02
+          || m.sg !== undefined || m.an === 'p') p.bewegt = now;
+        if (p.zuletzt && now - p.bewegt <= RUHE) p.aktiv += Math.min(now - p.zuletzt, 1000);
+        p.zuletzt = now;
         p.s = {
           x: num(m.x, 5000), y: num(m.y, 1000), z: num(m.z, 5000), h: num(m.h, 100),
           v: VEHICLES.includes(m.v) ? m.v : null,
@@ -127,6 +151,7 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
       const p = players.get(ws);
       if (!p) return;
       players.delete(ws);
+      abmelden(p);
       for (const other of players.keys()) send(other, { t: 'leave', id: p.id });
     });
   });
@@ -162,6 +187,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   // außerhalb von ~/bamla-mp, das beim Deploy per rsync --delete ersetzt wird
   const joinLog = process.env.JOIN_LOG || join(homedir(), 'bamla-joins.log');
   const stateFile = process.env.DORF_STATE || join(homedir(), 'bamla-dorf.json');
-  attachMultiplayer(server, { joinLog, stateFile });
+  const wss = attachMultiplayer(server, { joinLog, stateFile });
+  for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { wss.alleAbmelden(); process.exit(0); });
   server.listen(port, '127.0.0.1', () => console.log(`Bamla.ch Multiplayer auf ws://127.0.0.1:${port}${PATH}, Anmeldungen in ${joinLog}, Dorfstand in ${stateFile}`));
 }
