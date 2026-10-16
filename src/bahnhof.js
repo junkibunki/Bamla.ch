@@ -185,7 +185,8 @@ export class Tris {
 // ---------- Bahnsteige ----------
 
 // Bahnsteig als Band entlang des Gleises: Kante 1,70 m neben der Achse, Rückseite = OSM-Außenkante
-export function makePlatform(P, T, walls = WALLS) {
+// reach: so weit hinter der OSM-Kante darf die Wand stehen, damit der Bahnsteig bis an sie reicht; maxW: größte Breite
+export function makePlatform(P, T, walls = WALLS, { reach = 1.3, maxW = 7 } = {}) {
   const a = T.project(...P.edge[0]), b = T.project(...P.edge[P.edge.length - 1]);
   const mid = T.project(...P.edge[Math.floor(P.edge.length / 2)]);
   const side = Math.sign(mid.d);
@@ -197,8 +198,8 @@ export function makePlatform(P, T, walls = WALLS) {
     let w = rayHit([x, z], [nx, nz], P.edge) ?? Math.abs(T.project(x, z).d) + 3;
     // bis an die Lärmschutzwand, wo eine steht (OSM-Kante und Wandlinie weichen bis 1 m voneinander ab)
     const wall = Math.min(...walls.filter((W) => !W.low).map((W) => rayHit([x, z], [nx, nz], W.pts) ?? Infinity));
-    if (wall > w - 0.4 && wall < w + 1.3) w = wall - 0.05;
-    S.push({ s, x, z, nx, nz, dx, dz, w: Math.max(EDGE_OFFSET + 1.8, Math.min(7, w)), top: h + 0.25 + PLATFORM_H });
+    if (wall > w - 0.4 && wall < w + reach) w = wall - 0.05;
+    S.push({ s, x, z, nx, nz, dx, dz, w: Math.max(EDGE_OFFSET + 1.8, Math.min(maxW, w)), top: h + 0.25 + PLATFORM_H });
   }
   for (let pass = 0; pass < 2; pass++) for (let i = 1; i < S.length - 1; i++) S[i].w = (S[i - 1].w + 2 * S[i].w + S[i + 1].w) / 4;
   const inner = S.map((p) => [p.x + p.nx * EDGE_OFFSET, p.z + p.nz * EDGE_OFFSET]);
