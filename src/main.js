@@ -55,6 +55,7 @@ import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
 import { buildStationenweg, clearStationenweg } from './stationenweg.js';
+import { fixFusstunnel, buildFusstunnel, tunnelCamera } from './fusstunnel.js';
 import { buildReitzentrum } from './reitzentrum.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
@@ -110,6 +111,7 @@ data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/buil
 data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
+fixFusstunnel(data); // Fußgängertunnel unter der Bahn: Röhre bis zu den Portalen, Stufenweg mit eigenem Mesh
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 const world = new World(data, scene, terrain, vineyards);
@@ -119,6 +121,7 @@ buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
 buildKirschgartenEcke(scene, world); // Bruchsteinmauer, Verkehrsinsel mit Laterne, Betonmauer an der Einmündung Kirschgarten
 buildProbsteiweg(scene, world); // Marienheim und Probstei gegenüber: Fassadendetails, Statue, Hofmauer, Pflaster
+const fusstunnel = buildFusstunnel(scene, world); // Fußgängertunnel unter der Rheintalbahn, Stufenweg mit Bärlauch hinauf ins Dorf
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
 const museum = buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus), Eingangsbereich begehbar
 const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang)
@@ -355,6 +358,8 @@ function updateCamera(dt) {
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
   const ceil = kirche.innen.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
   if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
+  const tc = !riding() && tunnelCamera(camTarget, cam.yaw); // Fußgängertunnel: auf der Achse hinter der Figur
+  if (tc) camPos.copy(tc);
   camera.position.lerp(camPos, Math.min(1, dt * 12));
   camera.lookAt(camTarget);
   drunk.applyCamera(camera);
@@ -517,7 +522,7 @@ multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
