@@ -10,6 +10,8 @@ export const PAVED_WAYS = [
   { name: 'Schafgässle' },                         // graues Fischgrätpflaster, auch die Höfe
   { type: 'service', near: [-32.7, 54.3] },        // Friedhofsweg an der Kirche
   { type: 'service', near: [-244.2, 166.8] },      // Zufahrt Kindergarten (Alte Weinstraße)
+  { type: 'living_street', near: [505.0, -1722.6], color: [138, 130, 120] }, // Spielstraße am Parkplatz St. Leodegar (Bad Bellingen)
+  { type: 'living_street', near: [491.6, -1752.0], color: [138, 130, 120] }, // Pflastergasse am Bahnviadukt unter der Freitreppe
 ];
 
 // In OSM als Fahrweg (service) eingetragen, tatsächlich aber Schotter/Erde.

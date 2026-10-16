@@ -68,6 +68,9 @@ import { buildRathausBB } from './rathaus-bb.js';
 import { buildKurhaus } from './kurhaus.js';
 import { buildRheinstrasse } from './rheinstrasse.js';
 import { prepareRheinstrasse } from './rheinstrasse-site.js';
+import { buildLeodegar } from './leodegar.js';
+import { buildLeodegarUmfeld } from './leodegar-umfeld.js';
+import { prepareLeodegar } from './leodegar-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -130,6 +133,7 @@ prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, kei
 prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
 prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
 prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
+prepareLeodegar(data); // St. Leodegar Bad Bellingen: keine Waldbäume auf Friedhof und Kirchplatz
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -327,6 +331,8 @@ sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und T
 buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
 buildKurhaus(scene, world); // Kurhaus Bad Bellingen mit Café „DasPark“, Kursaal, Vorplatz und Sonnenterrasse
 buildRheinstrasse(scene, world, { vehicles, rng: rng(1604) }); // verkehrsberuhigte Rheinstraße in Bad Bellingen: Pflaster, Möblierung, Häuser
+const leodegar = buildLeodegar(scene, world); // Kirche St. Leodegar Bad Bellingen: außen und innen, Turmuhr, Portaltüren
+buildLeodegarUmfeld(scene, world, { vehicles, rng: rng(1797) }); // Freitreppe, Vorplatz, Hanggarten, Parkplatz, Friedhof, Aussegnungshalle
 const camPos = new THREE.Vector3();
 
 function updateCamera(dt) {
@@ -383,7 +389,7 @@ function updateCamera(dt) {
   const px = camTarget.x + (cx - camTarget.x) * k, pz = camTarget.z + (cz - camTarget.z) * k;
   // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt), in der Kirche nicht durch die Decke
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, camTarget.y + (cy - camTarget.y) * k), pz);
-  const ceil = kirche.innen.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
+  const ceil = kirche.innen.ceilingAt(px, pz) ?? leodegar.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
   if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
   const tc = !riding() && tunnelCamera(camTarget, cam.yaw); // Fußgängertunnel: auf der Achse hinter der Figur
   if (tc) camPos.copy(tc);
@@ -619,6 +625,7 @@ function frame() {
   andacht.update(dt, editing ? IDLE : input, player);
   sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
+  leodegar.update(dt, player); // St. Leodegar: Portaltüren, Turmuhr, Kerzen
   carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
   museum.update(dt, player); // Museumstür
   backofen.update(dt); // Holzfeuer, Temperatur, Backen, Brotschieber

@@ -25,6 +25,7 @@ export const POIS = [
   { name: 'Metzgerei Dosenbach', icon: '🥩', x: -1432.7, z: 700.1 },
   { name: 'Balinea Thermen', icon: '♨️', x: 41.3, z: -1252.7 },
   { name: 'Rewe & Rossmann', icon: '🛒', x: 105, z: -1585 },
+  { name: 'Kirche St. Leodegar', icon: '⛪', x: 536, z: -1744 },
   { name: 'Abenteuer-Golf', icon: '⛳', x: 218, z: -1430 },
   { name: 'Spielplatz Wilde Wasser', icon: '🛝', x: 172, z: -1465 },
   { name: 'Kurparkweiher', icon: '🦆', x: 291, z: -1590 },
