@@ -1,13 +1,16 @@
 // Linienbus (Regionalbus, weiß mit blauem RVL-Band; Lackierung angenommen) zwischen Bad Bellingen und Rheinweiler:
+// Endhaltestelle „Thermalbad“ in der Wendeschleife vor den Balinea Thermen (wie die RVL-Linien 4 und 15) – K 6347 –
 // Alte Weinstraße (Bamlach) – Bamlacher Straße – Burgunderstraße. Hält in beiden Richtungen an den Haltestellen
 // „Bamlach“ (Wartehalle auf der Ostseite, siehe museum.js) und „Rheinweiler Ort“ (Burgunderstraße, siehe bahnhof-site.js):
-// Türen auf, der wartende Fahrgast steigt ein, nach einer Weile geht es weiter.
+// Türen auf, der wartende Fahrgast steigt ein, nach einer Weile geht es weiter. Am Thermalbad macht der Bus mit offenen
+// Türen Pause und fährt dann um die Schleife als Linie nach Rheinweiler zurück.
 // Mitfahren: E bei offenen Türen (einsteigen/aussteigen), während der Fahrt E = Haltewunsch.
 import * as THREE from 'three';
 import { Vehicle } from './vehicles.js';
 import { buildPerson } from './person.js';
 import { BUS_STOP } from './museum.js';
 import { BUS_STOP_RW } from './bahnhof-site.js';
+import { BUS_STOP_TB } from './therme-site.js';
 
 const LEN = 12, WID = 2.55, HGT = 3.0, CLEAR = 0.35;  // Solobus: Länge, Breite, Kastenhöhe, Bodenfreiheit
 const VMAX = 12.5, ACC = 1.2, DEC = 1.6;             // m/s, m/s²
@@ -202,9 +205,9 @@ export class BusLine {
   constructor(scene, world, data, r = Math.random) {
     this.world = world;
     this.r = r;
-    const aw = data.roads.filter((x) => x.name === 'Alte Weinstraße').flatMap((x) => x.pts);
     const bg = data.roads.filter((x) => x.name === 'Burgunderstraße').flatMap((x) => x.pts);
-    const north = aw.reduce((a, b) => (b[1] < a[1] ? b : a)), west = bg.reduce((a, b) => (b[0] < a[0] ? b : a));
+    const west = bg.reduce((a, b) => (b[0] < a[0] ? b : a));
+    const tb = BUS_STOP_TB; // Wendeschleife Thermalbad: Einfahrt oben, Haltestelle an der Westseite, Ausfahrt über die Ostseite
     const rwE = BUS_STOP_RW.find((b) => b.dir === 'east'), rwW = BUS_STOP_RW.find((b) => b.dir === 'west');
     // Fahrgäste warten an der Wartehalle Bamlach bzw. an den Masten in Rheinweiler
     const { x, z, heading } = BUS_STOP;
@@ -213,6 +216,7 @@ export class BusLine {
       { at: [x + lx * Math.cos(heading) + lz * Math.sin(heading), z - lx * Math.sin(heading) + lz * Math.cos(heading)], wait: [x, z], name: 'Bamlach' },
       { at: [rwE.sign[0] - 0.6, rwE.sign[1] - 0.8], wait: rwE.sign, name: 'Rheinweiler Ort' },
       { at: [rwW.sign[0] + 0.6, rwW.sign[1] + 0.8], wait: rwW.sign, name: 'Rheinweiler Ort' },
+      { at: tb.at, wait: tb.sign, name: 'Thermalbad' },
     ];
     this.spots = spots.map((sp) => {
       const p = buildPerson(r);
@@ -222,13 +226,14 @@ export class BusLine {
       return { ...sp, person: p };
     });
     // Richtung Rheinweiler (Süd/West) und Richtung Bad Bellingen (Ost/Nord), je mit Haltestellen in Fahrtreihenfolge
-    const mk = (wps, stops, display) => {
+    const mk = (wps, stops, display, extra) => {
       const route = new Route(findRoute(data.roads, wps));
-      return { route, display, stops: stops.map(([at, spot]) => ({ s: route.nearest(at), spot: this.spots[spot] })) };
+      return { route, display, ...extra, stops: stops.map(([at, spot]) => ({ s: route.nearest(at), spot: this.spots[spot] })) };
     };
     this.lines = [
-      mk([north, STOP_BAMLACH_S, rwW.stop, west], [[STOP_BAMLACH_S, 0], [rwW.stop, 2]], 'Rheinweiler'),
-      mk([west, rwE.stop, STOP_BAMLACH_N, north], [[rwE.stop, 1], [STOP_BAMLACH_N, 0]], 'Bad Bellingen'),
+      // beginnt hinter der Haltestelle Thermalbad, damit der Bus dort mit ganzer Länge auf der Strecke steht (Pause, siehe start)
+      mk([tb.entry, tb.stop, ...tb.exit, STOP_BAMLACH_S, rwW.stop, west], [[tb.stop, 3], [STOP_BAMLACH_S, 0], [rwW.stop, 2]], 'Rheinweiler'),
+      mk([west, rwE.stop, STOP_BAMLACH_N, tb.stop], [[rwE.stop, 1], [STOP_BAMLACH_N, 0], [tb.stop, 3]], 'Thermalbad', { terminus: true }),
     ];
     this.rider = null; // Spieler fährt mit
     this.lane = LANE;
@@ -244,6 +249,8 @@ export class BusLine {
     this.trip = null;
     this.wait = 20 + r() * 25;  // erster Bus kommt bald
     this.next = r() < 0.5 ? 0 : 1;
+    this.nextWait = this.wait;
+    if (this.next === 0) this.start(true); // steht schon in der Pause am Thermalbad
   }
 
   setDisplay(text) {
@@ -253,11 +260,13 @@ export class BusLine {
     m.needsUpdate = true;
   }
 
-  start() {
+  // layover: der Bus steht schon an der ersten Haltestelle (Thermalbad) und wartet dort mit offenen Türen die Pause ab
+  start(layover = false) {
     const L = this.lines[this.next];
     this.next = 1 - this.next;
     this.trip = { L, route: L.route, s: -LEN, v: VMAX, dwell: 0, stopped: false, doorT: 0, boarding: 0, blockT: 0, stop: 0, reqS: null, at: null, here: null };
-    this.lane = LANE;
+    if (layover) Object.assign(this.trip, { s: L.stops[0].s - 1, v: 0, stopped: true, at: 'stop', here: L.stops[0], stop: 1, doorT: 1, dwell: this.nextWait + 14 });
+    this.lane = layover ? LANE_STOP : LANE;
     this.nextWait = 50 + this.r() * 70; // Pause bis zur nächsten Fahrt (schon jetzt bekannt, für die Anzeige an der Haltestelle)
     this.setDisplay(L.display);
     this.mesh.visible = true;
@@ -283,7 +292,7 @@ export class BusLine {
     let g = Infinity;
     if (t.stop < t.L.stops.length) g = t.L.stops[t.stop].s;
     if (t.reqS != null) g = Math.min(g, t.reqS);
-    if (this.rider) g = Math.min(g, t.route.length - 1);
+    if (this.rider || t.L.terminus) g = Math.min(g, t.route.length - 1);
     return g;
   }
 
@@ -387,6 +396,7 @@ export class BusLine {
       if (t.at === 'end') {
         // Endhaltestelle: Fahrgast muss raus; der Bus verschwindet erst, wenn der Spieler weit genug weg ist
         if (this.rider && t.dwell < 3) this.alight();
+        if (!this.rider && t.dwell <= 0 && t.L.terminus) { this.start(true); return; } // Pause, dann zurück nach Rheinweiler
         if (!this.rider && t.dwell <= 0) {
           t.dwell = 0.01;
           if (Math.hypot(player.pos.x - this.car.x, player.pos.z - this.car.z) > 60) t.s = R.length + LEN + 1;
@@ -405,7 +415,7 @@ export class BusLine {
         t.stopped = true;
         t.v = 0;
         const stop = t.L.stops[t.stop], atStop = !!stop && Math.abs(goal - stop.s) < 1;
-        t.at = this.rider && goal >= R.length - 1.5 ? 'end' : atStop ? 'stop' : 'request';
+        t.at = (this.rider || t.L.terminus) && goal >= R.length - 1.5 ? 'end' : atStop ? 'stop' : 'request';
         t.here = atStop ? stop : null;
         if (atStop) { t.stop++; t.boarding = 0; }
         if (t.reqS != null && t.s >= t.reqS - 1) t.reqS = null;

@@ -23,6 +23,8 @@ export const POIS = [
   { name: 'Jugendtreff Baracke', icon: '🍻', x: -810.8, z: 603.2 },
   { name: 'Schloss Rheinweiler', icon: '🏰', x: -1413, z: 630.6 },
   { name: 'Metzgerei Dosenbach', icon: '🥩', x: -1432.7, z: 700.1 },
+  { name: 'Balinea Thermen', icon: '♨️', x: 41.3, z: -1252.7 },
+  { name: 'Rewe & Rossmann', icon: '🛒', x: 105, z: -1585 },
 ];
 
 function drawArrow(ctx, facing) {

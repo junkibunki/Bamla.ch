@@ -105,6 +105,25 @@ export const ITEMS = {
   } },
 };
 
+// Rewe und Rossmann in Bad Bellingen (rewe.js)
+Object.assign(ITEMS, {
+  einkauf: { name: 'Rewe-Einkaufstüte', icon: '🛍️', hold: 'arms', build(g) {
+    box(g, 0.36, 0.34, 0.2, 0xb88a5a, 0, 0.17, 0);                // Papiertüte
+    box(g, 0.2, 0.08, 0.004, 0xcc071e, 0, 0.2, 0.101);           // rotes REWE-Feld
+    ball(g, 0.05, 0xe8c64a, -0.1, 0.36, 0);                       // Bananen, Brot, Lauch schauen heraus
+    box(g, 0.08, 0.16, 0.06, 0xc58a3a, 0.02, 0.38, -0.03);
+    cyl(g, 0.015, 0.015, 0.22, 0x3f8a3a, 0.12, 0.42, 0.04);
+  } },
+  brezel: { name: 'Butterbrezel', icon: '🥨', hold: 'hand', eat: 'essen', build(g) {
+    const b = ball(g, 0.07, 0x8a4a1c, 0, 0, 0); b.scale.set(1, 0.35, 0.8);
+    ball(g, 0.012, 0xf4f4f0, 0.02, 0.022, 0.01);
+  } },
+  sonnencreme: { name: 'Sonnencreme', icon: '🧴', hold: 'hand', build(g) {
+    box(g, 0.06, 0.14, 0.03, 0xf2a21a, 0, 0, 0);
+    box(g, 0.04, 0.03, 0.025, 0xd8202a, 0, 0.085, 0);
+  } },
+});
+
 export const VOUCHERS = {
   freibier: { name: 'Freibier im Storchen', icon: '🎟' },
   freiessen: { name: 'Freiessen beim Metzger', icon: '🎟' },

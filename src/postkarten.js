@@ -20,6 +20,8 @@ export const KARTEN = [
   { id: 'baracke', name: 'Jugendtreff Baracke', icon: '🍻', x: -810.8, z: 603.2, a: -2, d: 30, h: 14 },
   { id: 'schloss', name: 'Schloss Rheinweiler', icon: '🏰', x: -1413, z: 630.6, r: 50, a: 2.0, d: 60, h: 18, look: 6 },
   { id: 'schule', name: 'Sonnenrainschule Rheinweiler', icon: '🏫', x: -1220.8, z: 770.3, r: 50, a: 0.4, d: 60, h: 18 },
+  { id: 'therme', name: 'Balinea Thermen Bad Bellingen', icon: '♨️', x: 37, z: -1268, r: 45, a: -2.85, d: 62, h: 24, look: 6 },
+  { id: 'rewe', name: 'Rewe und Rossmann Bad Bellingen', icon: '🛒', x: 105, z: -1595, r: 45, a: -1.95, d: 55, h: 14, look: 4 },
 ];
 
 const W = 360, H = 240;

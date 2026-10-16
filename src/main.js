@@ -57,6 +57,9 @@ import { Sport } from './sport.js';
 import { buildStationenweg, clearStationenweg } from './stationenweg.js';
 import { fixFusstunnel, buildFusstunnel, tunnelCamera } from './fusstunnel.js';
 import { buildReitzentrum } from './reitzentrum.js';
+import { buildRewe } from './rewe.js';
+import { buildTherme } from './therme.js';
+import { prepareTherme } from './therme-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -114,6 +117,7 @@ fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schma
 fixFusstunnel(data); // Fußgängertunnel unter der Bahn: Röhre bis zu den Portalen, Stufenweg mit eigenem Mesh
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
+prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -189,6 +193,9 @@ const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/)
 const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffis“: G an Haltestellen und Bahnhof
 const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
+const rewe = buildRewe(scene, world, { vehicles, carry, rng: rng(4711) }); // Rewe und Rossmann in Bad Bellingen: Parkplatz, Kundschaft mit Einkaufswagen
+pedestrians.push(rewe);
+pedestrians.push(buildTherme(scene, world, { rng: rng(815) })); // Balinea Thermen: Badehalle, Becken, Sauna-Park, Badegäste
 const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
 // Kirche und Schloss vor dem Straßengrün: ihre Mauern sind dann schon Hindernisse, das Grün lässt sie aus
 const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Friedhof, Krippe
@@ -220,7 +227,7 @@ for (const r of data.roads) {
 const yardRoads = world.graphs.car.roads.filter((r) => ['residential', 'living_street', 'tertiary', 'unclassified'].includes(r.type));
 const order = world.buildings.map((_, i) => i).sort(() => rand() - 0.5);
 for (const bi of order) {
-  if (vehicles.length >= 45) break;
+  if (vehicles.length >= 45 + rewe.cars) break; // Autos auf dem Rewe-Parkplatz zählen nicht mit
   const ring = world.buildings[bi];
   if (ring.length < 4) continue;
   const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
