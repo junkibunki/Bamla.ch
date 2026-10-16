@@ -66,6 +66,8 @@ import { prepareRheintreppe, buildRheintreppe } from './rheintreppe.js';
 import { prepareKurpark } from './kurpark-site.js';
 import { buildRathausBB } from './rathaus-bb.js';
 import { buildKurhaus } from './kurhaus.js';
+import { buildRheinstrasse } from './rheinstrasse.js';
+import { prepareRheinstrasse } from './rheinstrasse-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -127,6 +129,7 @@ clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenw
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
 prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
 prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
+prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -323,6 +326,7 @@ pedestrians.push(kurpark);
 sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und Tennis (E, Figur steht still)
 buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
 buildKurhaus(scene, world); // Kurhaus Bad Bellingen mit Café „DasPark“, Kursaal, Vorplatz und Sonnenterrasse
+buildRheinstrasse(scene, world, { vehicles, rng: rng(1604) }); // verkehrsberuhigte Rheinstraße in Bad Bellingen: Pflaster, Möblierung, Häuser
 const camPos = new THREE.Vector3();
 
 function updateCamera(dt) {
