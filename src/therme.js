@@ -574,25 +574,7 @@ export function buildTherme(scene, world, { rng = Math.random } = {}) {
     world.addObstacle(sq([px, pz], 0.6, 1.0), 2.4);
   }
 
-  // --- Wohnmobilstellplatz: Wohnmobile in den Buchten, Schranke mit Kassenautomat ---
-  {
-    const cols = [0xf2f2ee, 0xe8e4da, 0xf4f4f0, 0xdcdcd4];
-    const spots = [[60, -1495, 1.17], [66, -1505, 1.17], [72, -1515, 1.17], [80, -1500, 1.17], [86, -1488, 1.17], [74, -1480, 1.17], [92, -1505, 1.17]];
-    spots.forEach(([x, z, ry], i) => {
-      const g = new THREE.Group(), y = world.heightAt(x, z);
-      box(g, 2.3, 2.6, 6.8, cols[i % 4], 0, 1.75, 0);
-      box(g, 2.3, 0.5, 1.0, cols[i % 4], 0, 3.2, 2.6);
-      box(g, 2.32, 0.18, 6.0, [0x8a2b2b, 0x2a5a8a, 0x5a5a5a, 0x2a7a6a][i % 4], 0, 1.4, -0.2);
-      box(g, 2.2, 0.8, 0.05, mat(0x2c3a44, { emissive: 0x111111 }), 0, 1.95, 3.42);
-      for (const [sx, sz] of [[-1.05, 2.2], [1.05, 2.2], [-1.05, -1.8], [1.05, -1.8]]) cyl(g, 0.38, 0.38, 0.25, 0x1b1b1b, sx, 0.38, sz, 10).rotation.z = Math.PI / 2;
-      g.position.set(x, y, z); g.rotation.y = ry + (i % 2) * Math.PI; scene.add(g);
-      world.addObstacle(rectW(x, z, 2.4, 7, g.rotation.y), 3.4);
-    });
-    const [bx, bz] = [48, -1483], by = world.heightAt(bx, bz);
-    box(scene, 0.35, 1.3, 0.3, 0xf28c1a, bx + 0.8, by + 0.65, bz);
-    beam(scene, [bx, by + 1.0, bz], [bx - 3.2, by + 1.0, bz - 1.6], 0.08, 0.08, 0xd8202a);
-    world.addObstacle(sq([bx + 0.8, bz], 0, 0.5), 1.3);
-  }
+  // Wohnmobilstellplatz mit Buchten, Schranke und Kassenautomat: kurparkplatz.js
 
   // --- Badegäste: Becken A (stehen, lehnen auf den Sprudelliegen), Becken B (treiben im Strömungskanal), Saunabecken ---
   const swimmers = [];

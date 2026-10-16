@@ -65,6 +65,8 @@ import { prepareTherme } from './therme-site.js';
 import { buildKurpark } from './kurpark.js';
 import { prepareRheintreppe, buildRheintreppe } from './rheintreppe.js';
 import { prepareKurpark } from './kurpark-site.js';
+import { buildKurparkplatz } from './kurparkplatz.js';
+import { prepareKurparkplatz } from './kurparkplatz-site.js';
 import { buildRathausBB } from './rathaus-bb.js';
 import { buildKurhaus } from './kurhaus.js';
 import { buildRheinstrasse } from './rheinstrasse.js';
@@ -143,6 +145,7 @@ fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf 
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
 prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
+prepareKurparkplatz(data); // Parkplatz an Rewe und Kurhaus: Gassen zeichnet kurparkplatz.js, keine Waldbäume am Wohnmobilstellplatz
 prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
 prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
 prepareLeodegar(data); // St. Leodegar Bad Bellingen: keine Waldbäume auf Friedhof und Kirchplatz
@@ -227,6 +230,8 @@ const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
 const rewe = buildRewe(scene, world, { vehicles, carry, rng: rng(4711) }); // Rewe und Rossmann in Bad Bellingen: Parkplatz, Kundschaft mit Einkaufswagen
 pedestrians.push(rewe);
+const kurparkplatz = buildKurparkplatz(scene, world, { vehicles, player, rng: rng(1976) }); // Parkplatz zwischen Rewe und Kurhaus, Wohnmobilstellplatz
+pedestrians.push(kurparkplatz); // Schranke öffnet sich
 pedestrians.push(buildTherme(scene, world, { rng: rng(815) })); // Balinea Thermen: Badehalle, Becken, Sauna-Park, Badegäste
 const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
 // Kirche und Schloss vor dem Straßengrün: ihre Mauern sind dann schon Hindernisse, das Grün lässt sie aus
@@ -259,7 +264,7 @@ for (const r of data.roads) {
 const yardRoads = world.graphs.car.roads.filter((r) => ['residential', 'living_street', 'tertiary', 'unclassified'].includes(r.type));
 const order = world.buildings.map((_, i) => i).sort(() => rand() - 0.5);
 for (const bi of order) {
-  if (vehicles.length >= 45 + rewe.cars) break; // Autos auf dem Rewe-Parkplatz zählen nicht mit
+  if (vehicles.length >= 45 + rewe.cars + kurparkplatz.cars) break; // Autos auf dem Rewe- und dem Kurparkplatz zählen nicht mit
   const ring = world.buildings[bi];
   if (ring.length < 4) continue;
   const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
