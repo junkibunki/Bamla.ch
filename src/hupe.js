@@ -83,6 +83,29 @@ export const HORNS = {
       osc('square', i % 2 ? 587 : 440, t + i * 0.42, 0.42, g);
     }
   } },
+  piepser: { name: 'Rückwärts-Piepser', play(t, v) { // Warnpiepser eines Staplers: vier kurze Töne
+    for (let i = 0; i < 4; i++) osc('square', 1180, t + i * 0.5, 0.25, env(t + i * 0.5, 0.005, 0.22, 0.02, 0.1 * v));
+  } },
+  aufguss: { name: 'Aufguss-Zischen', play(t, v) { // Kelle Wasser auf heiße Steine: Zischen, das abklingt
+    const hp = ac.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 2500;
+    const e = ac.createGain();
+    e.gain.setValueAtTime(0, t);
+    e.gain.linearRampToValueAtTime(0.5 * v, t + 0.04);
+    e.gain.exponentialRampToValueAtTime(0.002, t + 1.5);
+    hp.connect(e).connect(out);
+    noise(t, 1.6, hp);
+  } },
+  quak: { name: 'Enten-Quaken', play(t, v) { // zweimal „Quak“: nasaler Ton mit fallender Tonhöhe
+    for (const k of [0, 0.32]) {
+      const bp = ac.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 3;
+      bp.connect(env(t + k, 0.01, 0.12, 0.08, 0.5 * v));
+      const o = osc('sawtooth', 420, t + k, 0.22, bp);
+      o.frequency.setValueAtTime(420, t + k);
+      o.frequency.exponentialRampToValueAtTime(260, t + k + 0.2);
+    }
+  } },
 };
 
 // Hupen mit Lautstärke v (0…1, z. B. nach Entfernung)

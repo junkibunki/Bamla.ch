@@ -116,6 +116,9 @@ export function buildKurpark(scene, world, { rng = Math.random, quests, cam, car
     const g = new THREE.Group(); box(g, 1.8, 0.06, 0.45, 0xc89a50, 0, 0.45, 0); box(g, 1.8, 0.4, 0.05, 0xc89a50, 0, 0.75, -0.22); for (const s of [-0.8, 0.8]) box(g, 0.06, 0.45, 0.45, 0x8a9096, s, 0.22, 0);
     g.position.set(x, H(x, z), z); g.rotation.y = ry; scene.add(g);
   }
+  // Enten füttern (Aufgabe „Entenfütterung“): quests.emit('enten-fuettern', { x, z }) lockt sie für eine Weile ans Ufer
+  let lure = null;
+  quests?.on?.('enten-fuettern', ({ x, z }) => { lure = { x, z, t: 25 }; });
   const ducks = [];
   for (let i = 0; i < 6; i++) { const d = duck(); scene.add(d); ducks.push({ d, x: 290 + (i % 3) * 3, z: -1560 - i * 9, a: rng() * 6, sp: 0.25 + rng() * 0.2 }); }
 
@@ -174,7 +177,15 @@ export function buildKurpark(scene, world, { rng = Math.random, quests, cam, car
       wt.offset.set(t * 0.012, Math.sin(t * 0.3) * 0.03);
       for (const [i, f] of foam.entries()) f.material.opacity = 0.45 + Math.sin(t * 6 + i) * 0.12;
       for (const { j, top, ring, hh } of jets) { const s = 1 + Math.sin(t * 3) * 0.06; j.scale.set(s, 1 + Math.sin(t * 2.3) * 0.05, s); top.position.y = lv + hh * (1 + Math.sin(t * 2.3) * 0.05); ring.scale.setScalar(1 + Math.sin(t * 4) * 0.1); }
+      if (lure && (lure.t -= dt) <= 0) lure = null;
       for (const d of ducks) {
+        if (lure) {                                      // zum Futter am Ufer schwimmen, dort im Kreis gründeln
+          const dx = lure.x - d.x, dz = lure.z - d.z, dist = Math.hypot(dx, dz);
+          if (dist > 1.6) { d.a = Math.atan2(dx, dz); const nx = d.x + (dx / dist) * 0.7 * dt, nz = d.z + (dz / dist) * 0.7 * dt; if (inPond(nx, nz)) { d.x = nx; d.z = nz; } }
+          else d.a += dt * 1.5;
+          d.d.position.set(d.x, lv + 0.03 + Math.sin(t * 6 + d.sp * 9) * 0.02, d.z); d.d.rotation.y = d.a;
+          continue;
+        }
         d.a += (Math.sin(t * 0.3 + d.sp * 10) * 0.6) * dt;
         let nx = d.x + Math.sin(d.a) * d.sp * dt, nz = d.z + Math.cos(d.a) * d.sp * dt;
         if (!inPond(nx, nz) || nz < -1540.5 && nz > -1545 || Math.hypot(nx - BRIDGE.a[0], nz - BRIDGE.a[1]) < 0) { d.a += Math.PI * 0.7; nx = d.x; nz = d.z; }

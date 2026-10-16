@@ -42,6 +42,25 @@ function carMesh(color) {
   return g;
 }
 
+// Teilintegriertes Wohnmobil (Wohnmobilstellplatz an den Balinea Thermen): weißer Aufbau mit Zierstreifen in der Lackfarbe,
+// Fahrerhaus mit Alkoven-Spoiler, Seitenfenster, Eingangstür, Dachluke
+function wohnmobilMesh(color) {
+  const g = new THREE.Group();
+  g.wheels = [];
+  const white = lambert(0xf2f2ee), paint = lambert(color);
+  g.add(box(2.3, 2.5, 5.1, white, 0, 1.85, -0.75));              // Aufbau
+  g.add(box(2.2, 1.3, 1.6, white, 0, 1.25, 2.55));               // Fahrerhaus
+  g.add(box(2.1, 0.75, 1.3, MAT.glass, 0, 1.55, 2.95));          // Frontscheibe
+  g.add(box(2.25, 0.5, 1.2, white, 0, 2.35, 2.25));              // Spoiler über dem Fahrerhaus
+  g.add(box(2.32, 0.16, 6.4, paint, 0, 1.25, -0.15));            // Zierstreifen
+  for (const x of [-1.16, 1.16]) g.add(box(0.02, 0.6, 1.4, MAT.glass, x, 2.15, -1.5), box(0.02, 0.6, 0.9, MAT.glass, x, 2.15, 0.6));
+  g.add(box(0.02, 1.8, 0.65, lambert(0xdedede), 1.165, 1.5, -0.4)); // Tür (rechts)
+  g.add(box(0.7, 0.12, 0.7, lambert(0xbfd2dc), 0, 3.15, -1));     // Dachluke
+  for (const x of [-0.75, 0.75]) g.add(box(0.35, 0.16, 0.05, MAT.light, x, 0.95, 3.36), box(0.3, 0.3, 0.05, MAT.tail, x, 1.2, -3.31));
+  for (const [x, z, f] of [[-1.05, 2.3, 1], [1.05, 2.3, 1], [-1.05, -1.6, 0], [1.05, -1.6, 0]]) wheel(g, 0.4, 0.3, x, z, !!f);
+  return g;
+}
+
 function tractorMesh(color) {
   const g = new THREE.Group();
   g.wheels = [];
@@ -277,6 +296,7 @@ export const KINDS = {
   // lift: maximale Hubhöhe der Gabel (m), forkOff: Abstand Fahrzeugmitte – Mitte der aufgenommenen Palette
   // Pferd (Reitkunstzentrum): camY/labelY: Kamera und Namensschild über dem höheren Sitz
   horse:   { halfLen: 1.15, halfW: 0.4, wheelbase: 1.3, maxSpeed: 14, accel: 4, brake: 9, rev: 1.2, circles: [0.6, -0.6], r: 0.42, npcSpeed: 1.5, camDist: 6.5, mesh: horseMesh, camY: 2.3, labelY: 3.3 },
+  wohnmobil: { halfLen: 3.35, halfW: 1.17, wheelbase: 3.9, maxSpeed: 30, accel: 5, brake: 14, rev: 5, circles: [2.2, 0, -2.2], r: 1.2, npcSpeed: 10, camDist: 12, mesh: wohnmobilMesh, camY: 2.6, labelY: 3.6 },
   forklift: { halfLen: 1.25, halfW: 0.6, wheelbase: 1.35, maxSpeed: 5.5, accel: 3, brake: 8, rev: 4, circles: [0.45, -0.5], r: 0.62, npcSpeed: 3, camDist: 6.5, mesh: forkliftMesh, lift: 3.0, forkOff: 1.75 },
 };
 const TRAILER_HALF = 2.2;

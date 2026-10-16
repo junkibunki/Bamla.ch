@@ -100,6 +100,40 @@ export const OUTFITS = {
     s.rotation.z = 0.68;
     piece(g, new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12).rotateX(Math.PI / 2), 0xffd700, -0.12, 1.36, 0.215);
   } },
+  // Bad Bellingen (Rewe, Balinea Thermen, Kurpark)
+  bademantel: { name: 'Bademantel', shirt: 0xf6f6f2, build(g) {
+    // Weißer Frotteemantel bis unters Knie, Schalkragen, Gürtel mit Schleife
+    piece(g, BOX(0.64, 0.75, 0.39), 0xf6f6f2, 0, 0.72, 0);
+    piece(g, BOX(0.44, 0.08, 0.4), 0xf6f6f2, 0, 1.62, 0);
+    for (const x of [-0.11, 0.11]) piece(g, BOX(0.1, 0.42, 0.02), 0xe8e8e2, x, 1.38, 0.19).rotation.z = x > 0 ? -0.35 : 0.35;
+    piece(g, BOX(0.64, 0.06, 0.4), 0xe2e2da, 0, 1.06, 0);
+    piece(g, BOX(0.08, 0.2, 0.02), 0xe2e2da, 0.1, 0.96, 0.205);
+  } },
+  kappe: { name: 'Rewe-Kappe', build(g) {
+    // Rote Schirmmütze mit weißem Feld vorne
+    piece(g, BOX(0.39, 0.1, 0.39), 0xcc071e, 0, 2.08, 0);
+    piece(g, BOX(0.3, 0.06, 0.3), 0xcc071e, 0, 2.15, 0);
+    piece(g, BOX(0.34, 0.03, 0.18), 0xcc071e, 0, 2.04, 0.26);
+    piece(g, BOX(0.2, 0.06, 0.01), 0xffffff, 0, 2.09, 0.196);
+  } },
+  sonnenbrille: { name: 'Sonnenbrille', build(g) {
+    // Zwei dunkle Gläser mit schwarzem Rahmen und Bügeln
+    for (const x of [-0.085, 0.085]) piece(g, BOX(0.13, 0.07, 0.02), 0x111418, x, 1.9, 0.19);
+    piece(g, BOX(0.06, 0.02, 0.02), 0x111111, 0, 1.92, 0.19);
+    for (const x of [-0.185, 0.185]) piece(g, BOX(0.01, 0.02, 0.3), 0x111111, x, 1.92, 0.05);
+  } },
+  saunatuch: { name: 'Saunahandtuch', build(g) {
+    // Petrolfarbenes Handtuch über der linken Schulter, vorne und hinten herabhängend
+    piece(g, BOX(0.2, 0.03, 0.4), 0x2f9c8f, -0.22, 1.645, 0);
+    for (const z of [-0.19, 0.19]) piece(g, BOX(0.2, 0.5, 0.025), 0x2f9c8f, -0.22, 1.4, z);
+    for (const z of [-0.205, 0.205]) piece(g, BOX(0.2, 0.03, 0.01), 0xf2f2ee, -0.22, 1.2, z);
+  } },
+  schiebermuetze: { name: 'Schiebermütze', build(g) {
+    // Graubraune Tweedmütze, vorne flach heruntergezogen
+    piece(g, BOX(0.4, 0.08, 0.42), 0x6b6153, 0, 2.08, -0.01);
+    piece(g, BOX(0.36, 0.05, 0.3), 0x6b6153, 0, 2.13, -0.04);
+    piece(g, BOX(0.36, 0.03, 0.12), 0x5d5447, 0, 2.05, 0.25).rotation.x = 0.15;
+  } },
 };
 
 // Kleidung anziehen (id aus OUTFITS oder ''), alte ablegen
@@ -117,5 +151,5 @@ export function dressPerson(g, id) {
   g.outfit = new THREE.Group();
   o.build(g.outfit);
   g.add(g.outfit);
-  g.hair.visible = !['helm', 'golfmuetze'].includes(id);
+  g.hair.visible = !['helm', 'golfmuetze', 'kappe', 'schiebermuetze'].includes(id);
 }

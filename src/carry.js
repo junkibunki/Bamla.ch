@@ -127,6 +127,7 @@ Object.assign(ITEMS, {
 export const VOUCHERS = {
   freibier: { name: 'Freibier im Storchen', icon: '🎟' },
   freiessen: { name: 'Freiessen beim Metzger', icon: '🎟' },
+  brezel: { name: 'Brezel gratis bei Armbruster', icon: '🎟' },
 };
 
 const euro = (n) => n.toFixed(2).replace('.', ',').replace(',00', '') + ' €';

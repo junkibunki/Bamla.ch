@@ -7,7 +7,7 @@
 // stele, Leuchten, Bäume, Hecke zur Badstraße. Kundschaft schiebt Einkaufswagen; einkaufen mit E/R (carry.js).
 // Vorlagen: LoD2 + DGM1 (LGL 2025/2019), Luftbild DOP20 (LGL 2025), Photo Spheres (Juli 2024), Street View (April 2022).
 import * as THREE from 'three';
-import { F, A, P, toUV, ABS, Y_CP, HALL, roofY, ANNEX, SOUTH, CLAD, DOOR, GLASS_V, ROSS, REWE_OVERRIDES, LOT, THROAT, CAFE,
+import { F, A, P, toUV, ABS, Y_CP, HALL, roofY, ANNEX, SOUTH, CLAD, DOOR, DOCK, GLASS_V, ROSS, REWE_OVERRIDES, LOT, THROAT, CAFE,
   ROWS, WEST_ROWS, STALL, TREES_LOT } from './rewe-site.js';
 import { makeFrame } from './kiga-rheinweiler-site.js';
 import { mat, glow, canvasTex, texMat, box, cyl, beam, panel, meterUV, zonedWalls, lodRoof, drape, paverFill, tree, cypress, lamp, hedge } from './bauteile.js';
@@ -295,6 +295,11 @@ export function buildRewe(scene, world, { vehicles, carry, rng = Math.random }) 
     rect(tu - tl / 2, sv - 1.3, tu + tl / 2, sv + 1.3, 4);
   }
   panel(G, 1.1, 2.2, mat(C.steel), 9, Y_CP + 1.1 - 0.2, HALL.v1 + 0.03, 0);
+  { // zweites Rolltor (Leergut) in der Südwand des Anlieferungsblocks, Schild darüber
+    const y = ly(DOCK.u, SOUTH.v1 + 1);
+    panel(G, DOCK.w, DOCK.h, texMat(canvasTex(64, 128, (g, w, h) => { g.fillStyle = '#9aa0a6'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,0.18)'; for (let k = 0; k < h; k += 16) g.fillRect(0, k, w, 2); })), DOCK.u, y + DOCK.h / 2, SOUTH.v1 + 0.03, 0);
+    panel(G, 1.6, 0.4, texMat(canvasTex(256, 64, (g, w, h) => { g.fillStyle = '#cc071e'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = 'bold 34px Arial'; g.textAlign = 'center'; g.fillText('Leergut', w / 2, 44); })), DOCK.u, y + DOCK.h + 0.35, SOUTH.v1 + 0.04, 0);
+  }
   { const [x, z] = [87, -1543], y = world.heightAt(x, z); const g = new THREE.Group(); box(g, 2.5, 1.5, 1.8, 0xe8c21a, 0, 0.75, 0); box(g, 2.52, 0.12, 1.82, 0x333333, 0, 1.4, 0); g.position.set(x, y, z); g.rotation.y = -A; scene.add(g); obst([[x - 1.4, z - 1.1], [x + 1.4, z - 1.1], [x + 1.4, z + 1.1], [x - 1.4, z + 1.1]], 1.5); }
   // Müllplatz an der Nordostecke: Blecheinhausung mit Tor
   { const g = new THREE.Group(); for (const [w, d, x, z] of [[5, 0.06, 0, -3], [5, 0.06, 0, 3], [0.06, 6, 2.5, 0], [0.06, 2.4, -2.5, -1.8]]) box(g, w, 2.0, d, 0x8e949b, x, 1.0, z); const [x, z] = [135.5, -1609]; g.position.set(x, world.heightAt(x, z), z); g.rotation.y = -A; scene.add(g); obst([[x - 2.7, z - 3.2], [x + 2.7, z - 3.2], [x + 2.7, z + 3.2], [x - 2.7, z + 3.2]], 2); }
@@ -469,9 +474,10 @@ export function buildRewe(scene, world, { vehicles, carry, rng = Math.random }) 
   // --- Einkaufen (carry.js) ---
   carry?.spot({
     x: door[0], z: door[1], r: 2.6,
-    hint: () => 'E: Einkaufen bei Rewe – Einkaufstüte (8 €) · R: Butterbrezel bei Armbruster (1,50 €)',
+    hint: () => 'E: Einkaufen bei Rewe – Einkaufstüte (8 €) · R: Butterbrezel bei Armbruster (1,50 €)' + (carry.vouchers.brezel ? ' · V: Brezel-Gutschein' : ''),
     act: () => carry.buy('einkauf', 8, 'Kassiererin'),
     alt: () => carry.buy('brezel', 1.5, 'Bäckerin'),
+    voucher: () => { if (carry.useVoucher('brezel')) carry.add('brezel', '🥨 Bäckerin: „E Brezele ufs Huus – vergelt’s Gott fürs Iichaufe!“'); },
   });
   carry?.spot({
     x: rDoor[0], z: rDoor[1], r: 2.4,

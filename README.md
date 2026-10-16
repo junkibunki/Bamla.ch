@@ -49,14 +49,14 @@ systemctl --user daemon-reload && systemctl --user enable --now bamla-mp
 Im Caddyfile im Block der Seite `reverse_proxy /mp 127.0.0.1:8787` ergänzen (WebSockets leitet Caddy von selbst weiter).
 
 Belohnungen aus dem Dorfpass (`src/belohnungen.js`): Der Zustand trägt neben Titel (`ti`) auch Kleidung (`o`:
-`helm`, `schuerze`, `golfmuetze`, `motorradjacke`, `schaerpe`) und im Fahrzeug die Lackfarbe (`lk`, 0xRRGGBB);
+`helm`, `schuerze`, `golfmuetze`, `motorradjacke`, `schaerpe`, `bademantel`, `kappe`, `sonnenbrille`, `saunatuch`, `schiebermuetze`) und im Fahrzeug die Lackfarbe (`lk`, 0xRRGGBB);
 Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 
 | Richtung | Nachricht | Bedeutung |
 |---|---|---|
 | Client → Server | `{ t: 'stand', n, voll }` | Zahl der erledigten Aufgaben, voller Dorfpass (nach dem Verbinden und jedem Abschluss) |
 | Client → Server | `{ t: 'lieferung' }` | eine Lieferung fürs Dorfziel (höchstens eine alle 10 s pro Name) |
-| Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` (höchstens alle 0,7 s) |
+| Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` / `piepser` / `aufguss` / `quak` (höchstens alle 0,7 s) |
 | Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (10 Plätze), Ehrenbürger (Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
 | Server → Client | `{ t: 'feuerwerk', n, von }` | alle 50 Lieferungen: Feuerwerk über dem Rhein bei allen |
 | Server → Client | `{ t: 'hupe', id, k }` | ein Mitspieler hupt (leiser mit der Entfernung) |
