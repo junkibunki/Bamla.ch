@@ -213,7 +213,7 @@ function ramp(scene, world, pts, w, y0, y1, tex, { rails = [true, true], walls =
   const yAt = (t) => y0 + ((y1 - y0) * t) / total;
   const top = new Tris(), sides = new Tris();
   const left = [], right = [];
-  for (let t = 0; t <= total + 0.001; t += Math.min(1, total)) {
+  for (let t = 0; ; t += Math.min(1, total)) { // bis zum Endpunkt, auch wenn die Länge kein ganzes Vielfaches ist
     const tt = Math.min(t, total), a = along(pts, L, tt);
     left.push({ t: tt, p: [a.x - a.dz * hw, a.z + a.dx * hw] }); right.push({ t: tt, p: [a.x + a.dz * hw, a.z - a.dx * hw] });
     if (tt >= total) break;
@@ -616,8 +616,11 @@ export function buildBahnhofBB(scene, world, railway, r = Math.random) {
   buildWalls(scene, world, tracks, r, WALLS_BB, bbWallTexture(), false);
 
   const pav = paverTex(), grey = canvasTex(64, 64, (g) => { g.fillStyle = '#6f7174'; g.fillRect(0, 0, 64, 64); for (let y = 0; y < 64; y += 8) for (let x = (y / 8) % 2 ? 0 : 8; x < 64; x += 16) { const v = 100 + Math.random() * 16; g.fillStyle = `rgb(${v},${v + 1},${v + 4})`; g.fillRect(x + 1, y + 1, 14, 6); } }, true);
-  // Vorplatz am Nordgiebel auf Bahnsteighöhe, Freitreppe und Rampe von der Bahnhofstraße
-  const plateau = [[466.0, -1605.6], [471.5, -1604.8], [471.1, -1611.3], [466.6, -1611.9]];
+  // Vorplatz am Nordgiebel auf Bahnsteighöhe, Freitreppe und Rampe von der Bahnhofstraße; der Vorplatz endet an der
+  // Südkante der Rampe, die daneben bis zum Bahnsteig weiter ansteigt
+  const nru = unit(sub(NORTH_RAMP.b, NORTH_RAMP.a)), nre = ptAt(NORTH_RAMP.a, nru, 0, NORTH_RAMP.width / 2);
+  const onRampEdge = (p) => ptAt(nre, nru, (p[0] - nre[0]) * nru[0] + (p[1] - nre[1]) * nru[1]);
+  const plateau = [[466.0, -1605.6], [471.5, -1604.8], onRampEdge([471.1, -1610.1]), onRampEdge([466.4, -1610.7])];
   pavedDeck(scene, world, plateau, () => p1Top, grey);
   const ns = NORTH_STAIR, nsTop = [466.2, -1607.9], yN = world.heightAt(...ns.a);
   const nN = Math.max(3, Math.round((p1Top - yN) / 0.15)), Lns = len(sub(nsTop, ns.a));
@@ -635,8 +638,12 @@ export function buildBahnhofBB(scene, world, railway, r = Math.random) {
       t.mesh(new THREE.MeshLambertMaterial({ color: 0xc4c2bb, side: THREE.DoubleSide }), nsg, true);
       if (side < 0) railing(nsg, c0, c1, (s) => nsf.y(s) + 0.15, { posts: 1.5 });
     }
+    // Betonmauer zwischen Treppe und Rampe, Krone auf Höhe der Treppenwange
+    const w0 = ptAt(ns.a, u, 0, -hw - 0.1), w1 = ptAt(ns.a, u, Lns, -hw - 0.1);
+    pavedDeck(scene, world, [w0, w1, onRampEdge(w1), onRampEdge(w0)], (x, z) => nsf.y(Math.max(0, Math.min(Lns, (x - ns.a[0]) * u[0] + (z - ns.a[1]) * u[1]))) + 0.15,
+      canvasTex(16, 16, (g) => { g.fillStyle = '#c4c2bb'; g.fillRect(0, 0, 16, 16); }, true));
   }
-  ramp(scene, world, [NORTH_RAMP.a, [466.9, -1610.5], NORTH_RAMP.b], NORTH_RAMP.width, world.heightAt(...NORTH_RAMP.a), p1Top, pav, { rails: [true, false] });
+  ramp(scene, world, [NORTH_RAMP.a, NORTH_RAMP.b], NORTH_RAMP.width, world.heightAt(...NORTH_RAMP.a), p1Top, pav, { rails: [false, true] });
   // Südseite: zwei Stufen von der Bahnhofstraße, Rampe am Anbau entlang zum Bahnsteig 1, Rampe vom P+R
   const ss = SOUTH_STEPS, ySS = world.heightAt(...ss.a), ySR = Math.max(world.heightAt(...ss.b), ySS + 0.3);
   const ssg = new THREE.Group();

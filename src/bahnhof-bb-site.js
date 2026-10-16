@@ -55,10 +55,11 @@ export const STAIR_HOUSE_W = [[462.6, -1615.7], [462.1, -1612.5], [470.9, -1611.
 export const STAIR_HOUSE_E = [[482.4, -1596.5], [484.8, -1596.3], [486.3, -1609.9], [483.9, -1610.2]];
 
 // ---------- Wege am Empfangsgebäude ----------
-// Freitreppe nördlich des Hauses (7 Stufen, 5 m breit) und Rampe mit 15 % am Treppenhaus entlang, beide von der
-// Bahnhofstraße hinauf auf Bahnsteighöhe
+// Freitreppe nördlich des Hauses (7 Stufen, 5 m breit) und Rampe mit 15 % direkt an der Nordwand des Treppenhauses
+// entlang (OSM-Achse, Handlauf an der Wand), beide von der Bahnhofstraße hinauf auf Bahnsteighöhe; dazwischen eine
+// Betonmauer, oben endet der Vorplatz an der Rampe
 export const NORTH_STAIR = { a: [461.0, -1608.5], b: [470.4, -1607.3], width: 4.0, steps: 7 };
-export const NORTH_RAMP = { a: [461.5, -1611.2], b: [470.8, -1610.0], width: 1.2 };
+export const NORTH_RAMP = { a: [461.5, -1611.9], b: [470.8, -1610.7], width: 1.21 };
 // Südseite: zwei Stufen von der Bahnhofstraße, Rampe (5,9 %) am Anbau entlang zum Bahnsteig; zweite Rampe vom P+R
 export const SOUTH_STEPS = { a: [461.0, -1589.9], b: [462.8, -1589.6], width: 2.0, steps: 2 };
 export const SOUTH_RAMP = { pts: [[462.8, -1589.6], [464.4, -1589.3], [468.3, -1588.6], [470.6, -1588.1]], width: 2.37 };
