@@ -61,6 +61,9 @@ import { buildReitzentrum } from './reitzentrum.js';
 import { buildRewe } from './rewe.js';
 import { buildTherme } from './therme.js';
 import { prepareTherme } from './therme-site.js';
+import { buildKurpark } from './kurpark.js';
+import { prepareKurpark } from './kurpark-site.js';
+import { buildRathausBB } from './rathaus-bb.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -120,6 +123,7 @@ fixFusstunnel(data); // Fußgängertunnel unter der Bahn: Röhre bis zu den Port
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
+prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -310,6 +314,10 @@ const cam = { yaw: player.facing + Math.PI, pitch: 0.32, zoom: 1 };
 addEventListener('wheel', (e) => { cam.zoom = Math.max(0.5, Math.min(8, cam.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12))); });
 const camTarget = new THREE.Vector3();
 const sport = new Sport(scene, world, { golf, tennis, cam, quests }); // Golf und Tennis zum Selberspielen
+const kurpark = buildKurpark(scene, world, { rng: rng(2026), quests, cam, carry }); // Kurpark Bad Bellingen: Spielplatz, Minigolf, Weiher, Happleweg
+pedestrians.push(kurpark);
+sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und Tennis (E, Figur steht still)
+buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
 const camPos = new THREE.Vector3();
 
 function updateCamera(dt) {

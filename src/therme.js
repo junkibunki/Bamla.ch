@@ -453,6 +453,9 @@ export function buildTherme(scene, world, { rng = Math.random } = {}) {
     let d = A.depth; for (const [s, dd] of rings) if (m < s) d = dd; return d;
   };
   const inIsland = (x, z) => { const dx = x - B.island[0], dz = z - B.island[1], co = Math.cos(-B.a), si = Math.sin(-B.a), u = dx * co - dz * si, v = dx * si + dz * co; return (u / (B.iw / 2)) ** 2 + (v / (B.il / 2)) ** 2 < 1; };
+  // Figuren laufen über world.groundAt (Decks): Umgang und Beckenböden als begehbare Flächen
+  world.addDeck(DECK, () => yD); world.addDeck(DECK_B, () => yD);
+  world.addDeck(POOL_A, (x, z) => yW - Math.min(1.3, depthA(x, z))); world.addDeck(POOL_B, (x, z) => (inIsland(x, z) ? yW + 0.04 : yW - B.depth));
   world.heightAt = (x, z) => {
     if (x < -4 || x > 101 || z < -1256 || z > -1162) return prev(x, z);
     if (inA(x, z)) return yW - Math.min(1.3, depthA(x, z)); // tiefer als 1,3 m: man steht auf den Zehenspitzen
