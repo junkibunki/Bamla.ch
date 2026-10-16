@@ -3,7 +3,7 @@
 import { BOARD_THERMALBAD } from './_bad-bellingen.js';
 import { Vehicle } from '../vehicles.js';
 
-const AT = [98.5, -1501, -1.24]; // freie Bucht am Ostrand des Stellplatzes, Front zur Schranke
+const AT = [96.1, -1502.6, -1.94]; // freie Bucht 4 in der Ostspalte des Stellplatzes (kurparkplatz-site.js), Front zur Gasse
 const RECEPTION = [-322.8, 526.4];
 
 export default {
