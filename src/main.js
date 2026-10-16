@@ -28,6 +28,7 @@ import { ridingSwing, nearestSwing, swingHint, updateSwings } from './swing.js';
 import { Railway } from './train.js';
 import { BusLine } from './bus.js';
 import { buildBahnhof } from './bahnhof.js';
+import { fixBahnhofBB, carveBahnhofBB, buildBahnhofBB } from './bahnhof-bb.js';
 import { Camping, campingAreas } from './camping.js';
 import { buildKirche } from './kirche.js';
 import { Andacht } from './andacht.js';
@@ -127,6 +128,7 @@ splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Ver
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
 fixStAlban(data); // Hofgut im St. Alban: Umrisse nach LoD2 statt OSM
 fixFusstunnel(data); // Fußgängertunnel unter der Bahn: Röhre bis zu den Portalen, Stufenweg mit eigenem Mesh
+fixBahnhofBB(data); // Bahnhof Bad Bellingen: Treppen, Rampen und Unterführung baut bahnhof-bb.js
 fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf die Tür zu
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
@@ -134,6 +136,7 @@ prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neue
 prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
 prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
 prepareLeodegar(data); // St. Leodegar Bad Bellingen: keine Waldbäume auf Friedhof und Kirchplatz
+carveBahnhofBB(terrain, data); // Gelände unter den Bahnsteigen in Bad Bellingen absenken
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -157,6 +160,7 @@ const reit = buildReitzentrum(scene, world); // Reitkunstzentrum: Reithalle, Sta
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
+const bahnhofBB = buildBahnhofBB(scene, world, railway, rng(247)); // Bahnhof Bad Bellingen: Empfangsgebäude, Bahnsteige, Unterführung, Fahrgäste
 const riding = () => (bus.rider ? bus : railway.rider ? railway : multiplayer.rider ? multiplayer : null); // Mitfahrt in Bus, Zug oder bei einem anderen Spieler
 const input = new Input(renderer.domElement);
 const touch = new Touch(renderer.domElement, input); // Smartphone/Tablet: Stick, Wischen, Knöpfe
@@ -180,6 +184,7 @@ for (const kiga of [buildKindergarten(scene, world, player), buildKigaRheinweile
   vehicles.push(...kiga.trikes); // Dreiräder kann man den Kindern wegnehmen
 }
 pedestrians.push(bahnhof); // Fahrgäste am Bahnhof Rheinweiler, Zugzielanzeiger, Uhren
+pedestrians.push(bahnhofBB); // Fahrgäste am Bahnhof Bad Bellingen, Fahrgastinformation, Uhr
 vehicles.push(kienzler.forklift);
 vehicles.push(...feuerwehr.trucks); // fahrbares Feuerwehrauto vor dem ersten Hallentor
 vehicles.push(...buildMetzgerei(scene, world).vans); // Metzgerei Dosenbach (Rheinweiler): Laden, Pavillon, Halle, Kühltransporter
@@ -555,7 +560,7 @@ multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();

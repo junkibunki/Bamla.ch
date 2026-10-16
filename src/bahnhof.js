@@ -15,16 +15,17 @@ import {
   PLATFORMS, EDGE_OFFSET, PLATFORM_H, NICHE_1, WALLS, STAIRS, RAMP, GAP_2, GAP_2W, SHELTERS, FURNITURE, NAME_SIGNS,
   BIKE_SHED, BIKE_LOCKERS, GSMR_MAST, BUS_STOP_RW,
 } from './bahnhof-site.js';
+import { mastOffsetBB, adjustMastBB } from './bahnhof-bb-site.js';
 
-const mat = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
-const M = {
+export const mat = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
+export const M = {
   concrete: mat(0xb4b2ac), edge: mat(0xa9a7a1), dark: mat(0x2e3236), frame: mat(0x3c4146), galv: mat(0xa9aeb1),
   white: mat(0xf2f2ee), post: mat(0xe9ebea), wood: mat(0x9a6a40), slat: mat(0xb88a58), blue: mat(0x1f4fa0),
   locker: mat(0x5a6e8a), lockerDoor: mat(0x6c80a0), yellow: mat(0xf2c400), green: mat(0x2e8b3e), bin: mat(0x5d6368),
   glass: new THREE.MeshLambertMaterial({ color: 0xcfe3ea, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }),
 };
 
-function box(parent, w, h, d, material, x, y, z, ry = 0) {
+export function box(parent, w, h, d, material, x, y, z, ry = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   m.position.set(x, y, z);
   m.rotation.y = ry;
@@ -33,7 +34,7 @@ function box(parent, w, h, d, material, x, y, z, ry = 0) {
   return m;
 }
 
-function canvasTex(w, h, draw, repeat = false) {
+export function canvasTex(w, h, draw, repeat = false) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
@@ -48,7 +49,7 @@ function canvasTex(w, h, draw, repeat = false) {
 
 // Bahnsteigbelag quer zur Kante (v = Abstand von der Kante, 6 m) und längs (u, 4 m): helle Kantensteine,
 // dunkles Band, weiße Sicherheitslinie, anthrazit Betonpflaster
-function platformTexture() {
+export function platformTexture() {
   return canvasTex(256, 384, (g, w, h) => {
     const P = (m) => h - m * 64; // Abstand von der Kante (m) → Pixelzeile (Kante unten)
     g.fillStyle = '#6f7277'; g.fillRect(0, 0, w, h);
@@ -66,7 +67,7 @@ function platformTexture() {
 }
 
 // Lärmschutzwand: oben Aluminium-Paneele (mintweiß → hellgrün → grün → petrol), darunter Betonsockel; v = 1 an der Oberkante, 4 m hoch
-function wallTexture() {
+export function wallTexture() {
   return canvasTex(128, 256, (g, w, h) => {
     const y = (m) => m * 64;
     const grad = g.createLinearGradient(0, 0, 0, y(2.55));
@@ -94,7 +95,7 @@ function graffitiTexture([text, fill, stroke]) {
   });
 }
 
-function nameSignTexture(text) {
+export function nameSignTexture(text) {
   return canvasTex(512, 96, (g, w, h) => {
     g.fillStyle = '#26306c'; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#f2f2f2'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12);
@@ -103,7 +104,7 @@ function nameSignTexture(text) {
   });
 }
 
-function trackSignTexture(gleis, dest) {
+export function trackSignTexture(gleis, dest) {
   return canvasTex(256, 96, (g, w, h) => {
     g.fillStyle = '#26306c'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#fff'; g.fillRect(w - 96, 0, 96, h);
@@ -114,7 +115,7 @@ function trackSignTexture(gleis, dest) {
   });
 }
 
-function posterTexture() {
+export function posterTexture() {
   return canvasTex(128, 96, (g, w, h) => {
     g.fillStyle = '#e8eaec'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#f2d23a'; g.fillRect(6, 8, 56, 80);
@@ -128,8 +129,8 @@ function posterTexture() {
 
 // ---------- Geometrie-Helfer ----------
 
-const poly = (pts) => { let L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return L; };
-function along(pts, L, t) {
+export const poly = (pts) => { let L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return L; };
+export function along(pts, L, t) {
   t = Math.max(0, Math.min(L[L.length - 1], t));
   let i = 1;
   while (i < L.length - 1 && L[i] < t) i++;
@@ -137,7 +138,7 @@ function along(pts, L, t) {
   const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
   return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, dx: (b[0] - a[0]) / l, dz: (b[1] - a[1]) / l };
 }
-function projectPoly(pts, L, x, z) {
+export function projectPoly(pts, L, x, z) {
   let best = Infinity, bt = 0;
   for (let i = 1; i < pts.length; i++) {
     const [ax, az] = pts[i - 1], [bx, bz] = pts[i], dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
@@ -148,7 +149,7 @@ function projectPoly(pts, L, x, z) {
   return { t: bt, d: best };
 }
 // Schnitt eines Strahls (Ursprung o, Richtung n) mit einem Polygonzug: Entfernung oder null
-function rayHit(o, n, pts) {
+export function rayHit(o, n, pts) {
   let best = null;
   for (let i = 1; i < pts.length; i++) {
     const [ax, az] = pts[i - 1], [bx, bz] = pts[i], ex = bx - ax, ez = bz - az;
@@ -161,7 +162,7 @@ function rayHit(o, n, pts) {
 }
 
 // Dreiecksliste mit Position, Normale (flach) und UV
-class Tris {
+export class Tris {
   constructor() { this.p = []; this.uv = []; }
   quad(a, b, c, d, ua, ub, uc, ud) { this.p.push(...a, ...b, ...c, ...a, ...c, ...d); this.uv.push(...ua, ...ub, ...uc, ...ua, ...uc, ...ud); }
   geometry() {
@@ -184,7 +185,7 @@ class Tris {
 // ---------- Bahnsteige ----------
 
 // Bahnsteig als Band entlang des Gleises: Kante 1,70 m neben der Achse, Rückseite = OSM-Außenkante
-function makePlatform(P, T) {
+export function makePlatform(P, T, walls = WALLS) {
   const a = T.project(...P.edge[0]), b = T.project(...P.edge[P.edge.length - 1]);
   const mid = T.project(...P.edge[Math.floor(P.edge.length / 2)]);
   const side = Math.sign(mid.d);
@@ -195,7 +196,7 @@ function makePlatform(P, T) {
     const nx = -dz * side, nz = dx * side; // vom Gleis zum Bahnsteig
     let w = rayHit([x, z], [nx, nz], P.edge) ?? Math.abs(T.project(x, z).d) + 3;
     // bis an die Lärmschutzwand, wo eine steht (OSM-Kante und Wandlinie weichen bis 1 m voneinander ab)
-    const wall = Math.min(...WALLS.filter((W) => !W.low).map((W) => rayHit([x, z], [nx, nz], W.pts) ?? Infinity));
+    const wall = Math.min(...walls.filter((W) => !W.low).map((W) => rayHit([x, z], [nx, nz], W.pts) ?? Infinity));
     if (wall > w - 0.4 && wall < w + 1.3) w = wall - 0.05;
     S.push({ s, x, z, nx, nz, dx, dz, w: Math.max(EDGE_OFFSET + 1.8, Math.min(7, w)), top: h + 0.25 + PLATFORM_H });
   }
@@ -213,7 +214,7 @@ function makePlatform(P, T) {
   return { P, T, S, inner, outer, ring, side, top: (x, z) => nearest(x, z).top, nearest };
 }
 
-function buildPlatform(scene, world, pf, topTex) {
+export function buildPlatform(scene, world, pf, topTex) {
   const top = new Tris(), sides = new Tris();
   const { S, inner, outer } = pf;
   for (let i = 0; i < S.length - 1; i++) {
@@ -250,15 +251,14 @@ function buildPlatform(scene, world, pf, topTex) {
 
 // ---------- Lärmschutzwände ----------
 
-function buildWalls(scene, world, tracks, r) {
-  const tex = wallTexture();
+export function buildWalls(scene, world, tracks, r, walls = WALLS, tex = wallTexture(), graffiti = true) {
   const panels = new Tris(), posts = [], decals = [];
   const railTop = (x, z) => {
     let best = null;
     for (const T of tracks) { const p = T.project(x, z); if (!best || Math.abs(p.d) < Math.abs(best.d)) best = { ...p, T }; }
     return { y: best.T.railTop(best.s), d: best.d, T: best.T, s: best.s };
   };
-  for (const W of WALLS) {
+  for (const W of walls) {
     const pts = [];
     for (let i = 0; i < W.pts.length - 1; i++) {
       const [ax, az] = W.pts[i], [bx, bz] = W.pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 2.4));
@@ -295,7 +295,7 @@ function buildWalls(scene, world, tracks, r) {
       posts.push(new THREE.BoxGeometry(0.16, top - bottom, 0.24).rotateY(Math.atan2(p.dx, p.dz)).translate(p.x, (top + bottom) / 2, p.z));
     }
     // Graffiti auf der Gleisseite (nicht an niedrigen Brüstungen)
-    if (!W.low) for (let t = 6 + r() * 30; t < L[L.length - 1] - 3; t += 35 + r() * 60) {
+    if (!W.low && graffiti) for (let t = 6 + r() * 30; t < L[L.length - 1] - 3; t += 35 + r() * 60) {
       const p = along(pts, L, t), rt = railTop(p.x, p.z);
       const toTrack = Math.sign((rt.T.at(rt.s)[0] - p.x) * -p.dz + (rt.T.at(rt.s)[2] - p.z) * p.dx) || 1;
       decals.push({ x: p.x - p.dz * toTrack * 0.09, z: p.z + p.dx * toTrack * 0.09, y: rt.y + 0.9 + r() * 0.6, ry: Math.atan2(-p.dz * toTrack, p.dx * toTrack), k: Math.floor(r() * GRAFFITI.length), w: 2.4 + r() * 1.6 });
@@ -317,7 +317,7 @@ function buildWalls(scene, world, tracks, r) {
 
 // ---------- Treppen, Rampe ----------
 
-function buildStair(scene, world, st, yTop) {
+export function buildStair(scene, world, st, yTop) {
   const pts = st.pts.map((p) => [...p]);
   const L = poly(pts), total = L[L.length - 1];
   const y0 = world.heightAt(...pts[0]), rise = yTop - y0;
@@ -411,7 +411,7 @@ function connector(scene, world, a, b, w, ya, yb) {
 // ---------- Ausstattung ----------
 
 // Lage auf dem Bahnsteig: Höhe, Richtung längs des Gleises (dx, dz), Normale zum Gleis (tx, tz)
-function frameOn(pfs, world, x, z) {
+export function frameOn(pfs, world, x, z) {
   let best = null;
   for (const pf of pfs) {
     const p = pf.nearest(x, z), d = Math.hypot(p.x - x, p.z - z);
@@ -422,7 +422,7 @@ function frameOn(pfs, world, x, z) {
   return { y: p.top, dx: p.dx, dz: p.dz, tx: -p.nx, tz: -p.nz, on: true, pf: best.pf };
 }
 
-function lamp(g, x, y, z, tx, tz, clockTex) {
+export function lamp(g, x, y, z, tx, tz, clockTex) {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 5.2, 8), M.galv);
   pole.position.set(x, y + 2.6, z);
   pole.castShadow = true;
@@ -449,7 +449,7 @@ function lamp(g, x, y, z, tx, tz, clockTex) {
   return head;
 }
 
-function clockTexture() {
+export function clockTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const t = new THREE.CanvasTexture(c);
@@ -490,7 +490,7 @@ function dsaDisplay() {
   return t;
 }
 
-function shelter(scene, world, S, pfs) {
+export function shelter(scene, world, S, pfs) {
   const [ax, az] = S.a, [bx, bz] = S.b, len = Math.hypot(bx - ax, bz - az);
   const cx = (ax + bx) / 2, cz = (az + bz) / 2, f = frameOn(pfs, world, cx, cz);
   const ux = (bx - ax) / len, uz = (bz - az) / len;
@@ -583,7 +583,7 @@ function stopSign(scene, world, [x, z], heading, name) {
   world.addObstacle([[x - 0.15, z - 0.15], [x + 0.15, z - 0.15], [x + 0.15, z + 0.15], [x - 0.15, z + 0.15]], 3);
 }
 
-function furniture(scene, world, pfs, item, dsas) {
+export function furniture(scene, world, pfs, item, dsas) {
   const [x, z] = item.at, f = frameOn(pfs, world, x, z), g = new THREE.Group();
   g.position.set(x, f.y, z);
   const along = Math.atan2(f.dx, f.dz), face = Math.atan2(f.tx, f.tz);
@@ -660,7 +660,7 @@ function furniture(scene, world, pfs, item, dsas) {
 }
 
 // Stationsschild auf zwei Pfosten, längs des Gleises
-function nameSign(scene, pf, x, tex) {
+export function nameSign(scene, pf, x, tex) {
   const q = pf.S.reduce((b, s) => (Math.abs(s.x - x) < Math.abs(b.x - x) ? s : b), pf.S[0]);
   const d = q.w - 0.55, g = new THREE.Group();
   g.position.set(q.x + q.nx * d, q.top, q.z + q.nz * d);
@@ -691,7 +691,7 @@ function gsmrMast(scene, world, [x, z]) {
 
 // ---------- Fahrgäste ----------
 
-class Passenger {
+export class Passenger {
   constructor(scene, r) { this.mesh = buildPerson(r); this.mesh.visible = false; scene.add(this.mesh); this.path = null; this.phase = 0; this.state = 'off'; }
   place(x, y, z) { this.x = x; this.y = y; this.z = z; this.mesh.position.set(x, y, z); this.mesh.visible = true; }
   walk(path, then) { this.path = path; this.then = then; this.state = 'walk'; }
@@ -760,12 +760,15 @@ export function buildBahnhof(scene, world, railway, r = Math.random) {
 
   // Oberleitung: am Bahnsteig stehen die Masten direkt vor der Lärmschutzwand
   buildFahrleitung(scene, world, tracks, (x, z, k) => {
+    const bb = mastOffsetBB(x, z, k); // Bahnhof Bad Bellingen
+    if (bb != null) return bb;
     const pf = pfs[k], p = pf.nearest(x, z);
     return Math.hypot(p.x - x, p.z - z) < 2 && pf.S.indexOf(p) > 0 && pf.S.indexOf(p) < pf.S.length - 1 ? p.w - 0.45 : 3.3;
-  });
+  }, adjustMastBB);
 
   const station = new Station(scene, world, railway, pfs, seats, dsas, clockTex, r);
   railway.station = station;
+  railway.stations[0] = station;
   return station;
 }
 
@@ -842,8 +845,8 @@ class Station {
 
   update(dt) {
     for (const svc of this.railway.services) {
-      if (svc.doorsOpen && !svc.boardedHere) { svc.boardedHere = true; this.onTrain(svc); }
-      if (!svc.atStation) svc.boardedHere = false;
+      if (svc.doorsOpenAt(0) && !svc.boardedHere) { svc.boardedHere = true; this.onTrain(svc); }
+      if (!svc.atStationAt(0)) svc.boardedHere = false;
     }
     for (let k = 0; k < 2; k++) {
       if (this.waiting[k].length < 3 && (this.refill[k] -= dt) <= 0) { this.spawnWaiting(k); this.refill[k] = 12 + this.r() * 30; }
@@ -853,7 +856,7 @@ class Station {
     if ((this.dsaT -= dt) <= 0) {
       this.dsaT = 1;
       for (const d of this.dsas) {
-        const eta = this.railway.eta(d.k);
+        const eta = this.railway.eta(d.k, 0);
         const l2 = eta == null ? 'Bitte einsteigen' : eta < 25 ? 'Zug fährt ein' : `in ${Math.max(1, Math.round(eta / 60))} Min`;
         const text = `${this.railway.destination(d.k)}|${l2}`;
         if (text !== d.text) { d.text = text; d.tex.show(this.railway.destination(d.k), l2); }

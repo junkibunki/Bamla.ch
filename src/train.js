@@ -1,17 +1,21 @@
 // Regionalzug RB 27 im bwegt-Design (weiß, gelbe Front und Türen, schwarzes Fensterband) auf der Rheintalbahn.
 // Auf jedem der beiden Streckengleise pendelt ein Umlauf: Gleis 1 (Nordgleis) Richtung Basel Bad Bf, Gleis 2 (Südgleis)
-// Richtung Freiburg (Brsg) Hbf. Jeder Zug hält am Haltepunkt Rheinweiler (bahnhof.js): bremsen, Türen auf der
-// Bahnsteigseite öffnen, Fahrgäste steigen ein und aus, Türen zu, anfahren.
-// Mitfahren: an einer offenen Tür E. Am Streckenende fährt der Zug mit dem Spieler auf dem Gegengleis zurück nach
-// Rheinweiler, dort bei offenen Türen E: aussteigen.
+// Richtung Freiburg (Brsg) Hbf. Jeder Zug hält in Bad Bellingen (bahnhof-bb.js) und am Haltepunkt Rheinweiler
+// (bahnhof.js): bremsen, Türen auf der Bahnsteigseite öffnen, Fahrgäste steigen ein und aus, Türen zu, anfahren.
+// Mitfahren: an einer offenen Tür E, in beide Richtungen. Am Streckenende fährt der Zug mit dem Spieler auf dem
+// Gegengleis zurück; an jedem Halt bei offenen Türen E: aussteigen.
 import * as THREE from 'three';
 import { Vehicle } from './vehicles.js';
 import { STATION, PLATFORM_H } from './bahnhof-site.js';
+import { BB } from './bahnhof-bb-site.js';
+
+// Halte (Index i); je Gleis werden sie nach der Fahrtrichtung sortiert
+const STOPS = [{ name: STATION.name, center: STATION.center }, { name: BB.name, center: BB.center }];
 
 const CAR_LEN = 26, CAR_W = 2.9, GAP = 0.8, CARS = 3;
 const TRAIN_LEN = CARS * CAR_LEN + (CARS - 1) * GAP;
 const VMAX = 30, ACC = 0.8, DEC = 0.9; // m/s (108 km/h), m/s²
-const DWELL = 28;                      // Haltezeit in Rheinweiler (s)
+const DWELL = 28;                      // Haltezeit (s)
 const BODY_Y = 0.95, BODY_H = 3.3;
 const YELLOW = 0xffcc00;
 const LINE = 'RB 27';
@@ -266,7 +270,7 @@ class Service {
     this.state = 'wait';
     this.wait = home === 0 ? 8 + r() * 10 : 35 + r() * 25; // erster Zug kommt bald
     this.nextWait = 60;
-    this.s = 0; this.v = 0; this.dwell = 0; this.doorT = 0; this.passed = false;
+    this.s = 0; this.v = 0; this.dwell = 0; this.doorT = 0; this.next = 0; this.at = null;
     this.meshes = []; this.doors = []; this.displays = [];
     const side = rw.side;
     for (let i = 0; i < CARS; i++) {
@@ -290,6 +294,12 @@ class Service {
   get dest() { return this.rw.dest[this.k]; }
   get doorsOpen() { return this.state === 'dwell' && this.doorT > 0.7; }
   get atStation() { return this.state === 'dwell'; }
+  get stops() { return this.rw.stops[this.k]; }
+  get passed() { return this.next >= this.stops.length; }  // alle Halte auf dieser Fahrt erledigt
+  doorsOpenAt(i) { return this.doorsOpen && this.at === i; }
+  atStationAt(i) { return this.state === 'dwell' && this.at === i; }
+  // Name des Halts, an dem der Zug steht, sonst des nächsten (null: keiner mehr)
+  stopName() { return this.state === 'dwell' ? STOPS[this.at].name : this.stops[this.next]?.name ?? null; }
 
   setDest() {
     for (const d of this.displays) { d.material.map.dispose(); d.material.map = displayTexture(this.dest); }
@@ -298,8 +308,10 @@ class Service {
   start(s = 0) {
     this.state = 'run';
     this.s = s;
-    this.v = Math.min(VMAX, Math.sqrt(2 * DEC * Math.max(0, this.rw.stopS[this.k] - s)));
-    this.passed = false;
+    this.next = this.stops.findIndex((st) => st.s > s + 0.25);
+    if (this.next < 0) this.next = this.stops.length;
+    this.at = null;
+    this.v = this.passed ? VMAX : Math.min(VMAX, Math.sqrt(2 * DEC * Math.max(0, this.stops[this.next].s - s)));
     this.doorT = 0;
     this.nextWait = 50 + this.r() * 70;
     this.setDest();
@@ -319,18 +331,18 @@ class Service {
       if ((this.wait -= dt) <= 0) this.start();
       else return;
     }
-    const T = this.track, stopS = this.rw.stopS[this.k];
+    const T = this.track, nx = this.stops[this.next];
     if (this.state === 'dwell') {
       // Türen auf (nach 1,5 s), Fahrgastwechsel, 4 s vor der Abfahrt Türen zu
       this.dwell -= dt;
       const open = DWELL - this.dwell > 1.5 && this.dwell > 4;
       this.doorT = open ? Math.min(1, this.doorT + dt / 1.5) : Math.max(0, this.doorT - dt / 1.5);
-      if (this.dwell <= 0) { this.state = 'run'; this.passed = true; this.doorT = 0; }
+      if (this.dwell <= 0) { this.state = 'run'; this.next++; this.at = null; this.doorT = 0; }
     } else {
-      const target = this.passed ? VMAX : Math.min(VMAX, Math.sqrt(2 * DEC * Math.max(0, stopS - this.s)));
+      const target = !nx ? VMAX : Math.min(VMAX, Math.sqrt(2 * DEC * Math.max(0, nx.s - this.s)));
       this.v = this.v < target ? Math.min(target, this.v + ACC * dt) : Math.max(target, this.v - DEC * 1.5 * dt);
-      this.s += Math.max(this.v, this.passed ? 0 : 0.4) * dt;
-      if (!this.passed && this.s >= stopS - 0.25) { this.s = stopS; this.v = 0; this.state = 'dwell'; this.dwell = DWELL; }
+      this.s += Math.max(this.v, nx ? 0.4 : 0) * dt;
+      if (nx && this.s >= nx.s - 0.25) { this.s = nx.s; this.v = 0; this.state = 'dwell'; this.dwell = DWELL; this.at = nx.i; }
       if (this.s > T.length + TRAIN_LEN) {
         if (this.rw.rider && this.rw.riderSvc === this) this.rw.turnBack(this);
         else this.stop();
@@ -368,14 +380,25 @@ class Service {
     });
   }
 
-  // Fahrzeit bis zum Halt in Rheinweiler (s), null wenn der Zug gerade steht
-  eta() {
-    const stopS = this.rw.stopS[this.k];
-    const approach = (d, v) => (d >= (v * v) / (2 * DEC) ? (d - (v * v) / (2 * DEC)) / Math.max(v, 1) + v / DEC : (2 * d) / Math.max(v, 1));
-    const fresh = () => { const v0 = Math.min(VMAX, Math.sqrt(2 * DEC * stopS)); return approach(stopS, v0); };
-    if (this.state === 'dwell') return null;
+  // Fahrzeit bis zum Halt am Bahnhof i (s), null wenn der Zug dort gerade steht
+  eta(i) {
+    const stops = this.stops, j = stops.findIndex((st) => st.i === i);
+    if (j < 0) return Infinity;
+    // Fahrt über die Strecke d ab Geschwindigkeit v bis zum Stillstand (beschleunigen bis VMAX, bremsen mit DEC)
+    const run = (d, v) => {
+      d = Math.max(0, d);
+      const dAcc = Math.max(0, VMAX * VMAX - v * v) / (2 * ACC), dDec = (VMAX * VMAX) / (2 * DEC);
+      if (d >= dAcc + dDec) return (VMAX - v) / ACC + (d - dAcc - dDec) / VMAX + VMAX / DEC;
+      const vp = Math.sqrt(Math.max(v * v, (2 * ACC * DEC * d + DEC * v * v) / (ACC + DEC)));
+      return Math.max(0, vp - v) / ACC + vp / DEC;
+    };
+    // ab Bogenlänge s mit Geschwindigkeit v, nächster Halt q0: bis Halt j, mit den Haltezeiten dazwischen
+    const from = (s, v, q0) => { let t = 0; for (let q = q0; q <= j; q++) { t += run(stops[q].s - s, v) + (q < j ? DWELL : 0); s = stops[q].s; v = 0; } return t; };
+    const fresh = () => from(0, Math.min(VMAX, Math.sqrt(2 * DEC * stops[0].s)), 0);
+    if (this.state === 'dwell' && this.at === i) return null;
     if (this.state === 'wait') return this.wait + fresh();
-    if (!this.passed) return approach(stopS - this.s, this.v);
+    if (this.state === 'dwell' && this.next < j) return this.dwell + from(this.s, 0, this.next + 1);
+    if (this.state !== 'dwell' && this.next <= j) return from(this.s, this.v, this.next);
     return (this.track.length + TRAIN_LEN - this.s) / VMAX + this.nextWait + fresh();
   }
 }
@@ -404,7 +427,8 @@ export class Railway {
     this.rider = null;
     this.riderSvc = null;
     this.riderCar = 0;
-    this.station = null; // bahnhof.js: Bahnsteig-Abfrage für die Hinweise
+    this.station = null; // bahnhof.js: Bahnsteig-Abfrage für die Hinweise (Rheinweiler)
+    this.stations = [];  // je Halt (Index wie STOPS) das Bahnhofsobjekt mit platformAt(x, z, y)
     if (this.tracks.length < 2) return;
     // Rechtsverkehr: Nordgleis (Gleis 1) nach Südwesten (Basel), Südgleis (Gleis 2) nach Nordosten (Freiburg)
     const [cx, cz] = STATION.center;
@@ -412,11 +436,11 @@ export class Railway {
     if (at[0][2] > at[1][2]) this.tracks.reverse();
     this.dirs = this.tracks.map((t, k) => ((t.pts[0][0] > t.pts[t.pts.length - 1][0]) === (k === 0) ? 1 : -1));
     this.dest = ['Basel Bad Bf', 'Freiburg (Brsg) Hbf'];
-    // Bogenlänge (in Fahrtrichtung) der Zugspitze beim Halt: Zugmitte an der Bahnhofsmitte
-    this.stopS = this.tracks.map((t, k) => {
-      const s = t.project(cx, cz).s;
-      return (this.dirs[k] > 0 ? s : t.length - s) + TRAIN_LEN / 2;
-    });
+    // Bogenlänge (in Fahrtrichtung) der Zugspitze beim Halt: Zugmitte an der Bahnhofsmitte; je Gleis nach Fahrtrichtung sortiert
+    this.stops = this.tracks.map((t, k) => STOPS.map((st, i) => {
+      const s = t.project(...st.center).s;
+      return { i, name: st.name, s: (this.dirs[k] > 0 ? s : t.length - s) + TRAIN_LEN / 2 };
+    }).sort((a, b) => a.s - b.s));
     this.fade = fadeOverlay();
     for (let k = 0; k < 2; k++) {
       const svc = new Service(this, k, r);
@@ -430,12 +454,12 @@ export class Railway {
   // Gleis k: Fahrtrichtung und Ziel
   destination(k) { return `${LINE} nach ${this.dest[k]}`; }
 
-  // Sekunden bis zum nächsten Zug am Gleis k (null: Zug steht am Bahnsteig)
-  eta(k) {
+  // Sekunden bis zum nächsten Zug am Gleis k im Bahnhof i (null: Zug steht dort am Bahnsteig)
+  eta(k, i = 0) {
     const here = this.services.filter((s) => s.k === k && s.state !== 'wait');
-    if (here.some((s) => s.atStation)) return null;
+    if (here.some((s) => s.atStationAt(i))) return null;
     const list = here.length ? here : this.services.filter((s) => s.home === k);
-    return Math.min(...list.map((s) => s.eta()));
+    return Math.min(...list.map((s) => s.eta(i)));
   }
 
   // ---------- Mitfahren ----------
@@ -485,26 +509,30 @@ export class Railway {
     const k = 1 - svc.k;
     for (const o of this.services) if (o !== svc && o.k === k && o.state !== 'wait') { o.stop(); o.wait = 25 + this.r() * 20; }
     svc.k = k;
-    svc.start(Math.max(0, this.stopS[k] - 1400));
-    this.fade(`Rückfahrt mit der ${LINE} – nächster Halt: Rheinweiler`);
+    svc.start(Math.max(0, this.stops[k][0].s - 1400));
+    this.fade(`Rückfahrt mit der ${LINE} – nächster Halt: ${svc.stopName()}`);
   }
 
   riderAction() { if (this.riderSvc?.doorsOpen) this.alight(); }
 
   riderHint() {
-    const svc = this.riderSvc;
-    if (svc.doorsOpen) return 'Rheinweiler – E: Aussteigen';
-    if (svc.atStation) return 'Rheinweiler';
-    return `${this.destination(svc.k)}${svc.passed ? '' : ' · Nächster Halt: Rheinweiler'}`;
+    const svc = this.riderSvc, name = svc.stopName();
+    if (svc.doorsOpen) return `${name} – E: Aussteigen`;
+    if (svc.atStation) return name;
+    return `${this.destination(svc.k)}${name ? ` · Nächster Halt: ${name}` : ''}`;
   }
 
   // Hinweis zu Fuß: einsteigen oder wann der nächste Zug am Bahnsteig hält
   footHint(player) {
     const b = this.boardable(player);
     if (b) return `E: In den Zug einsteigen (${this.destination(b.svc.k)})`;
-    const k = this.station?.platformAt(player.pos.x, player.pos.z, player.groundY + player.pos.y);
+    let k = null, i = 0;
+    for (const [n, st] of this.stations.entries()) {
+      const q = st?.platformAt(player.pos.x, player.pos.z, player.groundY + player.pos.y);
+      if (q != null) { k = q; i = n; break; }
+    }
     if (k == null || !this.services.length) return '';
-    const eta = this.eta(k);
+    const eta = this.eta(k, i);
     const head = `Gleis ${k + 1} – ${this.destination(k)}`;
     if (eta == null) return `${head} – Zug steht am Gleis`;
     return eta < 20 ? `${head} – Zug fährt ein` : `${head} in ca. ${Math.ceil(eta / 10) * 10} s`;
