@@ -20,6 +20,7 @@ import { THERME_SITE } from './therme-site.js';
 import { KURPARK_SITE } from './kurpark-site.js';
 import { RATHAUS_SITE } from './rathaus-bb.js';
 import { KURHAUS_SITE } from './kurhaus.js';
+import { MUSIK_SITE } from './musikpavillon.js';
 import { KPP_SITE } from './kurparkplatz-site.js';
 import { LEODEGAR_SITE } from './leodegar-site.js';
 import { RS_PAVED } from './rheinstrasse-site.js';
@@ -60,7 +61,7 @@ function segmentIndex(roads) {
 
 const inBuilding = (world, x, z) => !!world.collide(x, z, 0.05);
 // Punkt in einer der gepflasterten Flächen (Vorplätze) oder auf einem eigens gebauten Gelände – dort keine Büsche
-export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_SITE, ...REWE_SITE, ...THERME_SITE, ...KURPARK_SITE, ...RS_PAVED, { pts: RATHAUS_SITE }, ...KURHAUS_SITE, ...KPP_SITE, ...LEODEGAR_SITE].some(({ pts }) => {
+export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_SITE, ...REWE_SITE, ...THERME_SITE, ...KURPARK_SITE, ...RS_PAVED, { pts: RATHAUS_SITE }, ...KURHAUS_SITE, ...KPP_SITE, ...MUSIK_SITE, ...LEODEGAR_SITE].some(({ pts }) => {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, zi] = pts[i], [xj, zj] = pts[j];
