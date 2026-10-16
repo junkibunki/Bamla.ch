@@ -62,6 +62,7 @@ import { buildRewe } from './rewe.js';
 import { buildTherme } from './therme.js';
 import { prepareTherme } from './therme-site.js';
 import { buildKurpark } from './kurpark.js';
+import { prepareRheintreppe, buildRheintreppe } from './rheintreppe.js';
 import { prepareKurpark } from './kurpark-site.js';
 import { buildRathausBB } from './rathaus-bb.js';
 import { buildKurhaus } from './kurhaus.js';
@@ -125,6 +126,7 @@ fixMariahuegelWeg(data); // Fußweg zur Kapelle auf dem Mariahügel: gerade auf 
 clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenweg
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
 prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
+prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
@@ -316,6 +318,7 @@ addEventListener('wheel', (e) => { cam.zoom = Math.max(0.5, Math.min(8, cam.zoom
 const camTarget = new THREE.Vector3();
 const sport = new Sport(scene, world, { golf, tennis, cam, quests }); // Golf und Tennis zum Selberspielen
 const kurpark = buildKurpark(scene, world, { rng: rng(2026), quests, cam, carry }); // Kurpark Bad Bellingen: Spielplatz, Minigolf, Weiher, Happleweg
+buildRheintreppe(scene, world); // Rheintreppe vom Kurpark am Aufzug hinauf zur Rheinstraße: 6 Läufe, Quadermauer, Handläufe, Hecke
 pedestrians.push(kurpark);
 sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und Tennis (E, Figur steht still)
 buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
