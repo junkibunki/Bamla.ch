@@ -76,7 +76,9 @@ export function carveFusstunnel(T) {
       let y = T.h[k];
       const side = Math.max(0, n - 2.5) * 0.8;
       if (s > S0 - 8 && s < S0 + 1 && n < 4.5) y = Math.min(y, tunnel.F0 + side);                                   // Vorplatz West
+      if (s > S0 - 4 && s < S0 + 1 && n < 2.5) y = tunnel.F0;                       // direkt vor der Öffnung bündig mit dem Röhrenboden
       if (s > S1 - 1 && s < S1 + 7 && n < 4.5) y = Math.min(y, tunnel.F1 + Math.max(0, s - S1 - 2) * 0.3 + side);   // Ostportal, der Weg steigt
+      if (s > S1 - 1 && s < S1 + 2 && n < 2.5) y = tunnel.F1;
       if (s >= S0 + 1.5 && s <= S1 - 1.5 && n < 7) y = Math.max(y, tunnel.floor(s) + COVER - Math.max(0, n - 2.5) * 0.6);
       T.h[k] = y;
     }
@@ -258,8 +260,8 @@ function tubeGeometry() {
       uv.push(a / 2, len[i - 1] / 2, b / 2, len[i - 1] / 2, b / 2, len[i] / 2, a / 2, len[i - 1] / 2, b / 2, len[i] / 2, a / 2, len[i] / 2);
     }
   }
-  for (let k = 0, f0 = S0 - 0.6, n = Math.ceil(S1 - S0 + 1.2); k < n; k++) {
-    const a = f0 + k * ((S1 - S0 + 1.2) / n), b = f0 + (k + 1) * ((S1 - S0 + 1.2) / n);
+  for (let k = 0, f0 = S0 - 0.15, n = Math.ceil(S1 - S0 + 0.3); k < n; k++) { // Boden endet an den Ansichtsflächen der Portale
+    const a = f0 + k * ((S1 - S0 + 0.3) / n), b = f0 + (k + 1) * ((S1 - S0 + 0.3) / n);
     fpos.push(...pt(a, -HW, 0.02), ...pt(a, HW, 0.02), ...pt(b, HW, 0.02), ...pt(a, -HW, 0.02), ...pt(b, HW, 0.02), ...pt(b, -HW, 0.02));
     fuv.push(a / 2, -HW / 2, a / 2, HW / 2, b / 2, HW / 2, a / 2, -HW / 2, b / 2, HW / 2, b / 2, -HW / 2);
   }
@@ -688,7 +690,7 @@ export function buildFusstunnel(scene, world) {
   buildBaerlauch(scene, world, sm, r);
   cutTerrain(world);
 
-  addBore(world, { a: A, u: U, s0: S0, s1: S1, sA: S0 - 0.6, sB: S1 + 0.6, f0: tunnel.F0, f1: tunnel.F1, hw: HW, top: CROWN });
+  addBore(world, { a: A, u: U, s0: S0, s1: S1, sA: S0 - 0.15, sB: S1 + 0.15, f0: tunnel.F0, f1: tunnel.F1, hw: HW, top: CROWN });
   addBore(world, CAVE);
   return { tunnel, local, S0, S1, cave: CAVE };
 }
