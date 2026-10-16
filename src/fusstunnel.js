@@ -8,6 +8,8 @@
 // Das DGM ist ein Höhenraster ohne Hohlräume: Der Damm bleibt über der Röhre, vor den Portalen wird das Gelände abgesenkt
 // und über der Röhre bis zur Mauerkrone aufgefüllt; im Lichtraum der Röhre verwirft der Geländeshader seine Pixel.
 // Boden und Wände der Röhre regelt world.tunnels (floorAt, push), die Kamera tunnelCamera.
+// Unten am Westportal dichter Laubwald (außer auf den Wegen) und schräg rechts gegenüber ganz oben auf der Hügelkante ein
+// Felsbuckel aus beigem Sandstein mit einer kleinen Höhle, in die man gerade so hineingeht.
 import * as THREE from 'three';
 import { Parts, canvasTex, sample } from './kirschgarten-ecke.js';
 import { pointInPolygon } from './world.js';
@@ -25,6 +27,11 @@ export const P = (s, n = 0) => [A[0] + U[0] * s + N[0] * n, A[1] + U[1] * s + N[
 export const local = (x, z) => { const dx = x - A[0], dz = z - A[1]; return [dx * U[0] + dz * U[1], dx * N[0] + dz * N[1]]; };
 export const WEST = P(S0), EAST = P(S1);
 const WAY = 'Fußweg Bamlach - Rhein';
+
+// Höhle: Mund oben an der Kante der Böschung jenseits des Waldwegs (vom Westportal aus schräg rechts gegenüber), schaut
+// hinunter zum Weg; die Achse führt in den Sandsteinbuckel auf dem Hügel
+export const CAVE = { a: P(-24, -5.2), u: [U[1], -U[0]], s0: 0, s1: 5.5, sA: -0.3, sB: 5.8, hw: 0.62, top: 2.17, dead: true, f0: 0, f1: 0 };
+const CAVE_SPRING = CAVE.top - CAVE.hw;
 
 // Bodenhöhe der Röhre (geradlinig zwischen den Portalen); F0/F1 setzt carveFusstunnel
 export const tunnel = {
@@ -49,7 +56,7 @@ export function fixFusstunnel(data) {
     r.pts = r.pts.map((p) => (near(p, A) ? WEST : near(p, B) ? EAST : p));
     if (r.name === WAY) r.ownMesh = true;
   }
-  (data.treeFree ||= []).push([...P(S0 - 4), 7], [...P(S1 + 3), 4]); // Vorplätze frei von Waldbäumen
+  (data.treeFree ||= []).push([...P(S0 - 4), 7], [...P(S1 + 3), 4], [...boreAt(CAVE, -2.5, 0), 4.5], [...boreAt(CAVE, 3, 0), 6.5]); // Vorplätze und Höhlenfels frei von Waldbäumen
 }
 
 // Gelände: vor den Portalen auf Bodenhöhe, über der Röhre bis zur Mauerkrone (zur Seite hin auslaufend)
@@ -69,6 +76,19 @@ export function carveFusstunnel(T) {
       if (s > S1 - 1 && s < S1 + 7 && n < 4.5) y = Math.min(y, tunnel.F1 + Math.max(0, s - S1 - 2) * 0.3 + side);   // Ostportal, der Weg steigt
       if (s >= S0 + 1.5 && s <= S1 - 1.5 && n < 7) y = Math.max(y, tunnel.floor(s) + COVER - Math.max(0, n - 2.5) * 0.6);
       T.h[k] = y;
+    }
+  // Höhle: davor höchstens Bodenhöhe, darüber ein Buckel bis gut über die Decke (der Sandsteinfels obenauf)
+  const F = (CAVE.f0 = CAVE.f1 = T.heightAt(...boreAt(CAVE, 3, 0))); // Bodenhöhe = Hügelkuppe
+  const [mx, mz] = CAVE.a;
+  for (let r = Math.floor((mz - 14 - T.minZ) / T.step); r <= Math.ceil((mz + 14 - T.minZ) / T.step); r++)
+    for (let c = Math.floor((mx - 14 - T.minX) / T.step); c <= Math.ceil((mx + 14 - T.minX) / T.step); c++) {
+      const [s, n0] = boreLocal(CAVE, T.minX + c * T.step, T.minZ + r * T.step), n = Math.abs(n0), k = r * T.cols + c;
+      if (s > -6 && s < 0.5 && n < 3.5) { // Rampe hinauf zum Mund, nirgends über dem Höhlenboden
+        const ramp = F - 0.05 - Math.max(0, -s - 0.3) * 0.9;
+        T.h[k] = n < 2.5 ? ramp : Math.max(T.h[k], ramp - (n - 2.5) * 0.8);
+      }
+      if (s >= 2.5 && s < CAVE.s1 + 5 && n < 6.5) // vorn deckt der Sandsteinfels die Röhre
+        T.h[k] = Math.max(T.h[k], F + CAVE.top + 1.3 - Math.max(0, n - 2) * 0.45 - Math.max(0, s - CAVE.s1 - 1) * 0.6);
     }
 }
 
@@ -107,6 +127,24 @@ const blueMarks = (g) => { // blaue Farbkleckse wie auf dem Foto
     g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 10, y - 14, x + 22, y + 8, x + 34, y - 6); g.stroke();
     g.beginPath(); g.moveTo(x + 4, y + 10); g.lineTo(x + 26, y + 12); g.stroke();
   }
+};
+// Beiger Sandstein: feine, leicht wellige Schichtbänder, Körnung, dunklere Verwitterungsflecken
+const beigeTex = () => {
+  const t = canvasTex(128, 128, (g) => {
+    g.fillStyle = '#d6c29b';
+    g.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < 128; y += 4 + Math.random() * 7) {
+      const v = Math.random();
+      g.fillStyle = v < 0.4 ? 'rgba(190,160,110,0.55)' : v < 0.7 ? 'rgba(232,215,180,0.6)' : 'rgba(170,140,95,0.45)';
+      g.beginPath(); g.moveTo(0, y);
+      for (let x = 0; x <= 128; x += 16) g.lineTo(x, y + Math.sin(x / 20 + y) * 1.5);
+      g.lineTo(128, y + 3); g.lineTo(0, y + 3); g.fill();
+    }
+    for (let i = 0; i < 300; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '120,95,60' : '245,235,210'},0.25)`; g.fillRect(Math.random() * 128, Math.random() * 128, 1.5, 1.5); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(110,95,70,0.15)'; g.beginPath(); g.ellipse(Math.random() * 128, Math.random() * 128, 6 + Math.random() * 14, 3 + Math.random() * 6, 0, 0, 7); g.fill(); }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
 };
 const earthTex = () => {
   const t = canvasTex(128, 128, (g) => {
@@ -194,12 +232,12 @@ function portal(add, m, r, { wing, boulders, pole }) {
   // Röhre: die ersten 0,6 m bildet das Bogenfeld, der Rest ist eigene Geometrie (tubeGeometry)
 }
 
-function fern(add, x, z, r) {
+function fern(add, x, z, r, y = 0) {
   for (let k = 0; k < 7; k++) {
     const a = (k / 7) * Math.PI * 2 + r(), l = 0.5 + r() * 0.35, g = new THREE.PlaneGeometry(0.16, l, 1, 3).translate(0, l / 2, 0);
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) { const t = p.getY(i) / l; p.setZ(i, t * t * l * 0.6); } // Wedel biegt sich nach außen
-    add(g.rotateX(-0.5).rotateY(a).translate(x, 0, z), 'fern');
+    add(g.rotateX(-0.5).rotateY(a).translate(x, y, z), 'fern');
   }
 }
 
@@ -236,37 +274,71 @@ function tubeGeometry() {
   return [geo(pos, uv), geo(fpos, fuv)];
 }
 
-// Gelände im Lichtraum der Röhre (und unmittelbar vor den Öffnungen) nicht zeichnen
+// ---------- Röhren unter dem Gelände (Tunnel, Höhle) ----------
+// b: a (Anfangspunkt), u (Richtung), s0/s1 (Öffnung, Ende), f0/f1 (Boden bei s0/s1), hw (halbe lichte Breite),
+// top (lichte Höhe), dead (hinten geschlossen). Das Gelände wird von sA bis sB unter der Decke nicht gezeichnet.
+export const bores = [];
+const boreLocal = (b, x, z) => { const dx = x - b.a[0], dz = z - b.a[1]; return [dx * b.u[0] + dz * b.u[1], -dx * b.u[1] + dz * b.u[0]]; };
+const boreAt = (b, s, n) => [b.a[0] + b.u[0] * s - b.u[1] * n, b.a[1] + b.u[1] * s + b.u[0] * n];
+const boreFloor = (b, s) => b.f0 + (b.f1 - b.f0) * Math.min(1, Math.max(0, (s - b.s0) / (b.s1 - b.s0)));
+
+// Boden für Figuren und Fahrzeuge (wer unter der Decke ist), Seitenwände und hintere Wand
+function addBore(world, b) {
+  bores.push(b);
+  world.tunnels.push({
+    floorAt(x, z, prevY) {
+      const [s, n] = boreLocal(b, x, z);
+      if (s < b.sA + 0.2 || s > b.s1 + (b.dead ? 0 : 0.3) || Math.abs(n) > b.hw + 0.3) return null;
+      const f = boreFloor(b, s);
+      return prevY < f + Math.min(2, b.top - 0.4) ? f : null;
+    },
+    push(x, z, rad, y) {
+      const [s, n] = boreLocal(b, x, z);
+      if (s < b.s0 + 0.2 || s > b.s1 + (b.dead ? 0.5 : -0.2) || Math.abs(n) > b.hw + 0.8 || y > boreFloor(b, s) + Math.min(2, b.top - 0.4)) return null;
+      const lim = Math.max(0, b.hw - rad), dn = Math.abs(n) > lim ? Math.sign(n) * lim - n : 0, ds = b.dead && s > b.s1 - rad ? b.s1 - rad - s : 0;
+      if (!dn && !ds) return null;
+      return [b.u[0] * ds - b.u[1] * dn, b.u[1] * ds + b.u[0] * dn];
+    },
+  });
+}
+
+// Gelände im Lichtraum der Röhren (und unmittelbar vor den Öffnungen, nicht tiefer als knapp unter dem Boden) nicht zeichnen; Röhren, die bis zum ersten
+// Bild angelegt sind, kommen in den Shader
 function cutTerrain(world) {
   const mat = world.ground?.children[0]?.material;
   if (!mat) return;
-  mat.customProgramCacheKey = () => 'fusstunnel';
+  mat.customProgramCacheKey = () => 'bores' + bores.length;
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.tunA = { value: new THREE.Vector4(A[0], A[1], U[0], U[1]) };
-    sh.uniforms.tunB = { value: new THREE.Vector4(S0 - 0.6, S1 + 0.6, HW + 0.02, CROWN + 0.05) };
-    sh.uniforms.tunF = { value: new THREE.Vector4(S0, S1, tunnel.F0, tunnel.F1) };
+    const nb = bores.length;
+    sh.uniforms.tunA = { value: bores.map((b) => new THREE.Vector4(b.a[0], b.a[1], b.u[0], b.u[1])) };
+    sh.uniforms.tunB = { value: bores.map((b) => new THREE.Vector4(b.sA, b.sB, b.hw + 0.02, b.top + 0.05)) };
+    sh.uniforms.tunF = { value: bores.map((b) => new THREE.Vector4(b.s0, b.s1, b.f0, b.f1)) };
     sh.vertexShader = 'varying vec3 vTunW;\n' + sh.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\nvTunW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = 'varying vec3 vTunW;\nuniform vec4 tunA, tunB, tunF;\n' + sh.fragmentShader.replace('void main() {', `void main() {
-  vec2 tunD = vTunW.xz - tunA.xy;
-  float tunS = dot(tunD, tunA.zw), tunN = dot(tunD, vec2(-tunA.w, tunA.z));
-  float tunY = mix(tunF.z, tunF.w, clamp((tunS - tunF.x) / (tunF.y - tunF.x), 0.0, 1.0));
-  if (tunS > tunB.x && tunS < tunB.y && abs(tunN) < tunB.z && vTunW.y < tunY + tunB.w) discard;`);
+    sh.fragmentShader = `varying vec3 vTunW;\nuniform vec4 tunA[${nb}], tunB[${nb}], tunF[${nb}];\n` + sh.fragmentShader.replace('void main() {', `void main() {
+  for (int i = 0; i < ${nb}; i++) {
+    vec2 tunD = vTunW.xz - tunA[i].xy;
+    float tunS = dot(tunD, tunA[i].zw), tunN = dot(tunD, vec2(-tunA[i].w, tunA[i].z));
+    float tunY = mix(tunF[i].z, tunF[i].w, clamp((tunS - tunF[i].x) / (tunF[i].y - tunF[i].x), 0.0, 1.0));
+    if (tunS > tunB[i].x && tunS < tunB[i].y && abs(tunN) < tunB[i].z && vTunW.y < tunY + tunB[i].w && vTunW.y > tunY - 0.3) discard;
+  }`);
   };
 }
 
-// Kamera in der Röhre (oder direkt vor einem Portal mit Blick hinein): auf der Achse hinter der Figur, unter dem Gewölbe.
+// Kamera in einer Röhre (oder direkt vor der Öffnung mit Blick hinein): auf der Achse hinter der Figur, unter der Decke.
 // target: Blickziel (Kopf der Figur), yaw: Richtung zur Kamera. Gibt die Kameraposition zurück oder null.
 const camOut = new THREE.Vector3();
 export function tunnelCamera(target, yaw) {
-  const [s, n] = local(target.x, target.z);
-  if (s < S0 - 4 || s > S1 + 4 || Math.abs(n) > HW + 0.6) return null;
-  const f = tunnel.floor(s);
-  if (target.y > f + 3) return null; // oben auf dem Damm
-  const dir = Math.sin(yaw) * U[0] + Math.cos(yaw) * U[1] >= 0 ? 1 : -1;
-  if ((s < S0 && dir < 0) || (s > S1 && dir > 0)) return null; // vor dem Portal, Blick vom Tunnel weg
-  const cs = s + dir * 3.4, [x, z] = P(cs, n * 0.3);
-  return camOut.set(x, tunnel.floor(cs) + 2.05, z);
+  for (const b of bores) {
+    const [s, n] = boreLocal(b, target.x, target.z);
+    if (s < b.s0 - 4 || s > b.s1 + (b.dead ? 0 : 4) || Math.abs(n) > b.hw + 0.6) continue;
+    if (target.y > boreFloor(b, s) + 3) continue; // oben auf dem Damm bzw. Hang
+    const dir = Math.sin(yaw) * b.u[0] + Math.cos(yaw) * b.u[1] >= 0 ? 1 : -1;
+    if ((s < b.s0 && dir < 0) || (s > b.s1 && dir > 0)) continue; // vor der Öffnung, Blick von der Röhre weg
+    const cs = Math.min(b.dead ? b.s1 - 0.3 : Infinity, s + dir * 3.4), [x, z] = boreAt(b, cs, n * 0.3);
+    return camOut.set(x, boreFloor(b, cs) + Math.min(2.05, b.top - 0.45), z);
+  }
+  return null;
 }
 
 // ---------- Stufenweg mit Bärlauch ----------
@@ -438,6 +510,113 @@ function trees(world, add, sm, r) {
     }
 }
 
+// Höhle: rauer Felsschlauch mit runder Rückwand, Boden, Tropfsteine; um den Mund Felsblöcke, Farn und Efeu
+function hoehle(world, add, r) {
+  const b = CAVE, F = b.f0, W = (s, n, y) => { const [x, z] = boreAt(b, s, n); return [x, F + y, z]; };
+  const prof = [[b.hw, -0.05], [b.hw, CAVE_SPRING]];
+  for (let i = 1; i < 10; i++) { const a = (i / 10) * Math.PI; prof.push([Math.cos(a) * b.hw, CAVE_SPRING + Math.sin(a) * b.hw]); }
+  prof.push([-b.hw, CAVE_SPRING], [-b.hw, -0.05]);
+  const ss = []; for (let s = -0.3; s < b.s1; s += 0.5) ss.push(s); ss.push(b.s1);
+  // Wand nach außen ausbeulen (nie in den Lichtraum hinein)
+  const ring = ss.map((s) => prof.map(([n, y], i) => {
+    const e = i === 0 || i === prof.length - 1 ? 0.06 * r() : 0.04 + 0.16 * r(), l = Math.hypot(n, y - CAVE_SPRING * 0.6) || 1;
+    return W(s, n + (n / l) * e, y + Math.max(0, (y - CAVE_SPRING * 0.6) / l) * e);
+  }));
+  const pos = [];
+  for (let k = 1; k < ss.length; k++)
+    for (let i = 1; i < prof.length; i++) pos.push(...ring[k - 1][i - 1], ...ring[k][i - 1], ...ring[k][i], ...ring[k - 1][i - 1], ...ring[k][i], ...ring[k - 1][i]);
+  const end = W(b.s1 + 0.4, 0, CAVE_SPRING * 0.7), last = ring[ring.length - 1];
+  for (let i = 1; i < prof.length; i++) pos.push(...last[i - 1], ...end, ...last[i]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  add(g, 'cave');
+  const fl = [];
+  for (let s = -0.3; s < b.s1 + 0.3; s += 0.5) {
+    const t = Math.min(b.s1 + 0.3, s + 0.5);
+    fl.push(...W(s, -b.hw - 0.05, 0.02), ...W(s, b.hw + 0.05, 0.02), ...W(t, b.hw + 0.05, 0.02), ...W(s, -b.hw - 0.05, 0.02), ...W(t, b.hw + 0.05, 0.02), ...W(t, -b.hw - 0.05, 0.02));
+  }
+  const fg = new THREE.BufferGeometry();
+  fg.setAttribute('position', new THREE.Float32BufferAttribute(fl, 3));
+  fg.computeVertexNormals();
+  add(fg, 'caveFloor');
+  for (const [s, n, l] of [[3.6, 0.2, 0.32], [4.3, -0.25, 0.22], [4.8, 0.1, 0.4], [2.7, -0.3, 0.18]]) // Tropfsteine
+    add(new THREE.ConeGeometry(0.05, l, 5).deleteAttribute('uv').rotateX(Math.PI).translate(...W(s, n, Math.sqrt(b.hw * b.hw - n * n) + CAVE_SPRING - l / 2 + 0.02)), 'cave');
+  for (let k = 0; k < 7; k++) add(new THREE.DodecahedronGeometry(0.06 + r() * 0.08, 0).translate(...W(1 + r() * 4, (r() - 0.5) * 0.9, 0.05)), 'sandstein'); // Steinchen
+  // Sandsteinblöcke (flach geschichtet) um den Mund und als Kappe auf dem Buckel; keiner ragt in die Öffnung
+  const rock = (s, n, y, rad, flat = 0.7) => {
+    const geo = new THREE.DodecahedronGeometry(rad, 0), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const f = 0.9 + r() * 0.15; p.setXYZ(i, p.getX(i) * f * 1.15, p.getY(i) * f * flat, p.getZ(i) * f); }
+    add(geo.rotateY(r() * 3).translate(...W(s, n, y)), 'sandstein');
+  };
+  for (const sd of [-1, 1]) {
+    for (const [n, y, rad] of [[0.62, 0.3, 0.55], [0.64, 0.95, 0.55], [0.62, 1.6, 0.55], [0.6, 2.2, 0.5], [1.6, 0.4, 0.8], [1.7, 1.4, 0.8], [1.6, 2.3, 0.7], [2.8, 0.5, 0.9], [2.9, 1.5, 0.8]])
+      rock(0.3 + r() * 0.3, sd * (b.hw + n), y, rad);
+    world.addObstacle([boreAt(b, -0.3, sd * b.hw), boreAt(b, -0.3, sd * (b.hw + 3.5)), boreAt(b, 1, sd * (b.hw + 3.5)), boreAt(b, 1, sd * b.hw)], 2.8, F + 2.8);
+    fern(add, ...boreAt(b, -0.9 - r() * 0.6, sd * (b.hw + 0.9 + r())), r, F);
+  }
+  for (const n of [-1.3, -0.6, 0, 0.6, 1.3]) rock(0.35, n, b.top + 0.55, 0.6);                       // Sturz
+  for (let k = 0; k < 14; k++) rock(0.8 + r() * (b.s1 + 1), (r() - 0.5) * 5, b.top + 1.2 + r() * 0.9, 0.8 + r() * 0.7, 0.55); // Kappe
+}
+
+// Dichter Laubwald unten am Westportal (laut Luftbild ist dort westlich der Bahn alles Wald): Buchen und Eschen in engem
+// Stand, Unterholz; frei bleiben Wege, Vorplatz, Portalmauer, Bahndamm, der Hang vor der Höhle und Reben, Äcker, Wohngebiet.
+// Stämme, Kronen und Büsche als Instanzen (tiles.js teilt sie in Kacheln).
+const NOT_FOREST = ['vineyard', 'farmland', 'farmyard', 'residential', 'industrial', 'railway', 'golf_course', 'pitch'];
+function dichterWald(scene, world, add, r) {
+  const [cx, cz] = P(S0 - 25, -8), R = 95; // innen dicht, ab 65 m lichtet sich der Rand unregelmäßig
+  const other = world.data.areas.filter((a) => NOT_FOREST.includes(a.kind) && a.pts.some(([x, z]) => Math.hypot(x - cx, z - cz) < R + 150));
+  const free = (x, z) => {
+    const [s, n] = local(x, z), [hs, hn] = boreLocal(CAVE, x, z);
+    return s < S0 + 2 && !(s > S0 - 4 && Math.abs(n) < 9) && !(hs > -5 && hs < CAVE.s1 + 4 && Math.abs(hn) < (hs < 1.2 ? 3.5 : 5.5))
+      && !pointInPolygon(x, z, TUNNEL_PAVED[0].pts) && !world.nearRoad(x, z) && !nearRail(world, x, z, 10)
+      && !other.some((a) => pointInPolygon(x, z, a.pts));
+  };
+  const spot = () => {
+    for (;;) { const a = r() * Math.PI * 2, d = R * Math.sqrt(r()); if (d < 65 || r() < (R - d) / 30) return [cx + Math.cos(a) * d, cz + Math.sin(a) * d]; }
+  };
+  // Rasterindex für den Mindestabstand der Stämme
+  const cell = new Map(), key = (x, z) => Math.floor(x / 4) + ',' + Math.floor(z / 4);
+  const crowded = (x, z) => {
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++)
+      for (const [px, pz] of cell.get((Math.floor(x / 4) + i) + ',' + (Math.floor(z / 4) + j)) || []) if ((px - x) ** 2 + (pz - z) ** 2 < 3.3 * 3.3) return true;
+    return false;
+  };
+  const trunks = [], crowns = [], bushes = [];
+  for (let k = 0; k < 12000 && trunks.length < 1500; k++) {
+    const [x, z] = spot();
+    if (crowded(x, z) || !free(x, z)) continue;
+    (cell.get(key(x, z)) || cell.set(key(x, z), []).get(key(x, z))).push([x, z]);
+    const y = world.heightAt(x, z), young = r() < 0.25, h = young ? 5 + r() * 3 : 9 + r() * 8, kk = young ? 0.55 + r() * 0.2 : 0.85 + r() * 0.45;
+    trunks.push([x, y - 0.2, z, kk, h]);
+    for (let c = 0; c < 3; c++) {
+      const a = r() * Math.PI * 2, dd = c ? 1.6 * kk : 0;
+      crowns.push([x + Math.cos(a) * dd, y + h + (r() - 0.4) * 1.6 * kk, z + Math.sin(a) * dd, (c ? 2.1 : 2.7) * kk]);
+    }
+    world.addObstacle([[x - 0.28, z - 0.28], [x + 0.28, z - 0.28], [x + 0.28, z + 0.28], [x - 0.28, z + 0.28]], h);
+  }
+  for (let k = 0; k < 4000 && bushes.length < 700; k++) { // Unterholz: Haselbüsche, dazwischen Farn
+    const [x, z] = spot();
+    if (!free(x, z)) continue;
+    if (r() < 0.25) { fern(add, x, z, r, world.heightAt(x, z)); continue; }
+    const rad = 0.5 + r() * 0.8;
+    bushes.push([x, world.heightAt(x, z) + rad * 0.45, z, rad]);
+  }
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
+  const inst = (geo, color, list, set) => {
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), list.length);
+    list.forEach((e, i) => { set(e); m.compose(v, q.setFromAxisAngle(up, r() * 6.28), sc); mesh.setMatrixAt(i, m); mesh.setColorAt(i, color(c)); });
+    mesh.castShadow = mesh.receiveShadow = true;
+    scene.add(mesh);
+  };
+  inst(new THREE.CylinderGeometry(0.16, 0.28, 1, 6).translate(0, 0.5, 0), (col) => col.setHSL(0.09, 0.06, 0.45 + r() * 0.1), trunks,
+    ([x, y, z, k, h]) => { v.set(x, y, z); sc.set(k, h, k); });
+  inst(new THREE.IcosahedronGeometry(1, 1), (col) => col.setHSL(0.26 + r() * 0.05, 0.42, 0.28 + r() * 0.1), crowns,
+    ([x, y, z, rad]) => { v.set(x, y, z); sc.set(rad, rad, rad); });
+  inst(new THREE.IcosahedronGeometry(1, 1), (col) => col.setHSL(0.27 + r() * 0.05, 0.45, 0.2 + r() * 0.08), bushes,
+    ([x, y, z, rad]) => { v.set(x, y, z); sc.set(rad, rad * 0.75, rad); });
+}
+
 export function buildFusstunnel(scene, world) {
   let seed = 2611;
   const r = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -448,6 +627,8 @@ export function buildFusstunnel(scene, world) {
     inner: lambert({ map: sand, color: 0x8f7f78, side: THREE.DoubleSide }), floor: lambert({ map: earthTex(), color: 0x6f6a63 }),
     earth: lambert({ map: earthTex() }), log: lambert({ color: 0x5b4330 }), ivy: lambert({ color: 0x2f5a26 }), fern: lambert({ color: 0x4f8a35, side: THREE.DoubleSide }),
     rock: lambert({ color: 0xa9a59a, flatShading: true }), pole: lambert({ color: 0x6b5236 }), sign: lambert({ map: signTex() }),
+    cave: lambert({ color: 0xc2a97f, flatShading: true, side: THREE.DoubleSide }), caveFloor: lambert({ color: 0x8a7656 }),
+    sandstein: lambert({ map: beigeTex(), color: 0xf0e2c4, flatShading: true }),
     bark: lambert({ color: 0x8a8378 }), crown: lambert({ color: 0x4d7a35 }), crown2: lambert({ color: 0x5c8a3e }),
     web: new THREE.MeshBasicMaterial({ map: webTex(), transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }),
   };
@@ -485,27 +666,14 @@ export function buildFusstunnel(scene, world) {
   }
   const { sm } = buildWeg(world, add, r);
   trees(world, add, sm, r);
+  hoehle(world, add, r);
+  dichterWald(scene, world, add, r);
   parts.build(scene, mats);
   scene.traverse((o) => { if (o.material === mats.web) o.castShadow = false; });
   buildBaerlauch(scene, world, sm, r);
   cutTerrain(world);
 
-  // Röhre: Boden für Figuren und Fahrzeuge, Seitenwände
-  world.tunnels.push({
-    floorAt(x, z, prevY) {
-      const [s, n] = local(x, z);
-      if (s < S0 - 0.3 || s > S1 + 0.3 || Math.abs(n) > HW + 0.3) return null;
-      const f = tunnel.floor(s);
-      return prevY < f + 2 ? f : null;
-    },
-    push(x, z, rad, y) {
-      const [s, n] = local(x, z);
-      if (s < S0 + 0.2 || s > S1 - 0.2 || Math.abs(n) > HW + 0.8 || y > tunnel.floor(s) + 2) return null;
-      const lim = Math.max(0, HW - rad);
-      if (Math.abs(n) <= lim) return null;
-      const d = Math.sign(n) * lim - n;
-      return [N[0] * d, N[1] * d];
-    },
-  });
-  return { tunnel, local, S0, S1 };
+  addBore(world, { a: A, u: U, s0: S0, s1: S1, sA: S0 - 0.6, sB: S1 + 0.6, f0: tunnel.F0, f1: tunnel.F1, hw: HW, top: CROWN });
+  addBore(world, CAVE);
+  return { tunnel, local, S0, S1, cave: CAVE };
 }
