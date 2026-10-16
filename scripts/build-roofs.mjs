@@ -4,8 +4,10 @@
 // LoD2-Gebäude werden den OSM-Umrissen über die Flächenüberdeckung zugeordnet; Gebäude, die in
 // OSM fehlen, kommen als zusätzliche Häuser hinzu.
 //
-// Aufruf: node scripts/build-roofs.mjs <Ordner mit entpackten LoD2-*.gml> <Ordner mit entpackten dop20rgb_*.tif + .tfw>
+// Aufruf: node scripts/build-roofs.mjs <Ordner mit entpackten LoD2-*.gml> <Ordner mit entpackten dop20rgb_*.tif + .tfw> [--append]
 // Ergebnis: public/roofs.json
+// --append: nur die Erweiterung außerhalb des Kerngebiets (bamlach.json: coreBounds) auswerten und an die
+// vorhandene roofs.json anhängen; Gebäude des Kerngebiets und ihre Zuordnung bleiben unverändert.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +16,8 @@ import { ShapeUtils, Vector2 } from 'three';
 import { fromUTM } from './utm.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const [LOD2_DIR, DOP_DIR] = process.argv.slice(2);
+const [LOD2_DIR, DOP_DIR] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const APPEND = process.argv.includes('--append');
 const CENTER = { lat: 47.71642, lon: 7.55123 }; // wie in fetch-osm.mjs
 const H0 = JSON.parse(readFileSync(join(ROOT, 'public/terrain.json'), 'utf8')).h0; // y = 0 in Spielkoordinaten
 const R_EARTH = 6378137;
@@ -64,7 +67,8 @@ const area2 = (p) => { let a = 0; for (let i = 0, j = p.length - 1; i < p.length
 
 // ---------- 1) LoD2 lesen ----------
 const osm = JSON.parse(readFileSync(join(ROOT, 'public/bamlach.json'), 'utf8'));
-const B = osm.bounds;
+const B = osm.bounds, CB = APPEND && osm.coreBounds;
+const inCore = (x, z) => CB && x >= CB.minX && x <= CB.maxX && z >= CB.minZ && z <= CB.maxZ;
 const buildings = [];
 for (const file of walk(LOD2_DIR, /\.gml$/i)) {
   const xml = readFileSync(file, 'utf8');
@@ -84,7 +88,7 @@ for (const file of walk(LOD2_DIR, /\.gml$/i)) {
     const g = b.grounds.flat(2);
     const ce = g.reduce((s, p) => s + p[0], 0) / g.length, cn = g.reduce((s, p) => s + p[1], 0) / g.length;
     const [cx, cz] = toLocal(ce, cn);
-    if (cx < B.minX || cx > B.maxX || cz < B.minZ || cz > B.maxZ) continue;
+    if (cx < B.minX || cx > B.maxX || cz < B.minZ || cz > B.maxZ || inCore(cx, cz)) continue;
     b.c = [cx, cz];
     buildings.push(b);
   }
@@ -316,7 +320,9 @@ const osmRings = osm.buildings.map((b) => {
   return { p, x0, x1, z0, z1 };
 });
 
-const out = { source: 'LoD2 + DOP20 (2025) © LGL Baden-Württemberg, www.lgl-bw.de, dl-de/by-2-0', osm: {}, extra: [], b: [] };
+const out = APPEND ? JSON.parse(readFileSync(join(ROOT, 'public/roofs.json'), 'utf8'))
+  : { source: 'LoD2 + DOP20 (2025) © LGL Baden-Württemberg, www.lgl-bw.de, dl-de/by-2-0', osm: {}, extra: [], b: [] };
+const nOld = out.b.length;
 const P = (e, n, h) => { const [x, z] = toLocal(e, n); return [r2(x), r2(h - H0), r2(z)]; };
 
 for (const b of buildings) {
@@ -337,6 +343,7 @@ for (const b of buildings) {
   }
   let best = -1, bv = 0;
   for (const [i, v] of votes) if (v > bv) { bv = v; best = i; }
+  if (APPEND && best >= 0 && best < osm.core.buildings && bv >= 0.3 * total) continue; // gehört zu einem Haus des Kerngebiets
 
   const roofCol = faceColor(b.faces.filter((f) => f.n[2] < 0.995));
   const flatCol = faceColor(b.faces.filter((f) => f.n[2] >= 0.995));
@@ -376,5 +383,5 @@ for (const b of buildings) {
 writeFileSync(join(ROOT, 'public/roofs.json'), JSON.stringify(out));
 if (DEBUG) writeFileSync(process.env.DEBUG_CAND, JSON.stringify(DEBUG));
 const nOsm = Object.keys(out.osm).length;
-console.log(`OSM-Gebäude mit LoD2-Dach: ${nOsm} von ${osm.buildings.length}, zusätzliche Gebäude: ${out.extra.length}`);
+console.log(`OSM-Gebäude mit LoD2-Dach: ${nOsm} von ${osm.buildings.length}, zusätzliche Gebäude: ${out.extra.length}${APPEND ? `, neu angehängt: ${out.b.length - nOld}` : ''}`);
 console.log(`Dächer mit PV: ${pvRoofs}, Modulfläche ca. ${Math.round(pvArea)} m²`);

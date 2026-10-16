@@ -179,7 +179,7 @@ function waterTexture() {
 }
 
 // Badegast: Haut statt Kleidung, Badehose bzw. Badeanzug.
-function buildBather(r, scale = 1) {
+export function buildBather(r, scale = 1) {
   const g = buildPerson(r);
   const skin = g.children[1].material.color.getHex();
   const suit = SUITS[Math.floor(r() * SUITS.length)];

@@ -1,6 +1,6 @@
 # Bamla.ch
 
-3rd-Person-Open-World-Spiel in Bamlach und Rheinweiler (Markgräflerland) – im Browser, mit Three.js und Vite.
+3rd-Person-Open-World-Spiel in Bamlach und Rheinweiler (Markgräflerland), entlang der K 6347 bis zu den Balinea Thermen und dem Rewe in Bad Bellingen – im Browser, mit Three.js und Vite.
 Karte aus OpenStreetMap, Gelände, Dächer, Reben und Beläge aus den Open-Data-Geodaten des LGL Baden-Württemberg,
 Gebäude Haus für Haus nach Street View und Fotos.
 
@@ -26,7 +26,7 @@ Für den Rest reicht ein statischer Webhost (Nginx, GitHub Pages, Netlify, …):
 npm run build
 ```
 
-Den Ordner `dist/` hochladen (enthält auch die Kartendaten aus `public/`, ca. 9 MB pro Erstaufruf; gzip/brotli
+Den Ordner `dist/` hochladen (enthält auch die Kartendaten aus `public/`, ca. 12 MB pro Erstaufruf; gzip/brotli
 am Server verkleinert die JSON-Dateien deutlich). Der Karten-Editor speichert nur über den Dev-Server.
 
 ## Multiplayer
@@ -88,14 +88,20 @@ Jede Änderung wird sofort gebaut und vom Dev-Server nach `public/edits.json` ge
 (`scripts/edits-plugin.mjs`); die Datei gehört zu den Kartendaten und wird beim Laden angewendet (`src/edits.js`).
 Häuser mit eigenem Modell (Spezialmodule wie Schule, Kirche, Feuerwehr) lassen sich hier nicht ändern.
 
-Kartendaten neu laden (Overpass API): `npm run fetch-map` → schreibt `public/bamlach.json`.
+Kartendaten neu laden (Overpass API): `npm run fetch-map` → schreibt `public/bamlach.json`. Die Karte besteht aus dem Kerngebiet
+(Bamlach, Rheinweiler bis 47,7265° N) und der Erweiterung nach Norden entlang der K 6347 bis hinter die Badstraße in
+Bad Bellingen (47,7323° N). Das Kerngebiet bleibt beim Neuladen so, wie es in der Datei steht (Anzahl je Art in `core`),
+weil `public/roofs.json` über die Gebäudeindizes darauf verweist; neu geladen wird nur die Erweiterung (nur Wege, die nicht
+schon im Kerngebiet liegen, hinten angehängt). Mit `--core` wird auch das Kerngebiet neu geladen, danach müssen die Dächer
+neu gebaut werden.
 Campingplatz (Stellplätze, Pools, Spiel-/Sportflächen): `npm run fetch-camping` → schreibt `public/camping.json`.
 
 Gelände: Digitales Geländemodell DGM1 (1-m-Raster, ±15 cm, Laserscan 2019) vom
 [Open GeoData Portal des LGL Baden-Württemberg](https://opengeodata.lgl-bw.de).
 Die vier 2×2-km-Kacheln gehören nach `data/dgm/` (`dgm1_32_389_5284`, `…389_5286`, `…391_5284`, `…391_5286`,
 Download: `https://opengeodata.lgl-bw.de/data/dgm/dgm1_32_<Ost>_<Nord>_2_bw.zip`).
-`npm run build-terrain` erzeugt daraus `public/terrain.bin` (2-m-Höhenraster, 1 cm Auflösung).
+`npm run build-terrain` erzeugt daraus `public/terrain.bin` (2-m-Höhenraster, 1 cm Auflösung). Die Rasterpunkte liegen
+immer auf ungeraden Metern, damit eine Erweiterung der Karte die Höhen im bisherigen Gebiet und die Nullhöhe `h0` nicht verschiebt.
 
 Reben: aus den Luftbildern DOP20 (20 cm, Befliegung 2025, ebenfalls LGL) erkannt. Die Rebzeilen
 (Abstand 1,6–2,8 m) werden per 2D-FFT in 12,8-m-Fenstern gefunden; Grün-Kontrast und Helligkeit
@@ -120,6 +126,9 @@ node --max-old-space-size=8192 scripts/build-roofs.mjs <Ordner mit entpackten Lo
 ```
 
 Ergebnis: `public/roofs.json`. Einzelne Häuser können in `src/belchenstrasse.js` ihr eigenes Modell behalten (`lod: false`).
+Mit `--append` werden nur die LoD2-Gebäude außerhalb des Kerngebiets (`coreBounds` in `bamlach.json`) ausgewertet und an die
+vorhandene Datei angehängt; für die Erweiterung nach Bad Bellingen reichen die Kacheln `LoD2_32_389_5286`/`391_5286` und
+`dop20rgb_32_389_5286`/`391_5286` (zusammen ≈ 310 MB).
 
 Straßenbeläge: OSM hat im Ort fast keine `surface`-Angaben. Geprüft an DOP20 und Street-View-/360°-Aufnahmen:
 Hauptstraßen sind Asphalt, Storchengasse, Am Buck, Schafgässle, der Friedhofsweg und die Kindergarten-Zufahrt
@@ -187,7 +196,10 @@ Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der
 - `src/train.js` – RB 27 im bwegt-Design auf der Rheintalbahn: je Gleis ein Umlauf (Gleis 1 Richtung Basel Bad Bf, Gleis 2 Richtung Freiburg (Brsg) Hbf), bremst am Haltepunkt Rheinweiler, öffnet die Schiebetüren auf der Bahnsteigseite, Zielanzeige an den Steuerwagen. Mitfahren: an einer offenen Tür E; am Streckenende geht es mit Schwarzblende auf dem Gegengleis zurück nach Rheinweiler, dort bei offenen Türen E: aussteigen
 - `src/bahnhof.js`, `src/bahnhof-site.js` – Haltepunkt Rheinweiler nach OSM (Bahnsteige, Treppen mit Stufenzahl, Lärmschutzwände, Ausstattung), Luftbild DOP20, Fotos (Wikimedia Commons 2014/2017, Google-Nutzerfotos) und Street View: Außenbahnsteige (55 cm) mit Betonkante, Sicherheitslinie und Pflaster, Lärmschutzwände mit grünem Farbverlauf, weißen Pfosten und Graffiti, gläserne Wartehallen, Stationsschilder, Gleisschilder, Lampen, Bahnsteiguhren mit echter Uhrzeit, Zugzielanzeiger mit Abfahrt, Nordtreppe (Beton, Podest) von der Burgunderstraße mit bwegt-Automat, Südtreppe (Sandstein) zur Blansinger Straße, Rampenweg zum P+R, Fahrradunterstand und Fahrradboxen, GSM-R-Mast, Stellwerk ESTW-A; Fahrgäste warten, steigen ein und aus (das Empfangsgebäude von 1960 ist abgerissen). Bushaltestelle „Rheinweiler Ort“ an der Burgunderstraße
 - `src/fahrleitung.js` – Oberleitung entlang der ganzen Strecke: Gittermasten auf Betonfundamenten mit Querjoch, Tragseil, Fahrdraht im Zickzack, Hänger; am Bahnsteig vor der Lärmschutzwand
-- `src/bus.js` – Linienbus Bad Bellingen – Bamlach – Rheinweiler (Alte Weinstraße, Bamlacher Straße, Burgunderstraße; Route per kürzestem Weg im Straßennetz): hält in beiden Richtungen an „Bamlach“ und „Rheinweiler Ort“ (Türen öffnen, wartender Fahrgast steigt ein), wartet auf Hindernisse in seiner Spur. Mitfahren: E bei offenen Türen, im Bus E = Haltewunsch; an der Haltestelle wird die Wartezeit angezeigt; an der Endhaltestelle muss man aussteigen
+- `src/bus.js` – Linienbus Thermalbad – Bamlach – Rheinweiler (Wendeschleife vor den Balinea Thermen, K 6347, Alte Weinstraße, Bamlacher Straße, Burgunderstraße; Route per kürzestem Weg im Straßennetz): Endhaltestelle „Thermalbad“ mit Wartehalle, dort Pause mit offenen Türen und Rückfahrt um die Schleife; hält in beiden Richtungen an „Bamlach“ und „Rheinweiler Ort“ (Türen öffnen, wartender Fahrgast steigt ein), wartet auf Hindernisse in seiner Spur. Mitfahren: E bei offenen Türen, im Bus E = Haltewunsch; an der Haltestelle wird die Wartezeit angezeigt; an der Endhaltestelle muss man aussteigen
+- `src/rewe.js`, `src/rewe-site.js` – Rewe (Badstraße 11) und Rossmann (Badstraße 9/1) in Bad Bellingen nach LoD2, DGM1, Luftbild DOP20, Photo Spheres (Juli 2024) und Street View (April 2022): Halle mit Pultdach und PV in sechs Bändern, Fassade weiß verputzt bis 4,8 m, darüber graues Trapezblech; Eingangsanbau mit umlaufendem Kragvordach (braune Untersicht, Konsolen, Downlights), Glas-Schiebetür, Schaufenster und Café-Terrasse der Bäckerei Armbruster, REWE-Leuchtkästen, Uhr mit Öffnungszeiten (echte Uhrzeit), Plakatwände, Anlieferung mit Sattelauflieger; Rossmann mit roter Türzarge und Schriftzug; Parkplatz in Betonpflaster mit rotbraunen Stellplätzen, Bäumen, Einkaufswagenboxen, Fahnen, Einfahrtsstele und Leuchten, parkende Autos (übernehmbar), Kundschaft mit Einkaufswagen. Einkaufen (E/R): Einkaufstüte, Butterbrezel, Sonnencreme
+- `src/therme.js`, `src/therme-site.js` – Balinea Thermen (früher Mineral-Thermalbad) nach OSM, DOP20, nDOM1/DGM1 und Fotos (balinea.de, Wikimedia Commons 2023, Google 2022, Photo Spheres 2024): Flachbau mit Zedernschindelblende über Klinker, Badehalle mit achteckigem Tambour (Glasband, Schindelattika, Glaskästen) und Glaslaterne mit rotbraunen Rahmen; Eingang mit Vordach auf Betonstützen, Pergola, Schriftzug „MINERAL-THERMALBAD“, roter Klinker-Vorplatz mit Fächermuster und Terrakottakübeln, Promenade mit Laternen und Vogelskulptur; Becken A mit Stufenterrassen, Sprudelliegen, Treppe und Durchschwimmkanal, Becken B mit Insel, Strömungskanal und Schwallduschen unter dem Stahlstützen-Vordach am korallroten Ostflügel; Sauna-Park mit Glasbändern, Saunagarten mit erhöhtem Becken und Saunahaus; Liegewiesen, Schirme, Palmen, Fit-Bar-Terrasse, Zaun mit Tor im Südwesten. Becken begehbar (Gelände ausgehoben, Boden je Tiefe), Badegäste stehen, liegen auf den Sprudelliegen und treiben im Strömungskanal. Wohnmobilstellplatz mit Wohnmobilen und Schranke, Fahnen in der Wendeschleife
+- `src/bauteile.js` – gemeinsame Bausteine dafür: LoD2-Wände mit Farbzonen nach Höhe, LoD2-Dächer, Bodenbelag über dem Gelände (Canvas-Textur), Bäume, Zypressen, Mastleuchten, Hecken
 - `src/swing.js` – Schaukeln, auf die sich der Spieler setzen kann (Pendel mit Schwungholen): Nestschaukel am Grillplatz, die beiden Kindergarten-Schaukeln (das Kind darauf steigt ab und wartet), Campingplatz-Schaukel
 - `src/vehicles.js` – Auto, Traktor (+ Anhänger), Fahrrad, Motorrad, Quad, Pferd: Fahrphysik und Verkehrs-KI
 - `src/pedestrians.js`, `src/person.js` – Fußgänger und Figuren (mit Kleidung aus dem Dorfpass)

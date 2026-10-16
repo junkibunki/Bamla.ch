@@ -20,6 +20,8 @@ import { ECKE_PAVED } from './kirschgarten-ecke.js';
 import { PROBSTEI_PAVED } from './probsteiweg.js';
 import { KNEIPP_PAVED, carveKneipp } from './wassertretanlage.js';
 import { REIT_PAVED, carveReit } from './reitzentrum-site.js';
+import { REWE_PAVED } from './rewe-site.js';
+import { THERME_PAVED, carveTherme } from './therme-site.js';
 import { TUNNEL_PAVED, carveFusstunnel } from './fusstunnel.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
 import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
@@ -199,6 +201,7 @@ export class World {
     carveBaracke(terrain); // Jugendtreff Baracke: Boden unter Haus und Vordach
     carveKneipp(terrain); // Wassertretanlage: ebener Kiesplatz ums Becken
     carveReit(terrain); // Reitkunstzentrum: Reithalle und Vorplatz eben
+    carveTherme(terrain); // Balinea Thermen: Becken A und B ausheben, Höhe des Umgangs
     carveFusstunnel(terrain); // Fußgängertunnel unter der Bahn: Vorplätze an den Portalen, Damm über der Röhre
     smoothRoads(terrain, underpassWays(data.roads), this.bridges, roadWidth, true); // Rampenkuppen abrunden
     this.autobahn = prepareAutobahn(this); // A5: Achse, Unterführungen (Gelände + Brücken)
@@ -286,7 +289,7 @@ export class World {
     // Reben: aus dem Luftbild erkannt (OSM-Rebflächen sind teils veraltet und bleiben Wiese)
     if (this.vineyards) paintVineyards(g, this.vineyards, t.minX, t.minZ);
     if (this.data.golf) paintGolf(g, this.data.golf, t.minX, t.minZ); // Golfplatz aus dem Luftbild
-    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
+    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED, ...REWE_PAVED, ...THERME_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;

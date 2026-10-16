@@ -53,7 +53,10 @@ const b = osm.bounds;
 const R = 6378137;
 const kx = (Math.PI / 180) * R * Math.cos((CENTER.lat * Math.PI) / 180);
 const kz = (Math.PI / 180) * R;
-const minX = Math.floor(b.minX - MARGIN), minZ = Math.floor(b.minZ - MARGIN);
+// Rasterpunkte auf ungeraden Metern (wie seit dem ersten Build): bei einer Erweiterung der Karte bleiben
+// alle Höhen im bisherigen Gebiet und h0 (Nullhöhe auch für public/roofs.json) unverändert
+const odd = (v) => (((v % 2) + 2) % 2 === 1 ? v : v - 1);
+const minX = odd(Math.floor(b.minX - MARGIN)), minZ = odd(Math.floor(b.minZ - MARGIN));
 const cols = Math.ceil((b.maxX + MARGIN - minX) / STEP) + 1;
 const rows = Math.ceil((b.maxZ + MARGIN - minZ) / STEP) + 1;
 const out = new Float32Array(cols * rows);
