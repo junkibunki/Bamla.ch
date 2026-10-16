@@ -32,15 +32,16 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <div id="loading">Lade Bamlach …</div>
+  <div id="loading"><div class="load-status"><span class="spinner"></span><span class="load-text">Bamlach wird geladen …</span></div><small>Gleich geht's los, bitte kurz warten.</small></div>
 
   <div id="join">
-    <form>
+    <form onsubmit="this.dataset.early = 1; return false">
       <h1>Bamla.ch</h1>
       <p>Bamlach in 3D – das Dorf in Bad Bellingen im Markgräflerland, nachgebaut aus echten Gelände- und Gebäudedaten.</p>
       <label for="join-name">Wie heißt du?</label>
       <input id="join-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Dein Name" required />
       <button type="submit">Losspielen</button>
+      <div class="load-status" id="join-status"><span class="spinner"></span><span class="load-text">Bamlach wird geladen …</span></div>
       <p>Andere Spieler sehen dich unter diesem Namen in Bamlach und auf der Karte.</p>
     </form>
   </div>

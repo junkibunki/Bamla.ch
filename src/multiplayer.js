@@ -25,7 +25,7 @@ export function askName() {
   const box = document.getElementById('join');
   const form = box.querySelector('form');
   const field = form.querySelector('input');
-  field.value = store.get();
+  if (!field.value) field.value = store.get(); // schon vor dem Laden des Skripts Getipptes bleibt stehen
   field.focus();
   return new Promise((resolve) => {
     form.addEventListener('submit', (e) => {
@@ -37,6 +37,7 @@ export function askName() {
       box.remove();
       resolve(name);
     });
+    if (form.dataset.early) form.requestSubmit(); // schon abgeschickt, bevor das Skript da war (index.html)
   });
 }
 
