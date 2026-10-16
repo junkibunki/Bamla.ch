@@ -40,7 +40,8 @@ export class Schnellreise {
 
   // Haltestelle, an der man zu Fuß steht (nur freigeschaltet)
   near(player) {
-    if (player.car || !player.mesh.visible || !this.quests.unlocked('schnellreise')) return null;
+    // „Strömungskanal“ schaltet nur die Verbindung zum Thermalbad frei (hin und zurück)
+    if (player.car || !player.mesh.visible || !(this.quests.unlocked('schnellreise') || this.quests.unlocked('thermalbad-express'))) return null;
     return STOPS.find((s) => Math.hypot(s.x - player.pos.x, s.z - player.pos.z) < NEAR) || null;
   }
   hint(player) { return this.near(player) ? 'G: Schnellreise' : ''; }
@@ -65,7 +66,8 @@ export class Schnellreise {
       return e;
     };
     this.player = player;
-    this.targets = STOPS.filter((s) => s !== here);
+    const thermal = STOPS.find((s) => s.name.startsWith('Thermalbad'));
+    this.targets = STOPS.filter((s) => s !== here && (this.quests.unlocked('schnellreise') || here === thermal || s === thermal));
     this.open = this.justOpened = true;
     document.exitPointerLock?.();
     const head = el('div', 'thead', ''), x = el('button', null, '✕');

@@ -480,6 +480,7 @@ export function buildTherme(scene, world, { rng = Math.random } = {}) {
       const x = x0 + Math.cos(ry) * step * i, z = z0 - Math.sin(ry) * step * i;
       if (pointInPolygon(x, z, MAIN) || pointInPolygon(x, z, POOL_A) || pointInPolygon(x, z, POOL_B)) continue;
       const g = lounger(x, z, ry);
+      (SITE.loungers ||= []).push([x, z]);           // für die Aufgabe „Sonnenschutz“
       if ((li++ * 7) % 3 === 0) {                      // Badegast liegt (Rücken auf der Liege)
         const p = buildBather(rng);
         p.rotation.x = -Math.PI / 2 + 0.1; p.position.set(0, 0.5, 0.85); p.scale.setScalar(0.92);

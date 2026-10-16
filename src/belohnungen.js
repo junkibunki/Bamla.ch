@@ -8,8 +8,11 @@ import { Feuerwerk } from './feuerwerk.js';
 
 // Freischaltung: erledigte Aufgabe (quest) oder Freischalt-Id (unlock)
 const OUTFIT_FROM = { helm: { quest: 'ehrenamt' }, schuerze: { quest: 'essen-auf-raedern' }, golfmuetze: { quest: 'hole-in-one' },
-  motorradjacke: { quest: 'easy-rider' }, schaerpe: { unlock: 'dorfpass-voll' } };
-const HORN_FROM = { hupe: {}, glocke: { quest: 'andacht' }, storch: { quest: 'stammgast' }, martinshorn: { quest: 'ehrenamt' } };
+  motorradjacke: { quest: 'easy-rider' }, schaerpe: { unlock: 'dorfpass-voll' },
+  bademantel: { quest: 'kurgast' }, kappe: { quest: 'einkaufswagen' }, sonnenbrille: { quest: 'sonnenschutz' },
+  saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' } };
+const HORN_FROM = { hupe: {}, glocke: { quest: 'andacht' }, storch: { quest: 'stammgast' }, martinshorn: { quest: 'ehrenamt' },
+  piepser: { quest: 'kuehlkette' }, aufguss: { quest: 'saunagang' }, quak: { quest: 'entenfuetterung' } };
 const LACKE = {
   gelb: { name: 'Öffi-Gelb', hex: 0xf2c200, quest: 'oeffis' },
   rot: { name: 'Feuerwehrrot', hex: 0xc8101c, quest: 'ehrenamt' },
@@ -17,9 +20,11 @@ const LACKE = {
   gruen: { name: 'Fairway-Grün', hex: 0x2e8b3a, quest: 'hole-in-one' },
   schwarz: { name: 'Easy-Rider-Schwarz', hex: 0x151517, quest: 'easy-rider' },
   gold: { name: 'Ehrenbürger-Gold', hex: 0xd4af37, unlock: 'dorfpass-voll' },
+  rewe: { name: 'Rewe-Rot', hex: 0xcc071e, quest: 'kuehlkette' },
+  rvl: { name: 'RVL-Blau', hex: 0x1f4f9f, quest: 'kurlinie' },
 };
 // Diese Aufgaben sind Lieferungen: ihr Abschluss zählt fürs Dorfziel
-export const LIEFER_QUESTS = ['gabelstapler', 'essen-auf-raedern', 'kienzler-lehrling', 'weinlese', 'gaertnerei-lieferung', 'elterntaxi'];
+export const LIEFER_QUESTS = ['gabelstapler', 'essen-auf-raedern', 'kienzler-lehrling', 'weinlese', 'gaertnerei-lieferung', 'elterntaxi', 'wocheneinkauf', 'kuehlkette'];
 const RHEIN_MAX = 900; // Feuerwerk höchstens so weit weg (Sichtweite der Kamera)
 
 // Ehrentafel neben dem Eingang des alten Rathauses (Kirchstraße), Blick nach Westen

@@ -13,6 +13,9 @@ export const HALL = { u1: 32.25, v1: 69.9, yW: ABS(234.22), yE: ABS(231.34) };  
 export const roofY = (u) => HALL.yW + ((HALL.yE - HALL.yW) * u) / HALL.u1;
 export const ANNEX = { u0: -6.12, v1: 31.68, y: ABS(230.87) };                     // Eingang und Bäckerei (Flachdach)
 export const SOUTH = { u0: 25.53, v1: 75.36, y: ABS(232.63) };                     // Anlieferung an der Südostecke
+export const DOCK = { u: 28.9, w: 3.0, h: 3.5 };           // Rolltor „Leergut“ in der Südwand des Anlieferungsblocks (Aufgabe Kühlkette)
+export const DOCK_AT = P(DOCK.u, SOUTH.v1 + 2.4);              // davor wird abgesetzt
+export const SHELTERS = [[87.5, -1614], [86.5, -1553.5]];       // Einkaufswagenboxen
 export const CLAD = Y_CP + 4.8;           // darüber graues Trapezblech
 export const DOOR = { v: 9.71, w: 2.2 };  // Schiebetür in der Westwand des Anbaus
 export const GLASS_V = [11.0, 26.2];      // Schaufenster (Bäckerei Armbruster) südlich der Tür

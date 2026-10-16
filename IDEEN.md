@@ -41,6 +41,20 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 26 | Stammgast | Im Storchen und in der Baracke je ein Bier trinken. | an beiden Orten ein Bier getrunken | erledigt |
 | 27 | Nachbarschaftshilfe | Einen anderen Spieler im Auto mitnehmen (Multiplayer). | zwei Spieler im selben Fahrzeug gefahren | erledigt |
 | 28 | Mutprobe | Einmal ganz durch den dunklen Fußgängertunnel unter der Bahn gehen, wo „de Tunnelgeischt“ haust (Hall, Zug über einem, Fledermaus). | zu Fuß am anderen Portal wieder heraus, ohne umzukehren | erledigt |
+| 29 | Wocheneinkauf | Im Rewe in Bad Bellingen eine Einkaufstüte holen und den Senior:innen im Marienheim bringen. | Tüte im Hof des Marienheims abgegeben | erledigt |
+| 30 | Einkaufswagen-Chip | Einen herumstehenden Einkaufswagen auf dem Rewe-Parkplatz zurück in die Box schieben. | Wagen in der Einkaufswagenbox | erledigt |
+| 31 | Brezel-Frühstück | Butterbrezel bei der Bäckerei Armbruster kaufen und auf der Café-Terrasse essen. | Brezel auf der Terrasse gegessen | erledigt |
+| 32 | Kühlkette | Mit dem roten Stapler eine Palette Leergut an der Rewe-Anlieferung vor das Rolltor bringen. | Palette vor dem Rolltor „Leergut“ abgesetzt | erledigt |
+| 33 | Kurgast | Mit dem Bus bis zur Endhaltestelle „Thermalbad“ fahren und ins Becken steigen. | nach der Busfahrt in einem Becken der Balinea Thermen | erledigt |
+| 34 | Sonnenschutz | Sonnencreme beim Rossmann kaufen und auf einer Liege im Badegarten eincremen. | auf einer Liege eingecremt | erledigt |
+| 35 | Strömungskanal | Einmal ganz um die Insel in Becken B treiben. | volle Runde im Strömungskanal | erledigt |
+| 36 | Saunagang | Erst ins Saunahaus, dann ins kalte Becken im Saunagarten. | beides nacheinander | erledigt |
+| 37 | Wohnmobil-Urlaub | Ein Wohnmobil vom Stellplatz an der Therme zum Campingplatz fahren. | Wohnmobil auf dem Campingplatz | erledigt |
+| 38 | Abenteuer-Golf | Alle 18 Bahnen im Kurpark spielen (unter Par: Bonus). | Runde komplett | erledigt |
+| 39 | Entenfütterung | Brezel bei Armbruster kaufen und am Kurparkweiher die Enten füttern. | am Ufer verfüttert, Enten kommen angeschwommen | erledigt |
+| 40 | Großer Spielplatz | Auf dem neuen Spielplatz „Wilde Wasser“ rutschen und schaukeln. | beides erledigt | erledigt |
+| 41 | Kurlinie | Die ganze Buslinie von Rheinweiler Ort bis zum Thermalbad durchfahren, ohne auszusteigen. | an der Endhaltestelle angekommen | erledigt |
+| 42 | Bad-Bellingen-Kenner:in | Kurpark, Thermen, Rewe und Wendeschleife besuchen. | alle vier Orte besucht | erledigt |
 
 ## Belohnungen
 
@@ -52,8 +66,8 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 - Schnellreise: Bushaltestellen und Bahnhöfe werden zu Teleportpunkten, sobald „Nutze die Öffis“ erledigt ist.
 
 ### Kosmetisch
-- Kleidung für die Spielfigur: Feuerwehrhelm, Metzgerschürze, Golfmütze, Motorradjacke (wählbar, sobald freigeschaltet).
-- Fahrzeugfarben oder Hupen, z. B. das Storchen-Klappern als Hupe.
+- Kleidung für die Spielfigur: Feuerwehrhelm, Metzgerschürze, Golfmütze, Motorradjacke, Bademantel, Rewe-Kappe, Sonnenbrille, Saunahandtuch, Schiebermütze (wählbar, sobald freigeschaltet).
+- Fahrzeugfarben oder Hupen, z. B. das Storchen-Klappern als Hupe; dazu Rückwärts-Piepser, Aufguss-Zischen und Enten-Quaken, Lack Rewe-Rot und RVL-Blau.
 - Titel neben dem Namen im Multiplayer: „Ehrenbürger“, „Stammgast“, „Grillmeister“.
 
 ### Dorf-Ansehen

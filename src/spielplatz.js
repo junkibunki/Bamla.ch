@@ -349,8 +349,16 @@ export function buildSpielplatz(scene, world, { rng = Math.random, quests } = {}
       // Wippe
       const ang = Math.sin(time * 1.6) * 0.22;
       wip.rotation.z = ang;
+      // nach „Großer Spielplatz“ winken die Kinder, wenn man vorbeikommt
+      const fan = quests?.isDone?.('grosser-spielplatz') && window.game?.player, pp = fan && !fan.car && fan.pos;
       for (const k of kids) {
         const m = k.mesh;
+        if (pp && Math.hypot(pp.x - m.position.x, pp.z - m.position.z) < 7 && (k.kind === 'pump' || k.kind === 'mud')) {
+          m.rotation.y = Math.atan2(pp.x - m.position.x, pp.z - m.position.z);
+          m.armR.rotation.x = -2.7; m.armR.rotation.z = 0.35 * Math.sin(time * 8);
+          continue;
+        }
+        m.armR.rotation.z = 0;
         if (k.kind === 'loop') {
           const total = k.path.reduce((s, p) => s + p[3], 0) + 2;
           let t = (time + k.t) % total, i = 0;
