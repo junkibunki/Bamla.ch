@@ -167,10 +167,9 @@ export function buildTherme(scene, world, { rng = Math.random } = {}) {
     const c = centroid(KIOSK), p = new THREE.Mesh(new THREE.ConeGeometry(1.4, 0.9, 4), mat(0x4a8fc0, { emissive: 0x10283a }));
     p.position.set(c[0], kt + 0.45, c[1]); p.rotation.y = Math.PI / 4 + 0.35; G.add(p);
   }
-  // Ziegelturm an der Ostseite, kleiner Technikanbau, grauer Container östlich
+  // Ziegelturm an der Ostseite, kleiner Technikanbau (Container „Bike-Zentrum“ östlich: kurmittelhaus.js)
   box(G, 3, MAIN_H + 0.3, 4, brick, 83, Y_G + (MAIN_H + 0.3) / 2, -1277.5, 0.4);
   box(G, 7, 2.6, 2.9, 0x8d898c, 68.7, Y_G + 1.3, -1241, 0.36);
-  box(G, 6.5, 2.5, 6.5, 0x3c4249, 101.5, world.heightAt(101.5, -1282) + 1.25, -1282, 0.4);
 
   // --- Tambour: Glasband, Schindelattika, zwei Glaskästen bis oben; Laterne mit Glaspyramide ---
   const [d0, d1] = DRUM_H.map((h) => Y_G + h);
