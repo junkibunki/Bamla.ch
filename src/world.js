@@ -22,6 +22,7 @@ import { KNEIPP_PAVED, carveKneipp } from './wassertretanlage.js';
 import { REIT_PAVED, carveReit } from './reitzentrum-site.js';
 import { REWE_PAVED } from './rewe-site.js';
 import { THERME_PAVED, carveTherme } from './therme-site.js';
+import { carveKurpark } from './kurpark-site.js';
 import { TUNNEL_PAVED, carveFusstunnel } from './fusstunnel.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
 import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
@@ -202,6 +203,7 @@ export class World {
     carveKneipp(terrain); // Wassertretanlage: ebener Kiesplatz ums Becken
     carveReit(terrain); // Reitkunstzentrum: Reithalle und Vorplatz eben
     carveTherme(terrain); // Balinea Thermen: Becken A und B ausheben, Höhe des Umgangs
+    carveKurpark(terrain); // Kurpark: Rutschhügel und Matschbecken am Spielplatz
     carveFusstunnel(terrain); // Fußgängertunnel unter der Bahn: Vorplätze an den Portalen, Damm über der Röhre
     smoothRoads(terrain, underpassWays(data.roads), this.bridges, roadWidth, true); // Rampenkuppen abrunden
     this.autobahn = prepareAutobahn(this); // A5: Achse, Unterführungen (Gelände + Brücken)

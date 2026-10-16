@@ -25,6 +25,11 @@ export const POIS = [
   { name: 'Metzgerei Dosenbach', icon: '🥩', x: -1432.7, z: 700.1 },
   { name: 'Balinea Thermen', icon: '♨️', x: 41.3, z: -1252.7 },
   { name: 'Rewe & Rossmann', icon: '🛒', x: 105, z: -1585 },
+  { name: 'Abenteuer-Golf', icon: '⛳', x: 218, z: -1430 },
+  { name: 'Spielplatz Wilde Wasser', icon: '🛝', x: 172, z: -1465 },
+  { name: 'Kurparkweiher', icon: '🦆', x: 291, z: -1590 },
+  { name: 'Aufzug zum Rathaus', icon: '🛗', x: 352.8, z: -1700 },
+  { name: 'Rathaus Bad Bellingen', icon: '🏛️', x: 383, z: -1688 },
 ];
 
 function drawArrow(ctx, facing) {

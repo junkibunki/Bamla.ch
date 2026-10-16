@@ -22,6 +22,7 @@ export const KARTEN = [
   { id: 'schule', name: 'Sonnenrainschule Rheinweiler', icon: '🏫', x: -1220.8, z: 770.3, r: 50, a: 0.4, d: 60, h: 18 },
   { id: 'therme', name: 'Balinea Thermen Bad Bellingen', icon: '♨️', x: 37, z: -1268, r: 45, a: -2.85, d: 62, h: 24, look: 6 },
   { id: 'rewe', name: 'Rewe und Rossmann Bad Bellingen', icon: '🛒', x: 105, z: -1595, r: 45, a: -1.95, d: 55, h: 14, look: 4 },
+  { id: 'kurpark', name: 'Kurpark mit Weiher', icon: '🦆', x: 291, z: -1590, r: 40, a: -2.4, d: 45, h: 16, look: 2 },
 ];
 
 const W = 360, H = 240;
