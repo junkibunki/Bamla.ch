@@ -64,6 +64,7 @@ import { prepareTherme } from './therme-site.js';
 import { buildKurpark } from './kurpark.js';
 import { prepareKurpark } from './kurpark-site.js';
 import { buildRathausBB } from './rathaus-bb.js';
+import { buildKurhaus } from './kurhaus.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -318,6 +319,7 @@ const kurpark = buildKurpark(scene, world, { rng: rng(2026), quests, cam, carry 
 pedestrians.push(kurpark);
 sport.games.push(...kurpark.games); // Rutschen, Minigolf, Aufzug wie Golf und Tennis (E, Figur steht still)
 buildRathausBB(scene, world); // Rathaus Bad Bellingen: Baustelle Oktober 2026 (Altbau, Anbau, Bürgersaal, Kran)
+buildKurhaus(scene, world); // Kurhaus Bad Bellingen mit Café „DasPark“, Kursaal, Vorplatz und Sonnenterrasse
 const camPos = new THREE.Vector3();
 
 function updateCamera(dt) {

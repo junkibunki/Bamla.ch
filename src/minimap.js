@@ -30,6 +30,7 @@ export const POIS = [
   { name: 'Kurparkweiher', icon: '🦆', x: 291, z: -1590 },
   { name: 'Aufzug zum Rathaus', icon: '🛗', x: 352.8, z: -1700 },
   { name: 'Rathaus Bad Bellingen', icon: '🏛️', x: 383, z: -1688 },
+  { name: 'Kurhaus & Café DasPark', icon: '☕', x: 70, z: -1412 },
 ];
 
 function drawArrow(ctx, facing) {

@@ -23,6 +23,7 @@ import { REIT_PAVED, carveReit } from './reitzentrum-site.js';
 import { REWE_PAVED } from './rewe-site.js';
 import { THERME_PAVED, carveTherme } from './therme-site.js';
 import { carveKurpark } from './kurpark-site.js';
+import { KURHAUS_PAVED } from './kurhaus.js';
 import { TUNNEL_PAVED, carveFusstunnel } from './fusstunnel.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
 import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
@@ -291,7 +292,7 @@ export class World {
     // Reben: aus dem Luftbild erkannt (OSM-Rebflächen sind teils veraltet und bleiben Wiese)
     if (this.vineyards) paintVineyards(g, this.vineyards, t.minX, t.minZ);
     if (this.data.golf) paintGolf(g, this.data.golf, t.minX, t.minZ); // Golfplatz aus dem Luftbild
-    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED, ...REWE_PAVED, ...THERME_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
+    for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED, ...REWE_PAVED, ...THERME_PAVED, ...KURHAUS_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
