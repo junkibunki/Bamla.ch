@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { World, rng, pointInPolygon } from './world.js';
+import { World, rng } from './world.js';
 import { Terrain } from './terrain.js';
 import { loadPaving } from './paving.js';
 import { Vehicle, separateVehicles } from './vehicles.js';
@@ -318,31 +318,25 @@ for (let i = 0, n = 0; i < 600 && n < 16; i++) {
   if (camping.inside(x, z)) { pedestrians.push(new Pedestrian(scene, world.graphs.walk, spot, rand)); n++; }
 }
 
-// Start: bei jedem Laden an einer zufälligen Stelle auf den Wegen im Dorf Bamlach (Wohngebiet um die Kirche),
-// neben einem geparkten Fahrzeug, wenn eines ganz in der Nähe steht. Rückfall: Belchenstraße.
-let START = [-30, -205], startFacing = -Math.PI / 2;
-const dorf = data.areas.find((a) => a.kind === 'residential' && pointInPolygon(-28, 41, a.pts)); // Kirche liegt mitten im Dorf
-for (let i = 0; dorf && i < 2000; i++) {
-  const spot = world.graphs.walk.randomSpot(Math.random);
-  const pts = world.graphs.walk.roads[spot.road].pts, [x, z] = pts[spot.idx], [px, pz] = pts[spot.idx - 1];
-  if (!pointInPolygon(x, z, dorf.pts) || world.collide(x, z, 0.6) || camping.inside(x, z)) continue;
-  START = [x, z];
-  startFacing = Math.atan2(x - px, z - pz); // in Wegrichtung
-  break;
+// Start: bei jedem Laden vor einem zufälligen bekannten Gebäude, mit Blick darauf, damit man gleich weiß, wo man ist.
+// [Standort, Blickziel]; Standorte im Spiel geprüft (frei, Gebäude ganz im Bild)
+const STARTS = [
+  [[-49.7, 34.9], [-27.8, 37.2]],   // Kirche St. Peter und Paul: Hauptweg über den Friedhof, Blick aufs Turmportal
+  [[-71, -29], [-74, -50]],         // Gasthof Storchen: Rathausstraße, Blick auf Schriftzug, Storch und Restauranteingang
+  [[-139, -83], [-145, -98]],       // Bäder- und Heimatmuseum: Alte Weinstraße, Blick auf den Staffelgiebel
+  [[-298, -616], [-320, -591]],     // Feuerwehrhaus: Hof, Blick auf die roten Tore und das HLF
+];
+const [[sx, sz], [tx, tz]] = STARTS[Math.floor(Math.random() * STARTS.length)]; // Math.random: bei jedem Laden anders
+let START = [sx, sz];
+for (let i = 0; i < 20; i++) { // etwas streuen, damit mehrere Spieler:innen nicht aufeinander stehen
+  const x = sx + (Math.random() - 0.5) * 3, z = sz + (Math.random() - 0.5) * 3;
+  if (!world.collide(x, z, 0.6)) { START = [x, z]; break; }
 }
-const parked = vehicles.filter((v) => !v.npc);
-const dStart = (v) => Math.hypot(v.x - START[0], v.z - START[1]);
-const startCar = parked.reduce((a, b) => (dStart(a) < dStart(b) ? a : b), parked[0]);
-if (dStart(startCar) < 15) {
-  player.pos.set(startCar.x + startCar.fz * 2.2, 0, startCar.z - startCar.fx * 2.2);
-  player.facing = startCar.heading;
-} else {
-  player.pos.set(START[0], 0, START[1]);
-  player.facing = startFacing;
-}
+player.pos.set(START[0], 0, START[1]);
+player.facing = Math.atan2(tx - START[0], tz - START[1]);
 
 // ---------- Kamera ----------
-const cam = { yaw: player.facing + Math.PI, pitch: 0.32, zoom: 1 };
+const cam = { yaw: player.facing + Math.PI, pitch: 0.15, zoom: 1 }; // flach, damit das Gebäude am Start ganz im Bild ist
 addEventListener('wheel', (e) => { cam.zoom = Math.max(0.5, Math.min(8, cam.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12))); });
 const camTarget = new THREE.Vector3();
 const sport = new Sport(scene, world, { golf, tennis, cam, quests }); // Golf und Tennis zum Selberspielen
