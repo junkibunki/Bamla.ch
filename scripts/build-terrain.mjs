@@ -5,6 +5,7 @@
 // Erwartet entpackte Kacheln unter data/dgm/xyz/**.xyz (siehe README).
 import { createReadStream, readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { toUTM } from './utm.mjs';
@@ -88,15 +89,18 @@ while (missing > 0) {
     }
 }
 
-// 4) Als 16-Bit-Werte (1 cm Auflösung) speichern, Höhe relativ zur Kartenmitte
+// 4) Als 16-Bit-Werte (1 cm Auflösung) speichern, Höhe relativ zur Kartenmitte; je Zeile als Differenz zum
+//    linken Nachbarn und gzip-gepackt (5,5 → 2,1 MB, der Server packt .bin nicht), src/terrain.js entpackt
 let hmin = Infinity, hmax = -Infinity;
 for (const v of out) { hmin = Math.min(hmin, v); hmax = Math.max(hmax, v); }
 const h0 = out[Math.round(-minZ / STEP) * cols + Math.round(-minX / STEP)];
 const u16 = new Uint16Array(out.length);
 for (let i = 0; i < out.length; i++) u16[i] = Math.round((out[i] - hmin) * 100);
-writeFileSync(join(ROOT, 'public/terrain.bin'), Buffer.from(u16.buffer));
+const delta = new Uint16Array(u16.length);
+for (let i = 0; i < u16.length; i++) delta[i] = i % cols ? u16[i] - u16[i - 1] : u16[i]; // läuft modulo 2^16 über, entpackt exakt
+writeFileSync(join(ROOT, 'public/terrain.bin'), gzipSync(Buffer.from(delta.buffer), { level: 9 }));
 writeFileSync(join(ROOT, 'public/terrain.json'), JSON.stringify({
-  minX, minZ, step: STEP, cols, rows, hmin, h0, scale: 0.01,
+  minX, minZ, step: STEP, cols, rows, hmin, h0, scale: 0.01, encoding: 'delta-gzip',
   source: 'DGM1 © LGL Baden-Württemberg, www.lgl-bw.de, dl-de/by-2-0',
 }));
 console.log(`Höhenkarte ${cols}×${rows}, ${hmin.toFixed(1)}–${hmax.toFixed(1)} m NHN, Mitte ${h0.toFixed(1)} m`);

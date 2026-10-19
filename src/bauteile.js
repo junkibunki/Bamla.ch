@@ -162,21 +162,42 @@ export function drape(world, bbox, ppm, lift, draw) {
   m.receiveShadow = true;
   return m;
 }
-// Pflaster: Grundfarbe mit leichtem Rauschen und Fugenraster (Steine 0,2 × 0,1 m bei ppm ≥ 8 angedeutet)
+// Pflaster: Grundfarbe mit leichtem Rauschen und Fugenraster (Steine 0,2 × 0,1 m bei ppm ≥ 8 angedeutet).
+// Das Rauschen ist eine nahtlose Kachel je Steingröße, als Muster mit einem Fill gezeichnet und je seed
+// verschoben (früher ein fillRect je Stein über die ganze Leinwand: beim Rewe-Parkplatz 20 s Ladezeit)
+const paverTiles = new Map();
+function paverTile(step) {
+  let tile = paverTiles.get(step);
+  if (tile) return tile;
+  const n = 2 * step * Math.ceil(128 / step); // ganze Doppelreihen, damit der Versatz nahtlos anschließt
+  const img = new ImageData(n, n), d = img.data;
+  let s = 1;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let y = 0; y < n; y += step) for (let x = (y / step) % 2 ? step / 2 : 0; x < n; x += step) {
+    const v = rnd(), c = v < 0.5 ? 0 : 255, a = Math.round(255 * (v < 0.5 ? 0.03 + v * 0.06 : (v - 0.5) * 0.08));
+    for (let yy = y; yy < y + step - 1; yy++) for (let xx = Math.round(x); xx < Math.round(x) + step - 1; xx++) {
+      const o = (yy * n + (xx % n)) * 4;
+      d[o] = d[o + 1] = d[o + 2] = c;
+      d[o + 3] = a;
+    }
+  }
+  tile = document.createElement('canvas');
+  tile.width = tile.height = n;
+  tile.getContext('2d').putImageData(img, 0, 0);
+  paverTiles.set(step, tile);
+  return tile;
+}
 export function paverFill(g, path, base, ppm, seed = 1) {
   g.save();
   path();
   g.clip();
   g.fillStyle = base;
   g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-  let s = seed;
-  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  const step = Math.max(2, Math.round(ppm * 0.25));
-  for (let y = 0; y < g.canvas.height; y += step) for (let x = (y / step) % 2 ? step / 2 : 0; x < g.canvas.width; x += step) {
-    const v = rnd();
-    g.fillStyle = v < 0.5 ? `rgba(0,0,0,${0.03 + v * 0.06})` : `rgba(255,255,255,${(v - 0.5) * 0.08})`;
-    g.fillRect(x, y, step - 1, step - 1);
-  }
+  const tile = paverTile(Math.max(2, Math.round(ppm * 0.25))), n = tile.width;
+  const pattern = g.createPattern(tile, 'repeat');
+  pattern.setTransform(new DOMMatrix([1, 0, 0, 1, -((seed * 7919) % n), -((seed * 104729) % n)]));
+  g.fillStyle = pattern;
+  g.fillRect(0, 0, g.canvas.width, g.canvas.height);
   g.restore();
 }
 

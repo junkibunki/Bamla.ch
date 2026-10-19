@@ -4,11 +4,36 @@ import * as THREE from 'three';
 
 const MESH_EVERY = 2; // Geländemesh nutzt jeden 2. Rasterpunkt (4 m)
 
+// Antwort stückweise lesen und den Anteil melden (Content-Length; ohne sie nur am Ende)
+async function readWithProgress(res, onProgress) {
+  const total = +res.headers.get('Content-Length') || 0;
+  if (!onProgress || !total || !res.body) return res.arrayBuffer().finally(() => onProgress?.(1));
+  const reader = res.body.getReader(), parts = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value);
+    onProgress(Math.min(1, (got += value.length) / total));
+  }
+  onProgress(1);
+  return new Blob(parts).arrayBuffer();
+}
+
 export class Terrain {
-  static async load(url = '/terrain') {
-    const meta = await (await fetch(url + '.json')).json();
-    const buf = await (await fetch(url + '.bin')).arrayBuffer();
-    return new Terrain(meta, new Uint16Array(buf));
+  // onProgress(0…1) meldet den Download der Höhendaten (größte Datei, für den Ladebalken)
+  static async load(url = '/terrain', onProgress) {
+    const [meta, buf] = await Promise.all([fetch(url + '.json').then((r) => r.json()), fetch(url + '.bin').then((r) => readWithProgress(r, onProgress))]);
+    let bytes = new Uint8Array(buf);
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) { // gzip (scripts/build-terrain.mjs), falls der Server es nicht schon entpackt hat
+      const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+      bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+    const raw = new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+    if (meta.encoding === 'delta-gzip') { // je Zeile Differenz zum linken Nachbarn
+      for (let i = 0; i < raw.length; i++) if (i % meta.cols) raw[i] += raw[i - 1];
+    }
+    return new Terrain(meta, raw);
   }
 
   constructor(meta, raw) {
