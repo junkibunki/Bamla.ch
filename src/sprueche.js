@@ -26,6 +26,7 @@ const ORTE = [
   { id: 'aufzug', at: [348.9, -1703.2], face: [352.78, -1700.1], r: 22, sprueche: [
     'Ich nimm allewiil d\'Stäge. Denooch dörf i obe zwei Stückli Chueche esse.',
     'De Ufzug fahrt ufe und abe. Wie mi Bluetdruck bim Kurkonzert.',
+    'Dr Ufzug an dr Rheintreppe isch stecke blibe – mit em halbe Musikverein drin. Sie hän eifach witergspielt.',
   ] },
   { id: 'bahnhof-bb', at: [473.6, -1620.8], face: [478, -1621.5], r: 30, sprueche: [
     'Dr Zug chunnt pünktlich, so stoht\'s im Fahrplan. De Fahrplan isch halt vo 1998.',
