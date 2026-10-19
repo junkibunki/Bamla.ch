@@ -10,7 +10,7 @@ import { Feuerwerk } from './feuerwerk.js';
 const OUTFIT_FROM = { helm: { quest: 'ehrenamt' }, schuerze: { quest: 'essen-auf-raedern' }, golfmuetze: { quest: 'hole-in-one' },
   motorradjacke: { quest: 'easy-rider' }, schaerpe: { unlock: 'dorfpass-voll' },
   bademantel: { quest: 'kurgast' }, kappe: { quest: 'einkaufswagen' }, sonnenbrille: { quest: 'sonnenschutz' },
-  saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' } };
+  saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' }, uniform: { quest: 'kurkonzert' } };
 const HORN_FROM = { hupe: {}, glocke: { quest: 'andacht' }, storch: { quest: 'stammgast' }, martinshorn: { quest: 'ehrenamt' },
   piepser: { quest: 'kuehlkette' }, aufguss: { quest: 'saunagang' }, quak: { quest: 'entenfuetterung' } };
 const LACKE = {

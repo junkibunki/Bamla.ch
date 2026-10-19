@@ -1,10 +1,12 @@
 // Schnellreise (Belohnung für „Nutze die Öffis“): an Bushaltestellen und am Bahnhof mit G ein Ziel wählen und
 // dorthin springen. Haltestellen nach OSM: „Bamlach“ (am Museum, Wartehalle aus museum.js), „Rheinweiler Ort“
 // (Burgunderstraße, Mast an der Südseite, bahnhof-site.js), „Thermalbad“ (Wendeschleife vor den Balinea Thermen,
-// therme-site.js) und der Haltepunkt Rheinweiler (Zugang vom Parkplatz).
+// therme-site.js), der Haltepunkt Rheinweiler (Zugang vom Parkplatz) und der Bahnhof Bad Bellingen (Bahnhofstraße vor
+// dem Empfangsgebäude, bahnhof-bb-site.js).
 import { BUS_STOP } from './museum.js';
 import { BUS_STOP_RW } from './bahnhof-site.js';
 import { BUS_STOP_TB } from './therme-site.js';
+import { HOUSE, hx } from './bahnhof-bb-site.js';
 
 const NEAR = 6;
 const busLocal = (lx, lz) => {
@@ -13,11 +15,13 @@ const busLocal = (lx, lz) => {
 };
 const [bx, bz] = busLocal(0, 1.5);
 const [rx, rz] = BUS_STOP_RW.find((b) => b.dir === 'east').sign;
+const [hbx, hbz] = hx(-9.5, 0); // vor dem Mittelrisalit an der Straßenseite
 export const STOPS = [
   { name: 'Bamlach, Haltestelle am Museum', x: bx, z: bz, facing: BUS_STOP.heading + Math.PI },
   { name: 'Rheinweiler Ort', x: rx + 0.2, z: rz + 1.6, facing: Math.PI },
   { name: 'Thermalbad (Balinea Thermen)', x: BUS_STOP_TB.at[0], z: BUS_STOP_TB.at[1], facing: Math.atan2(-BUS_STOP_TB.side[0], -BUS_STOP_TB.side[1]) },
   { name: 'Bahnhof Rheinweiler', x: -1455.5, z: 781.2, facing: 2.8 },
+  { name: 'Bahnhof Bad Bellingen', x: hbx, z: hbz, facing: Math.atan2(HOUSE.o[0] - hbx, HOUSE.o[1] - hbz) },
 ];
 
 export class Schnellreise {
