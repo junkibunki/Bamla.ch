@@ -188,19 +188,32 @@ export function buildRathausBB(scene, world) {
     for (let k = 0; k < 3; k++) box(scene, 1.2, 0.8, 1.0, mat(0xf4f4f2), kx - 2 + k * 1.4, y + 0.4, kz + 5.2);
     box(scene, 1.2, 1.0, 0.8, 0xe86a1c, kx + 4, y + 0.5, kz - 3);
   }
-  // Bauzaun (mobile Gitterzaunelemente) um die Baustelle, Lücke für den Weg zum Aufzug bleibt draußen
+  // Bauzaun (mobile Gitterzaunelemente) um die Baustelle, offen am Ende des Aufzugstegs und zur Rheinstraße vor der Haustür
+  const GAPS = [[362.85, -1692.8], [404.67, -1681.5]], GAP = 3.6;
   for (let i = 0; i < RATHAUS_SITE.length; i++) {
     const a = RATHAUS_SITE[i], b = RATHAUS_SITE[(i + 1) % RATHAUS_SITE.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    for (let t = 0; t < L - 0.1; t += 3.5) {
-      const t1 = Math.min(L, t + 3.5), p = [a[0] + (b[0] - a[0]) * t / L, a[1] + (b[1] - a[1]) * t / L], q = [a[0] + (b[0] - a[0]) * t1 / L, a[1] + (b[1] - a[1]) * t1 / L];
-      const y = world.heightAt(...p);
-      const f = new THREE.Mesh(new THREE.PlaneGeometry(t1 - t, 1.9), mat(0x9ea3a6, { transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false }));
-      f.position.set((p[0] + q[0]) / 2, y + 1.05, (p[1] + q[1]) / 2); f.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); scene.add(f);
-      box(scene, 0.6, 0.15, 0.2, 0x9a9a94, p[0], y + 0.07, p[1], -Math.atan2(b[1] - a[1], b[0] - a[0]));
-      beam(scene, [p[0], y + 0.1, p[1]], [p[0], y + 2.0, p[1]], 0.04, 0.04, 0x9ea3a6);
+    const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, at = (t) => [a[0] + ux * t, a[1] + uz * t];
+    // geschlossene Abschnitte [t0, t1] dieser Seite ohne die Durchgänge
+    let runs = [[0, L]];
+    for (const [gx, gz] of GAPS) {
+      const t = (gx - a[0]) * ux + (gz - a[1]) * uz, d = Math.abs((gx - a[0]) * uz - (gz - a[1]) * ux);
+      if (d > 1 || t < 0 || t > L) continue;
+      runs = runs.flatMap(([s, e]) => [[s, Math.min(e, t - GAP / 2)], [Math.max(s, t + GAP / 2), e]]).filter(([s, e]) => e - s > 0.1);
     }
-    const nx = -(b[1] - a[1]) / L * 0.05, nz = (b[0] - a[0]) / L * 0.05;
-    world.addObstacle([[a[0] + nx, a[1] + nz], [b[0] + nx, b[1] + nz], [b[0] - nx, b[1] - nz], [a[0] - nx, a[1] - nz]], 2);
+    for (const [s, e] of runs) {
+      for (let t = s; t < e - 0.1; t += 3.5) {
+        const t1 = Math.min(e, t + 3.5), p = at(t), q = at(t1);
+        const y = world.heightAt(...p);
+        const f = new THREE.Mesh(new THREE.PlaneGeometry(t1 - t, 1.9), mat(0x9ea3a6, { transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false }));
+        f.position.set((p[0] + q[0]) / 2, y + 1.05, (p[1] + q[1]) / 2); f.rotation.y = -Math.atan2(uz, ux); scene.add(f);
+        box(scene, 0.6, 0.15, 0.2, 0x9a9a94, p[0], y + 0.07, p[1], -Math.atan2(uz, ux));
+        beam(scene, [p[0], y + 0.1, p[1]], [p[0], y + 2.0, p[1]], 0.04, 0.04, 0x9ea3a6);
+      }
+      const pe = at(e), ye = world.heightAt(...pe);
+      if (e < L) beam(scene, [pe[0], ye + 0.1, pe[1]], [pe[0], ye + 2.0, pe[1]], 0.04, 0.04, 0x9ea3a6); // Endpfosten am Durchgang
+      const p0 = at(s), nx = -uz * 0.05, nz = ux * 0.05;
+      world.addObstacle([[p0[0] + nx, p0[1] + nz], [pe[0] + nx, pe[1] + nz], [pe[0] - nx, pe[1] - nz], [p0[0] - nx, p0[1] - nz]], 2);
+    }
   }
   // Brunnen eingehaust, Hängebuche, Kiefer
   box(scene, 3.8, 1.3, 2.1, 0xb09a72, 396.2, world.heightAt(396.2, -1687.7) + 0.65, -1687.7, -F.A);
