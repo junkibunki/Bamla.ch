@@ -4,6 +4,7 @@
 // Wer betrunken reitet, hört überall von Fußgänger:innen und Ortsfiguren, dass es an der Fasnacht kommt.
 import { buildPerson, animateWalk } from './person.js';
 import { rng } from './world.js';
+import { buildBather } from './camping.js';
 
 const SAY_SECS = 5.5, COOL = 14, TALK = 14, WALKER = 10, FASNACHT_SIEHT = 18;
 const FASNACHT = 'Des chunnt sicher an dr Fasnacht – Bamlacher Neuschti Noochrichte!';
@@ -35,6 +36,9 @@ const ORTE = [
   { id: 'brunnen', at: [382.6, -1608.4], face: [388.2, -1608.3], r: 18, sprueche: [   // Café | Restaurant zum Brunnen, Rheinstraße 42
     'Früehner het\'s do e K&U gä. Die hän so feini Weckli gha!',
   ] },
+  { id: 'therme', at: [37.3, -1233.2], face: [32.0, -1233.8], r: 20, bather: true, sprueche: [   // im Becken A der Balinea Thermen
+    'Ich bin sit drei Stund im Thermalwasser. Ich bin jetzt offiziell e Dörrpflümli.',
+  ] },
   { id: 'minigolf', at: [213.6, -1467.4], face: [216.8, -1468.5], r: 25, sprueche: [
     'Bahn siebe isch nit schwer. Bahn siebe isch e Charaktertest.',
     'Ich ha do emol e Hole-in-One gspielt. Zeug:inne git\'s leider keini.',
@@ -60,13 +64,13 @@ export class Sprueche {
     const kp = ORTE[0], c = musikpavillon.center;
     kp.at = [120.3, -1398.9]; kp.face = c;
     this.orte = ORTE.map((o) => {
-      const mesh = buildPerson(r);
+      const mesh = o.bather ? buildBather(r) : buildPerson(r);
       animateWalk(mesh, 0, 0);
       const [x, z] = o.at;
-      mesh.position.set(x, world.groundAt(x, z, world.heightAt(x, z) + 3), z);
+      mesh.position.set(x, o.bather ? world.heightAt(x, z) : world.groundAt(x, z, world.heightAt(x, z) + 3), z); // Badegast steht auf dem Beckenboden
       mesh.rotation.y = Math.atan2(o.face[0] - x, o.face[1] - z);
       scene.add(mesh);
-      world.addObstacle([[x - 0.3, z - 0.3], [x + 0.3, z - 0.3], [x + 0.3, z + 0.3], [x - 0.3, z + 0.3]], 1.8);
+      if (!o.bather) world.addObstacle([[x - 0.3, z - 0.3], [x + 0.3, z - 0.3], [x + 0.3, z + 0.3], [x - 0.3, z + 0.3]], 1.8);
       return { ...o, x, z, mesh, base: mesh.rotation.y, figur: { mesh }, queue: [], talk: 0 };
     });
     this.cool = 0;
