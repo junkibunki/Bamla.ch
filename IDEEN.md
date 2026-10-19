@@ -35,7 +35,7 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 20 | Camper | Am Camping-Kiosk Eis oder Schorle holen und am Rhein genießen. | Kiosk-Ware am Rheinufer verzehrt | erledigt |
 | 21 | Raser | Auf der Autobahn ein bestimmtes Tempo erreichen. | Zieltempo auf der Autobahn erreicht | erledigt |
 | 22 | Bahnfahrer | Mit dem Zug fahren. | man in den Zug steigt | erledigt |
-| 23 | Ortskundig | Alle Ortsteile besuchen: Bamlach, Rheinweiler, Am Buck, Im Grund, Schafgässle. | alle Ortsteile betreten | erledigt |
+| 23 | Ortskundig | Alle Ortsteile besuchen: Bamlach, Rheinweiler, Bad Bellingen. | alle Ortsteile betreten | erledigt |
 | 24 | Pünktlich | Den Bus an der Haltestelle am Museum erwischen. | an der Museums-Haltestelle in den Bus gestiegen | erledigt |
 | 25 | Kater | Nach dem Bier ausnüchtern, z. B. im Camping-Zelt schlafen. | betrunken geschlafen und nüchtern aufgewacht | erledigt |
 | 26 | Stammgast | Im Storchen und in der Baracke je ein Bier trinken. | an beiden Orten ein Bier getrunken | erledigt |

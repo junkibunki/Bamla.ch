@@ -1,47 +1,31 @@
-// Aufgabe 23: Alle Ortsteile besuchen. Gebiete: Ortskern Bamlach (Kirche/Rathaus) und Rheinweiler als Kreis,
-// Am Buck, Im Grund und Schafgässle entlang der gleichnamigen Straßen aus OSM.
+// Aufgabe 23: Alle Ortsteile besuchen – Bamlach, Rheinweiler und Bad Bellingen, jeweils als Kreis um den Ortskern.
 const AREAS = [
   { name: 'Bamlach', c: [-10, -10], r: 70 },                 // Kirche, Rathaus, Storchen
   { name: 'Rheinweiler', c: [-1360, 700], r: 170 },          // Schloß-, Schul- und Rotbergerstraße
-  { name: 'Am Buck', street: 'Am Buck' },
-  { name: 'Im Grund', street: 'Im Grund' },
-  { name: 'Schafgässle', street: 'Schafgässle' },
+  { name: 'Bad Bellingen', c: [380, -1650], r: 180 },        // Rathaus, Rheinstraße, Bahnhof
 ];
-const NEAR = 18; // Abstand zur Straßenachse
-
-function segDist(x, z, [ax, az], [bx, bz]) {
-  const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
-  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
-  return Math.hypot(x - ax - dx * t, z - az - dz * t);
-}
+const NAMES = AREAS.map((a) => a.name);
 
 export default {
   id: 'ortskundig', nr: 23, title: 'Ortskundig',
   // Zettel neben der Ortstafel Bamlach an der Alten Weinstraße (Ortseingang aus Richtung Bad Bellingen)
   board: { id: 'ortstafel', name: 'Zettel an der Ortstafel', x: -195.0, z: -248.8, heading: 1.081, style: 'zettel' },
-  text: 'Wer hier mitreden will, muss sich auskennen: Besuche alle Ortsteile – Bamlach, Rheinweiler, Am Buck, Im Grund und das Schafgässle.',
-  steps: [0, 1, 2, 3, 4, 5].map((n) => `Alle Ortsteile besuchen (${n}/5)`),
+  text: 'Wer hier mitreden will, muss sich auskennen: Besuche alle Ortsteile – Bamlach, Rheinweiler und Bad Bellingen.',
+  steps: [0, 1, 2, 3].map((n) => `Alle Ortsteile besuchen (${n}/3)`),
   reward: { ansehen: 15, title: 'Ortskundige:r' },
-  setup({ world, player }, q) {
-    for (const a of AREAS) {
-      if (!a.street) continue;
-      a.lines = world.data.roads.filter((r) => r.name === a.street).map((r) => r.pts);
-      const pts = a.lines.flat();
-      a.c = pts[Math.floor(pts.length / 2)]; // Zielmarker etwa in der Straßenmitte
-    }
-    const inside = (a, x, z) => a.lines
-      ? a.lines.some((l) => l.some((p, i) => i && segDist(x, z, l[i - 1], p) < NEAR))
-      : Math.hypot(x - a.c[0], z - a.c[1]) < a.r;
+  setup({ player }, q) {
     let check = 0;
     return (dt) => {
       if ((check -= dt) > 0) return;
       check = 0.5;
-      const seen = (q.data.seen ||= []);
+      // ältere Spielstände kannten noch Am Buck, Im Grund und Schafgässle als Ortsteile
+      const seen = (q.data.seen = (q.data.seen || []).filter((n) => NAMES.includes(n)));
+      if (q.step !== seen.length) q.advance(seen.length);
       const { x, z } = player.car ? { x: player.car.x, z: player.car.z } : player.pos;
       for (const a of AREAS) {
-        if (seen.includes(a.name) || !inside(a, x, z)) continue;
+        if (seen.includes(a.name) || Math.hypot(x - a.c[0], z - a.c[1]) >= a.r) continue;
         seen.push(a.name);
-        q.toast(`Ortsteil „${a.name}“ besucht (${seen.length}/5)`);
+        q.toast(`Ortsteil „${a.name}“ besucht (${seen.length}/${AREAS.length})`);
         q.advance(seen.length);
         q.save();
       }
