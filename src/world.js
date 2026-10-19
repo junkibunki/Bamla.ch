@@ -103,6 +103,23 @@ function ringBox(ring) {
 
 // Begehbare Flächen (Dachterrassen, Treppen): so hoch kann man von unten hinaufsteigen
 const DECK_STEP = 0.6;
+// Oberkanten von Hindernissen (Mauern, Brunnen, Dächer): so hoch steigt man ohne Sprung hinauf
+const TOP_STEP = 0.3;
+
+// Höchste Dachfläche über (x, z) aus einer Dreiecksliste [x, y, z, …] je 9 Werte; null: kein Dach darüber.
+function roofHeight(tris, x, z) {
+  let best = null;
+  for (let k = 0; k < tris.length; k += 9) {
+    const ax = tris[k], az = tris[k + 2], bx = tris[k + 3], bz = tris[k + 5], cx = tris[k + 6], cz = tris[k + 8];
+    const d = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
+    if (Math.abs(d) < 1e-9) continue; // senkrechte Fläche
+    const u = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / d, v = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / d;
+    if (u < 0 || v < 0 || u + v > 1) continue;
+    const y = u * tris[k + 1] + v * tris[k + 4] + (1 - u - v) * tris[k + 7];
+    if (best === null || y > best) best = y;
+  }
+  return best;
+}
 
 function closestOnSegment(px, pz, ax, az, bx, bz) {
   const dx = bx - ax, dz = bz - az;
@@ -260,7 +277,43 @@ export class World {
       const y = d.h(x, z);
       if (prevY >= y - DECK_STEP) h = Math.max(h, y);
     }
+    if (prevY > -Infinity) { // Oberkanten von Mauern und Dächern: nur wer von oben (oder knapp darunter) kommt
+      for (const bi of this.grid.get(Math.floor(x / this.cell) + ',' + Math.floor(z / this.cell)) || []) {
+        const y = this.topAt(bi, x, z);
+        if (y !== null && y > h && prevY >= y - TOP_STEP) h = y;
+      }
+    }
     return h;
+  }
+
+  // Oberfläche eines Hindernisses bei (x, z), auf der man stehen kann; null: dort keine.
+  // Gebäude mit Dachflächen (world.roofs) tragen auf dem Dach, eigene Hindernisse oben flach auf ihrer Höhe.
+  // Hindernisse mit walkTop (Türen, Dachterrassen) regeln das selbst über ihre Decks.
+  topAt(bi, x, z) {
+    const roof = this.roofs?.[bi];
+    if (roof) {
+      if (x < roof.box[0] || x > roof.box[2] || z < roof.box[1] || z > roof.box[3]) return null;
+      return roof.flat ?? roofHeight(roof.tris, x, z);
+    }
+    if (bi < this.buildingSrc.length || this.walkTop.has(bi)) return null;
+    const ring = this.buildings[bi], b = ringBox(ring);
+    if (x < b[0] || x > b[2] || z < b[1] || z > b[3] || !pointInPolygon(x, z, ring)) return null;
+    return this.heights[bi];
+  }
+
+  // Steht man mit den Füßen auf Höhe y auf Hindernis bi (Kreis um x, z mit Radius r)? Dann stößt man sich nicht daran.
+  onTop(bi, x, z, r, y) {
+    if (this.walkTop.has(bi)) return this.walkTop.get(bi) <= y + DECK_STEP;
+    const roof = this.roofs?.[bi];
+    if (!roof) return bi >= this.buildingSrc.length && this.heights[bi] <= y + TOP_STEP;
+    if (roof.flat != null) return roof.flat <= y + TOP_STEP;
+    // Dach: niedrigste Dachstelle unter dem Kreis (auf dem First steht ein Auto mit den Rädern tiefer als die Mitte)
+    let t = Infinity;
+    for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
+      const h = roofHeight(roof.tris, x + dx, z + dz);
+      if (h !== null && h < t) t = h;
+    }
+    return (t === Infinity ? this.heights[bi] : t) <= y + TOP_STEP;
   }
 
   // Begehbare Fläche: Umriss ring, Höhe h(x, z) (konstant oder z. B. als Rampe über einer Treppe)
@@ -552,11 +605,11 @@ export class World {
         for (const bi of list) {
           if (seen.has(bi)) continue;
           seen.add(bi);
-          if (y !== undefined && this.walkTop.get(bi) <= y + DECK_STEP) continue; // man steht oben drauf
           const poly = this.buildings[bi];
           const px = x + pushX, pz = z + pushZ;
           const bb = ringBox(poly); // weiter als radius vom Rechteck weg: kann nicht schieben (spart beim Laden Sekunden)
           if (px < bb[0] - radius || px > bb[2] + radius || pz < bb[1] - radius || pz > bb[3] + radius) continue;
+          if (y !== undefined && this.onTop(bi, px, pz, radius, y)) continue; // man steht oben drauf
           let best = Infinity, bx = 0, bz = 0;
           for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
             const [qx, qz] = closestOnSegment(px, pz, poly[j][0], poly[j][1], poly[i][0], poly[i][1]);

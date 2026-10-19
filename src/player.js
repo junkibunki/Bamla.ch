@@ -90,7 +90,7 @@ export class Player {
     }
 
     // Springen und Schwerkraft
-    if (this.pos.y <= 0 && !sipping && input.hit('Space')) this.vy = 5.5;
+    if (this.pos.y <= 0 && !sipping && input.hit('Space')) this.vy = 6.6; // gut 1,2 m hoch: auf Mauern und Brunnen
     this.vy -= 18 * dt;
     this.pos.y = Math.max(0, this.pos.y + this.vy * dt);
     if (this.pos.y === 0) this.vy = Math.max(0, this.vy);
@@ -118,7 +118,13 @@ export class Player {
       this.mesh.armR.rotation.z = -0.4 * e;
       if (this.sip <= 0) { this.bottle.visible = this.glass.visible = false; this.onDrink?.(); }
     }
-    this.groundY = world.groundAt(this.pos.x, this.pos.z, feet); // auf der Brücke das Deck, darunter die Straße
+    const ground = world.groundAt(this.pos.x, this.pos.z, feet); // auf der Brücke das Deck, darunter die Straße
+    // In der Luft oder über eine Kante (Mauer, Dach): die Füße behalten ihre Höhe, die Figur fällt hinunter.
+    if (this.pos.y > 0 || ground < this.groundY - 0.4 - Math.hypot(this.vel.x, this.vel.y) * dt) {
+      this.pos.y = Math.max(0, feet - ground);
+      if (this.pos.y === 0) this.vy = Math.max(0, this.vy);
+    }
+    this.groundY = ground;
     this.mesh.position.set(this.pos.x, this.groundY + this.pos.y, this.pos.z);
     const t = this.drunk?.t || 0; // betrunken: Oberkörper schwankt
     this.mesh.rotation.set(k * 0.06 * Math.sin(t * 1.3), this.facing, k * 0.13 * Math.sin(t * 1.9));
