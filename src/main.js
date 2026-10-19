@@ -1,3 +1,4 @@
+import './canvas2d.js'; // vor allen anderen: Offscreen-Canvas im Speicher zeichnen (schnelleres Laden)
 import * as THREE from 'three';
 import { World, rng } from './world.js';
 import { Terrain } from './terrain.js';
@@ -77,16 +78,9 @@ import { buildLeodegar } from './leodegar.js';
 import { buildLeodegarUmfeld } from './leodegar-umfeld.js';
 import { prepareLeodegar } from './leodegar-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
+import { progress, step } from './ladebalken.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
-
-// Ladeanzeige im Namensdialog und auf dem Startbildschirm; wartet ein Bild, damit der Text
-// vor dem nächsten blockierenden Abschnitt auch wirklich zu sehen ist (im Hintergrund-Tab
-// gibt es kein Bild, dann nach 100 ms weiter)
-async function loadStatus(text) {
-  for (const el of document.querySelectorAll('.load-text')) el.textContent = text;
-  await new Promise((r) => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
-}
 
 const SKY = 0x9cc7e8;
 const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 0x1a1a1a, 0x7f8c8d, 0x8e2b2b];
@@ -127,17 +121,27 @@ sun.shadow.camera.layers.enable(ROOF_LAYER);
 scene.add(sun, sun.target);
 
 // ---------- Welt laden ----------
-loadStatus('Lade Karten- und Geländedaten …');
-const [data, terrain, vineyards, camp, golfData] = await Promise.all([
-  fetch('/bamlach.json').then((r) => r.json()), Terrain.load(), fetch('/vineyards.json').then((r) => r.json()),
-  fetch('/camping.json').then((r) => r.json()), loadGolf(),
+// Alle Dateien gleichzeitig laden. Ladebalken (src/ladebalken.js): Download bis NET, danach der Aufbau;
+// die Anteile der Aufbauschritte sind gemessen (Produktionsbuild, Oktober 2026), damit der Balken gleichmäßig läuft:
+// step(Beginn, Text, Ende des Abschnitts).
+const NET = 0.2, FILES = 7;
+let terrainPart = 0, filesDone = 0;
+const netProgress = () => progress(NET * (0.5 * terrainPart + 0.5 * filesDone / FILES)); // Gelände ist gut die Hälfte der Daten
+const counted = (p) => p.finally(() => { filesDone++; netProgress(); });
+progress(0, 'Lade Karten- und Geländedaten …');
+const [data, terrain, vineyards, camp, golfData, roofs, paving, edits] = await Promise.all([
+  counted(fetch('/bamlach.json').then((r) => r.json())),
+  Terrain.load('/terrain', (f) => { terrainPart = f; netProgress(); }),
+  counted(fetch('/vineyards.json').then((r) => r.json())),
+  counted(fetch('/camping.json').then((r) => r.json())),
+  counted(loadGolf()),
+  counted(fetch('/roofs.json').then((r) => r.json()).catch(() => null)), // LoD2-Dächer, scripts/build-roofs.mjs
+  counted(loadPaving().catch(() => null)), // Pflaster/Höfe aus dem Luftbild, scripts/detect-paving.mjs
+  counted(fetch('/edits.json').then((r) => r.json()).catch(() => null)), // Karten-Editor (Taste B)
 ]);
 data.areas.push(...campingAreas(camp));
-data.roofs = await fetch('/roofs.json').then((r) => r.json()).catch(() => null); // LoD2-Dächer, scripts/build-roofs.mjs
-data.paving = await loadPaving().catch(() => null); // Pflaster/Höfe aus dem Luftbild, scripts/detect-paving.mjs
-data.golf = golfData; // Golfplatz: Klassenraster aus dem Luftbild (scripts/build-golf.mjs)
-data.edits = await fetch('/edits.json').then((r) => r.json()).catch(() => null); // Karten-Editor (Taste B)
-await loadStatus('Baue das Dorf auf … gleich geht\'s los'); // ab hier rechnet der Browser am Stück, Eingaben hängen kurz
+Object.assign(data, { roofs, paving, edits, golf: golfData }); // golf: Klassenraster aus dem Luftbild (scripts/build-golf.mjs)
+await step(NET, 'Baue das Dorf auf …', 0.21); // ab hier rechnet der Browser in Abschnitten, Eingaben hängen kurz
 splitKirschgartenMouth(data); // Einmündung Kirschgarten: zwei Äste um die Verkehrsinsel
 fixProbsteiweg(data); // Probsteiweg an der Probstei: Achse nach Luftbild, schmaler
 fixStAlban(data); // Hofgut im St. Alban: Umrisse nach LoD2 statt OSM
@@ -152,9 +156,11 @@ prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen
 prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
 prepareLeodegar(data); // St. Leodegar Bad Bellingen: keine Waldbäume auf Friedhof und Kirchplatz
 carveBahnhofBB(terrain, data); // Gelände unter den Bahnsteigen in Bad Bellingen absenken
+await step(0.21, 'Gelände, Straßen und Gebäude …', 0.5);
 const world = new World(data, scene, terrain, vineyards);
 const sheds = new ShedLayer(world); // Gartenhütten aus dem Karten-Editor
 const camping = new Camping(scene, world, camp, rng);
+await step(0.5, 'Bamlach: Straßen, Höfe und Gasthaus …', 0.59);
 buildBelchenstrasse(scene, world); // Fassadendetails, Nr. 6, Brunnen, Hecken
 buildStrassen(scene, world); // übrige Straßen nach Street View
 buildKirschgartenEcke(scene, world); // Bruchsteinmauer, Verkehrsinsel mit Laterne, Betonmauer an der Einmündung Kirschgarten
@@ -167,11 +173,13 @@ const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen
 buildRathaus(scene, world); // ehemaliges Rathaus gegenüber, Brunnen davor
 buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
+await step(0.59, 'Tennis, Grillplatz und Reitzentrum …', 0.6);
 const tennis = buildTennis(scene, world, rng(77));
 const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feuerstelle, Bolzplatz, Beachvolleyball, Spielgeräten
 buildKuppelgarten(scene, world); // Kuppel- und Glasgewächshaus im Garten an der Unteren Römerstraße (statt zweier OSM-Häuser)
 const kneipp = buildWassertretanlage(scene, world); // Kneipp-Wassertretanlage an der Belchenstraße: Becken zum Durchwaten, Armbad, Bank
 const reit = buildReitzentrum(scene, world); // Reitkunstzentrum: Reithalle, Stall, Führanlage, Paddock, gesattelte Pferde zum Reiten
+await step(0.6, 'Bahn, Bus und Bahnhöfe …', 0.64);
 const railway = new Railway(scene, world, data, rng(99));
 const bus = new BusLine(scene, world, data, rng(123)); // Linienbus Bad Bellingen – Bamlach – Rheinweiler
 const bahnhof = buildBahnhof(scene, world, railway, rng(321)); // Haltepunkt Rheinweiler: Bahnsteige, Treppen, Oberleitung, Fahrgäste
@@ -186,10 +194,12 @@ minimap.canvas.addEventListener('click', () => bigmap.show(player.pos.x, player.
 const vehicles = [];
 const pedestrians = [];
 const rand = rng(1234);
+await step(0.64, 'Golfplatz …', 0.71);
 const golf = new Golf(scene, world, golfData, rng); // Drei Thermen Golfresort: Golfer, Carts, Clubhaus
 vehicles.push(...golf.carts);
 const pick = (a) => a[Math.floor(rand() * a.length)];
 
+await step(0.71, 'Betriebe, Schule und Kindergärten …', 0.73);
 const kienzler = new Kienzler(scene, world, rng(555)); // Kienzler Metalltechnik: Halle, Hof, Gabelstapler
 const schule = buildSchule(scene, world, player); // Sonnenrainschule Rheinweiler: Gebäude, Schulhof, spielende Kinder
 vehicles.push(...schule.cars);
@@ -230,12 +240,14 @@ const quests = new Quests(scene, world); // Aufgaben an Aushängen (src/quests/)
 const schnellreise = new Schnellreise(world, quests); // nach „Nutze die Öffis“: G an Haltestellen und Bahnhof
 const carry = new Carry(player); // Tragen, Kaufen, Geldbeutel und Gutscheine (G: essen/trinken, V: Gutschein)
 buildLaeden(scene, world, carry, { camping }); // Metzger-Theke, Eistruhe am Kiosk, Freibier im Storchen
+await step(0.73, 'Bad Bellingen: Rewe, Kurparkplatz und Therme …', 0.76);
 const rewe = buildRewe(scene, world, { vehicles, carry, rng: rng(4711) }); // Rewe und Rossmann in Bad Bellingen: Parkplatz, Kundschaft mit Einkaufswagen
 pedestrians.push(rewe);
 const kurparkplatz = buildKurparkplatz(scene, world, { vehicles, player, rng: rng(1976) }); // Parkplatz zwischen Rewe und Kurhaus, Wohnmobilstellplatz
 pedestrians.push(kurparkplatz); // Schranke öffnet sich
 pedestrians.push(buildTherme(scene, world, { rng: rng(815) })); // Balinea Thermen: Badehalle, Becken, Sauna-Park, Badegäste
 const backofen = buildBackofen(scene, world, carry); // Holzbackofen hinter dem Museum: anheizen, Brot und Zwiebelwaie backen
+await step(0.76, 'Kirche, Schloss und Stationenweg …', 0.78);
 // Kirche und Schloss vor dem Straßengrün: ihre Mauern sind dann schon Hindernisse, das Grün lässt sie aus
 const kirche = buildKirche(scene, world, player); // Kirche mit Innenraum, Friedhof, Krippe
 pedestrians.push(kirche.pfarrer); // Pfarrer läuft wie ein Fußgänger
@@ -243,9 +255,11 @@ const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der 
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 const stationenweg = buildStationenweg(scene, world, player, pedestrians); // Kreuzweg zum Kalvarienberg: 14 Bildstöcke, Steinkreuz, Passanten erzählen
 pedestrians.push(stationenweg);
+await step(0.78, 'Hecken, Mauern, Zäune und Blumen …', 0.88);
 buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
 // ---------- Parken in Hofeinfahrten ----------
+await step(0.88, 'Autos, Verkehr und Leute …', 0.89);
 // 1) OSM-Einfahrten (service=driveway): Auto am hausseitigen Ende.
 const connected = new Map();
 for (const r of data.roads) for (const [x, z] of r.pts) connected.set(x + ',' + z, (connected.get(x + ',' + z) || 0) + 1);
@@ -339,6 +353,7 @@ player.facing = Math.atan2(tx - START[0], tz - START[1]);
 const cam = { yaw: player.facing + Math.PI, pitch: 0.15, zoom: 1 }; // flach, damit das Gebäude am Start ganz im Bild ist
 addEventListener('wheel', (e) => { cam.zoom = Math.max(0.5, Math.min(8, cam.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12))); });
 const camTarget = new THREE.Vector3();
+await step(0.89, 'Kurpark, Rheinstraße und St. Leodegar …', 0.97);
 const sport = new Sport(scene, world, { golf, tennis, cam, quests }); // Golf und Tennis zum Selberspielen
 const kurpark = buildKurpark(scene, world, { rng: rng(2026), quests, cam, carry }); // Kurpark Bad Bellingen: Spielplatz, Minigolf, Weiher, Happleweg
 buildRheintreppe(scene, world); // Rheintreppe vom Kurpark am Aufzug hinauf zur Rheinstraße: 6 Läufe, Quadermauer, Handläufe, Hecke
@@ -560,6 +575,7 @@ function mapKeys() {
   return bigmap.open;
 }
 
+await step(0.97, 'Letzter Schliff …', 1);
 tileInstances(scene); // Reben, Bäume, Büsche in 200-m-Kacheln, damit Culling greift
 pruneSmallShadows(scene); // Kleinteile werfen keinen Schatten mehr
 const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu wenigen Meshes zusammenfassen
@@ -567,7 +583,7 @@ const statics = new StaticBatcher(scene); // Unbewegtes nach ~1,5 s je Kachel zu
 // ---------- Hauptschleife ----------
 document.getElementById('loading').remove();
 document.getElementById('join-status')?.classList.add('ready');
-loadStatus('Bamlach ist bereit – los geht\'s!');
+progress(1, 'Bamlach ist bereit – los geht\'s!');
 const multiplayer = new Multiplayer(scene, world, await playerName);
 sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen

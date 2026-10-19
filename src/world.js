@@ -89,6 +89,18 @@ export function pointInPolygon(x, z, poly) {
   return inside;
 }
 
+// Umrissrechteck [minX, minZ, maxX, maxZ] je Ring, zwischengespeichert (Module tauschen Ringe aus, nicht deren Punkte)
+const ringBoxes = new WeakMap();
+function ringBox(ring) {
+  let b = ringBoxes.get(ring);
+  if (!b) {
+    b = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const [x, z] of ring) { b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], z); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], z); }
+    ringBoxes.set(ring, b);
+  }
+  return b;
+}
+
 // Begehbare Flächen (Dachterrassen, Treppen): so hoch kann man von unten hinaufsteigen
 const DECK_STEP = 0.6;
 
@@ -543,6 +555,8 @@ export class World {
           if (y !== undefined && this.walkTop.get(bi) <= y + DECK_STEP) continue; // man steht oben drauf
           const poly = this.buildings[bi];
           const px = x + pushX, pz = z + pushZ;
+          const bb = ringBox(poly); // weiter als radius vom Rechteck weg: kann nicht schieben (spart beim Laden Sekunden)
+          if (px < bb[0] - radius || px > bb[2] + radius || pz < bb[1] - radius || pz > bb[3] + radius) continue;
           let best = Infinity, bx = 0, bz = 0;
           for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
             const [qx, qz] = closestOnSegment(px, pz, poly[j][0], poly[j][1], poly[i][0], poly[i][1]);

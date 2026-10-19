@@ -61,7 +61,12 @@ function segmentIndex(roads) {
 
 const inBuilding = (world, x, z) => !!world.collide(x, z, 0.05);
 // Punkt in einer der gepflasterten Flächen (Vorplätze) oder auf einem eigens gebauten Gelände – dort keine Büsche
-export const onPaved = (x, z) => [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_SITE, ...REWE_SITE, ...THERME_SITE, ...KURPARK_SITE, ...RS_PAVED, { pts: RATHAUS_SITE }, ...KURHAUS_SITE, ...KPP_SITE, ...MUSIK_SITE, ...LEODEGAR_SITE].some(({ pts }) => {
+// (Flächen samt Umrissrechteck beim ersten Aufruf einmal gesammelt; vorher je Punkt neu, ~0,5 s Ladezeit)
+let paved = null;
+export const onPaved = (x, z) => (paved ||= [...PAVED_AREAS, ...KIGA_SITE, ...KIGA_RW_SITE, ...RATHAUS_PAVED, ...BARACKE_SITE, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_SITE, ...REWE_SITE, ...THERME_SITE, ...KURPARK_SITE, ...RS_PAVED, { pts: RATHAUS_SITE }, ...KURHAUS_SITE, ...KPP_SITE, ...MUSIK_SITE, ...LEODEGAR_SITE].map(({ pts }) => ({
+  pts, x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])), z0: Math.min(...pts.map((p) => p[1])), z1: Math.max(...pts.map((p) => p[1])),
+}))).some(({ pts, x0, x1, z0, z1 }) => {
+  if (x < x0 || x > x1 || z < z0 || z > z1) return false;
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, zi] = pts[i], [xj, zj] = pts[j];

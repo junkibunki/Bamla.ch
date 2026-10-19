@@ -100,7 +100,7 @@ Gelände: Digitales Geländemodell DGM1 (1-m-Raster, ±15 cm, Laserscan 2019) vo
 [Open GeoData Portal des LGL Baden-Württemberg](https://opengeodata.lgl-bw.de).
 Die vier 2×2-km-Kacheln gehören nach `data/dgm/` (`dgm1_32_389_5284`, `…389_5286`, `…391_5284`, `…391_5286`,
 Download: `https://opengeodata.lgl-bw.de/data/dgm/dgm1_32_<Ost>_<Nord>_2_bw.zip`).
-`npm run build-terrain` erzeugt daraus `public/terrain.bin` (2-m-Höhenraster, 1 cm Auflösung). Die Rasterpunkte liegen
+`npm run build-terrain` erzeugt daraus `public/terrain.bin` (2-m-Höhenraster, 1 cm Auflösung; je Zeile als Differenz zum Nachbarn und gzip-gepackt, 2,1 statt 5,5 MB). Die Rasterpunkte liegen
 immer auf ungeraden Metern, damit eine Erweiterung der Karte die Höhen im bisherigen Gebiet und die Nullhöhe `h0` nicht verschiebt.
 
 Reben: aus den Luftbildern DOP20 (20 cm, Befliegung 2025, ebenfalls LGL) erkannt. Die Rebzeilen

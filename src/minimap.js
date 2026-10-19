@@ -92,7 +92,7 @@ export class Minimap {
     const c = document.createElement('canvas');
     c.width = Math.ceil((b.maxX - b.minX) * PX_PER_M);
     c.height = Math.ceil((b.maxZ - b.minZ) * PX_PER_M);
-    const g = c.getContext('2d');
+    const g = c.getContext('2d', { willReadFrequently: false }); // wird jedes Bild in die Minimap kopiert: auf der GPU lassen (canvas2d.js)
     const tx = (x) => (x - b.minX) * PX_PER_M, tz = (z) => (z - b.minZ) * PX_PER_M;
     const path = (pts) => {
       g.beginPath();

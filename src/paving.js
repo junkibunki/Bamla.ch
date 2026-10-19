@@ -7,10 +7,12 @@ const PERIOD = 2.4; // Musterkachel in m (Steine 20 × 10 cm)
 export const PAVER_GREY = [132, 126, 118];
 
 export async function loadPaving() {
-  const meta = await (await fetch('/paving.json')).json();
-  const img = new Image();
-  img.src = '/paving.png';
-  await img.decode();
+  // createImageBitmap statt Image.decode(): dekodiert abseits des Hauptthreads und wartet nicht auf ein
+  // gezeichnetes Bild (decode() hing in verdeckten Fenstern sekundenlang)
+  const [meta, img] = await Promise.all([
+    fetch('/paving.json').then((r) => r.json()),
+    fetch('/paving.png').then((r) => r.blob()).then((b) => createImageBitmap(b)),
+  ]);
   const c = document.createElement('canvas');
   c.width = meta.w;
   c.height = meta.h;

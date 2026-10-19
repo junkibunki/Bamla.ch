@@ -12,7 +12,7 @@ export class Drunk {
     // Doppelbild: verkleinerte Kopie des Bilds, versetzt und halbtransparent über dem Spielbild
     this.ghost = document.createElement('canvas');
     Object.assign(this.ghost.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', opacity: '0', display: 'none' });
-    this.ctx = this.ghost.getContext('2d');
+    this.ctx = this.ghost.getContext('2d', { willReadFrequently: false }); // kopiert jedes Bild das Spielbild: auf der GPU lassen (canvas2d.js)
     this.vignette = document.createElement('div');
     Object.assign(this.vignette.style, {
       position: 'fixed', inset: '0', pointerEvents: 'none', opacity: '0', display: 'none',
