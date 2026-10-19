@@ -56,6 +56,8 @@ canvas { display: block; }
   background: #ffd400; color: #1d2633; cursor: pointer;
 }
 #join p { margin: 0; font-size: 12px; opacity: .65; }
+#join .credits { border-top: 1px solid #41526a; padding-top: 10px; }
+#join a { color: #ffd400; }
 
 #players {
   position: fixed; top: 12px; right: 12px;
