@@ -55,7 +55,7 @@ export function animatePedal(g, phase) {
 }
 
 // ---------- Kleidung (Belohnungen, siehe belohnungen.js) ----------
-// Vorne ist +z. Jede Kleidung kommt als eigene Gruppe an die Figur; die Motorradjacke färbt Rumpf und Ärmel.
+// Vorne ist +z. Jede Kleidung kommt als eigene Gruppe an die Figur; shirt/pants färben Rumpf und Ärmel bzw. Beine.
 const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
 function piece(g, geo, color, x, y, z) {
   const m = new THREE.Mesh(geo, typeof color === 'number' ? lam(color) : color);
@@ -134,6 +134,15 @@ export const OUTFITS = {
     piece(g, BOX(0.36, 0.05, 0.3), 0x6b6153, 0, 2.13, -0.04);
     piece(g, BOX(0.36, 0.03, 0.12), 0x5d5447, 0, 2.05, 0.25).rotation.x = 0.15;
   } },
+  uniform: { name: 'Musikverein-Uniform', shirt: 0x1f4c84, pants: 0x1d2130, build(g) {
+    // Uniform des Musikvereins Bad Bellingen (wie die Kapelle im Musikpavillon): blaue Jacke offen über der
+    // oliv-goldenen Weste mit Messingknöpfen, weißer Hemdkragen, blaue Krawatte, dunkle Hose
+    piece(g, BOX(0.3, 0.62, 0.02), 0x8c7b3c, 0, 1.27, 0.18);
+    for (let i = 0; i < 4; i++) piece(g, BOX(0.04, 0.04, 0.02), 0xd8b84a, 0.09, 1.08 + i * 0.12, 0.195);
+    piece(g, BOX(0.2, 0.08, 0.03), 0xf2f2ee, 0, 1.59, 0.18);
+    piece(g, BOX(0.06, 0.32, 0.015), 0x23476e, 0, 1.42, 0.2);
+    for (const x of [-0.2, 0.2]) piece(g, BOX(0.12, 0.5, 0.02), 0x1a4277, x, 1.33, 0.185).rotation.z = x > 0 ? 0.12 : -0.12; // Revers
+  } },
 };
 
 // Kleidung anziehen (id aus OUTFITS oder ''), alte ablegen
@@ -143,11 +152,14 @@ export function dressPerson(g, id) {
   if (g.outfit) { g.remove(g.outfit); g.outfit.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); }
   g.outfit = null;
   const shirtMats = [g.torso.material, g.armL.children[0].material, g.armR.children[0].material];
+  const pantsMats = [g.legL.children[0].material, g.legR.children[0].material];
   for (const m of shirtMats) { m.userData.shirt ??= m.color.getHex(); m.color.setHex(m.userData.shirt); }
+  for (const m of pantsMats) { m.userData.pants ??= m.color.getHex(); m.color.setHex(m.userData.pants); }
   g.hair.visible = true;
   const o = OUTFITS[id];
   if (!o) return;
   if (o.shirt != null) for (const m of shirtMats) m.color.setHex(o.shirt);
+  if (o.pants != null) for (const m of pantsMats) m.color.setHex(o.pants);
   g.outfit = new THREE.Group();
   o.build(g.outfit);
   g.add(g.outfit);

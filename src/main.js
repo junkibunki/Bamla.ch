@@ -540,6 +540,7 @@ function updateHud(dt) {
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
   else if (stationenweg.hint(player)) hud.hint.textContent = stationenweg.hint(player); // Bildstock am Stationenweg
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
+  else if (musikpavillon.hint(player)) hud.hint.textContent = musikpavillon.hint(player); // Kurkonzert: Applaus nach jedem Stück
   else if (player.sip > 0) hud.hint.textContent = 'Prost!';
   else if (nearBar()) hud.hint.textContent = barHint(nearBar());
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
@@ -591,7 +592,7 @@ multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -613,6 +614,7 @@ function frame() {
     else if (multiplayer.canBoard(player)) multiplayer.board(player);      // bei einem anderen Spieler mitfahren
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
+    else if (musikpavillon.clap(player, quests)) { /* Kurkonzert: mitklatschen */ }
     else if (nearBar()) { const b = nearBar(); player.drink('beer'); b.serve?.(); } // Theke: Bier
     else if (andacht.spot(player)) andacht.pray(player, andacht.spot(player));       // Kirche, Kapelle: beten
     else toggleVehicle();

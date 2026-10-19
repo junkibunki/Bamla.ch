@@ -7,8 +7,10 @@
 // rote Gastroschirme mit Stehtischen, quadratisches Sommerbeet, gelbe Rankobelisken, Terrakottakübel, bunte
 // Lichterketten, grüner Ausschankwagen, Wiese mit Liegestühlen.
 // Kurkonzert: der Musikverein Bad Bellingen e. V. (Uniform nach Vereinsfotos 2023: blaue Jacke, weißes Hemd, blaue
-// Krawatte, oliv-goldene Weste bzw. Mieder, dunkler Rock) spielt im Wechsel einen Marsch und eine Polka, dazwischen
-// Applaus. Musik synthetisch mit Web Audio, Lautstärke nach Entfernung; Publikum auf Stühlen, Liegestühlen, an den Tischen.
+// Krawatte, oliv-goldene Weste bzw. Mieder, dunkler Rock) spielt der Reihe nach das Badnerlied, „Alte Kameraden“
+// (Teike) und den Radetzky-Marsch (Strauss Vater), dazwischen Applaus; währenddessen kann man mitklatschen (E,
+// Aufgabe „Kurkonzert“). Musik synthetisch mit Web Audio, Lautstärke nach Entfernung; Publikum auf Stühlen, Liegestühlen,
+// an den Tischen.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mat, canvasTex, texMat, box, cyl, beam, drape, paverFill } from './bauteile.js';
@@ -201,36 +203,39 @@ function crest(g, x, y, s) {
   g.restore(); shield(); g.strokeStyle = '#222'; g.lineWidth = 2; g.stroke(); g.restore();
 }
 
-// ---------- Musik (Web Audio, synthetisch): Marsch in B und Polka in Es, dazwischen Applaus ----------
+// ---------- Musik (Web Audio, synthetisch): Badnerlied, „Alte Kameraden“ und Radetzky-Marsch, dazwischen Applaus ----------
+// Märsche aus kurkonzert-noten.js: dort ist die Einheit die Viertel (Alla breve), Akkord und Wechselbass je Takt.
 const midi = (n) => 440 * 2 ** ((n - 69) / 12);
-// Melodie: [Ton, Achtel] (0 = Pause); Akkorde je Takt: [Grundton, Art]
-const MARSCH = {
-  bpm: 112,
-  a: [[65, 1], [70, 1], [74, 1], [77, 1], [77, 2], [74, 1], [70, 1], [72, 1], [74, 1], [75, 1], [72, 1], [74, 2], [70, 2],
-    [75, 1], [75, 1], [79, 1], [75, 1], [74, 1], [74, 1], [77, 1], [74, 1], [72, 1], [70, 1], [69, 1], [72, 1], [70, 2], [0, 1], [65, 1]],
-  ac: [[46, 'M'], [46, 'M'], [41, '7'], [46, 'M'], [51, 'M'], [46, 'M'], [41, '7'], [46, 'M']],
-  b: [[72, 1], [72, 1], [72, 1], [74, 1], [75, 2], [72, 2], [69, 1], [70, 1], [72, 1], [75, 1], [74, 2], [70, 1], [65, 1],
-    [70, 1], [74, 1], [77, 1], [82, 1], [81, 2], [79, 1], [77, 1], [75, 1], [72, 1], [69, 1], [72, 1], [70, 2], [0, 2]],
-  bc: [[41, '7'], [41, '7'], [41, '7'], [46, 'M'], [46, 'M'], [41, 'M'], [41, '7'], [46, 'M']],
-  form: ['a', 'a', 'b', 'b', 'a'],
+// Melodie: [Ton, Achtel] (0 = Pause); Akkorde je 2/4-Takt (4 Achtel): [Grundton, Art]
+// Badnerlied (Volksweise, um 1865) nach dem Notenblatt von liederkiste.com in G-Dur, für die Blaskapelle nach B-Dur
+// (+3) gesetzt; Akkorde je halben Takt. Die Strophe im Vordergrund: a (Vorspieltakt mit Auftakt „Das schönste Land …“
+// bis „… in Gottes Hand. Drum“), dann der Refrain „grüß ich dich …“ einmal mit Schluss (2. Haus), das Ganze zweimal.
+const G = (n) => n + 3;
+const BADNER_REF = [[69, 3], [67, 1], [66, 1], [67, 1], [69, 1], [71, 1], [72, 4], [0, 2], [74, 2],
+  [71, 3], [69, 1], [67, 1], [66, 1], [67, 1], [71, 1], [69, 2], [74, 1.5], [74, 0.5], [74, 1], [72, 1], [71, 1], [69, 1],
+  [67, 4], [0, 1], [66, 1], [66, 1.5], [69, 0.5], [74, 4], [0, 1], [66, 1], [67, 1.5], [71, 0.5],
+  [74, 2], [71, 1], [67, 1], [69, 2], [71, 1], [69, 1]];
+const BADNER_REFC = [[62, 'M'], [62, 'M'], [62, '7'], [62, '7'], [55, 'M'], [55, 'M'], [62, 'M'], [62, 'M'], [55, 'M'], [62, 'M'],
+  [55, 'M'], [55, 'M'], [55, 'M'], [62, 'M']];
+const BADNER = {
+  bpm: 96,
+  a: [[0, 6], [62, 2], [67, 2], [67, 2], [62, 2], [62, 2], [59, 2], [62, 1], [59, 1], [55, 2], [67, 2],
+    [69, 3], [69, 1], [69, 2], [69, 2], [71, 4], [0, 2], [71, 2], [64, 3], [64, 1], [69, 3], [67, 1],
+    [66, 2], [67, 2], [69, 2], [71, 2], [69, 3], [66, 1], [69, 1], [67, 1], [66, 1], [64, 1], [62, 4], [0, 2], [62, 2]].map(([n, l]) => [n && G(n), l]),
+  ac: [[55, 'M'], [55, 'M'], [55, 'M'], [62, 'M'], [55, 'M'], [55, 'M'], [62, 'M'], [62, 'M'], [55, 'M'], [55, 'M'],
+    [60, 'M'], [60, 'M'], [62, 'M'], [62, 'M'], [57, '7'], [57, '7'], [62, 'M'], [62, 'M']].map(([n, k]) => [G(n) - 12, k]),
+  c: [...BADNER_REF, [67, 2], [67, 1.5], [67, 0.5], [67, 2], [0, 2]].map(([n, l]) => [n && G(n), l]),
+  cc: [...BADNER_REFC, [55, 'M'], [55, 'M']].map(([n, k]) => [G(n) - 12, k]),
+  form: ['a', 'c', 'a', 'c'],
 };
-const POLKA = {
-  bpm: 124,
-  a: [[70, 1], [67, 1], [70, 1], [75, 1], [79, 2], [77, 1], [75, 1], [77, 1], [74, 1], [70, 1], [74, 1], [77, 2], [75, 1], [74, 1],
-    [72, 1], [68, 1], [72, 1], [75, 1], [80, 2], [79, 1], [77, 1], [75, 1], [79, 1], [77, 1], [74, 1], [75, 2], [0, 2]],
-  ac: [[51, 'M'], [51, 'M'], [46, '7'], [46, '7'], [44, 'M'], [44, 'M'], [46, '7'], [51, 'M']],
-  b: [[79, 1], [80, 1], [79, 1], [77, 1], [75, 2], [70, 2], [72, 1], [74, 1], [75, 1], [77, 1], [79, 2], [75, 2],
-    [80, 1], [79, 1], [77, 1], [75, 1], [74, 2], [70, 2], [72, 1], [74, 1], [70, 1], [74, 1], [75, 2], [0, 2]],
-  bc: [[51, 'M'], [51, 'M'], [44, 'M'], [51, 'M'], [44, 'M'], [46, '7'], [46, '7'], [51, 'M']],
-  form: ['a', 'b', 'a', 'b', 'a'],
-};
+export const PIECES = ['Badnerlied', 'Alte Kameraden', 'Radetzky-Marsch']; // Reihenfolge im Programm
 const CHORD = { M: [0, 4, 7], 7: [0, 4, 10], m: [0, 3, 7] };
 
 // Programm einer Runde: Ereignisse mit Zeit (s), Länge (s), Art, Ton; dazu Spielphasen für die Figuren
-function program() {
+function program({ ALTE_KAMERADEN, RADETZKY, piece }) {
   const ev = [], phases = [];
   let t = 2;
-  for (const [i, P] of [MARSCH, POLKA].entries()) {
+  for (const [i, P] of [BADNER, piece(ALTE_KAMERADEN), piece(RADETZKY)].entries()) {
     const e8 = 60 / P.bpm / 2, start = t;
     for (const [pi, part] of P.form.entries()) {
       const mel = P[part], chords = P[part + 'c'];
@@ -258,16 +263,16 @@ function program() {
     ev.push({ t, k: 'cym' }, { t, d: e8 * 4, k: 'bass', n: P.ac[0][0] });
     phases.push({ from: start, to: t + 0.6, beat: e8 * 2, piece: i });
     t += 1;
-    ev.push({ t, k: 'clap', d: 6 });
-    phases.push({ from: t, to: t + 6.5, clap: true });
-    t += 11;
+    ev.push({ t, k: 'clap', d: 8 });
+    phases.push({ from: t, to: t + 8.5, clap: true, piece: i });
+    t += 12;
   }
   ev.sort((a, b) => a.t - b.t);
   return { ev, phases, length: t };
 }
 
 class Kapelle {
-  constructor() { this.ac = null; this.prog = program(); this.i = 0; this.vol = 0; }
+  constructor() { this.ac = null; this.prog = null; this.i = 0; this.vol = 0; }
   ctx() {
     if (!this.ac) {
       const ac = (this.ac = new AudioContext());
@@ -283,6 +288,7 @@ class Kapelle {
     if (this.ac.state === 'suspended') this.ac.resume().catch(() => {});
     return this.ac;
   }
+  stop() { this.i = 0; this.last = null; if (this.ac) this.out.gain.setTargetAtTime(0, this.ac.currentTime, 0.3); }
   voice(type, f, t, dur, vol, cutoff, vib = 0) {
     const ac = this.ac, o = ac.createOscillator(), lp = ac.createBiquadFilter(), g = ac.createGain();
     o.type = type; o.frequency.value = f;
@@ -307,7 +313,7 @@ class Kapelle {
       case 'bd': { const ac = this.ac, o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.18); g.gain.setValueAtTime(0.45 * e.v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(g).connect(this.out); o.start(t); o.stop(t + 0.32); break; }
       case 'sn': this.hit(t, 0.12, 0.14 * e.v, 'highpass', 1800); break;
       case 'cym': this.hit(t, 1.4, 0.07, 'highpass', 6500); break;
-      case 'clap': for (let k = 0; k < 140; k++) { const a = t + Math.random() * e.d, fade = 1 - (a - t) / e.d; this.hit(a, 0.05, 0.12 * fade * (0.5 + Math.random() * 0.5), 'bandpass', 900 + Math.random() * 1400, 1.2); } break;
+      case 'clap': for (let k = 0; k < 180; k++) { const a = t + Math.random() * e.d, fade = 1 - (a - t) / e.d; this.hit(a, 0.05, 0.12 * fade * (0.5 + Math.random() * 0.5), 'bandpass', 900 + Math.random() * 1400, 1.2); } break;
     }
   }
   // T: Zeit im Programm (s), vol: 0…1 nach Entfernung
@@ -672,13 +678,50 @@ export function buildMusikpavillon(scene, world) {
   scene.add(standers.mesh());
 
   // --- Ablauf: Musik spielt in Runden; Figuren wippen im Takt, Dirigent schlägt, nach jedem Stück Applaus ---
-  const kapelle = new Kapelle(), P = kapelle.prog;
-  let T = 0, clapping = false;
+  // Noten der Märsche erst laden, wenn man in die Nähe kommt; das Konzert beginnt (immer mit dem Badnerlied), sobald man
+  // am Pavillon ist, und hört auf, wenn man weit weggeht.
+  const LOAD_DIST = 250, START_DIST = 40, STOP_DIST = 200;
+  const kapelle = new Kapelle();
+  let P = null, loading = false, running = false, T = 0, clapping = false, posed = true;
+  const CLAP_DIST = START_DIST;
+  let ph = null;
   return {
     center: STAGE_C,
+    get T() { return T; },
+    get phase() { return ph; },      // { from, to, piece } beim Spielen, { …, clap: true, piece } beim Applaus danach
+    get running() { return running; },
+    // Sekunden bis zum Beginn des Stücks (Index in PIECES), 0 während es läuft; null, solange das Konzert nicht läuft
+    until(piece) {
+      if (!running) return null;
+      const p = P.phases.find((x) => x.piece === piece && !x.clap);
+      return T >= p.from && T < p.to ? 0 : (p.from - T + P.length) % P.length;
+    },
+    near(player) { return !player.car && Math.hypot(player.pos.x - STAGE_C[0], player.pos.z - STAGE_C[1]) < CLAP_DIST; },
+    canClap(player) { return !!ph?.clap && this.near(player); },
+    hint(player) { return this.canClap(player) ? 'E: Mitklatschen 👏' : ''; },
+    clap(player, quests) {
+      if (!this.canClap(player)) return false;
+      if (kapelle.ac) { const t = kapelle.ac.currentTime; for (let k = 0; k < 6; k++) kapelle.hit(t + k * 0.28 + Math.random() * 0.03, 0.06, 0.3, 'bandpass', 1300, 1.2); }
+      quests?.emit('klatschen', { piece: PIECES[ph.piece] });
+      return true;
+    },
     update(dt, player) {
+      const d = player ? Math.hypot(player.pos.x - STAGE_C[0], player.pos.z - STAGE_C[1]) : Infinity;
+      if (!P && !loading && d < LOAD_DIST) {
+        loading = true;
+        import('./kurkonzert-noten.js').then((m) => { P = kapelle.prog = program(m); }).catch(() => { loading = false; });
+      }
+      if (P && !running && d < START_DIST && !player.car) { running = true; T = 0; }
+      if (running && d > STOP_DIST) { running = false; ph = null; kapelle.stop(); }
+      if (!running) { if (!posed) { posed = true; this.pose(0, null); } return; }
+      posed = false;
       T = (T + Math.min(dt, 0.1)) % P.length;
-      const ph = P.phases.find((p) => T >= p.from && T < p.to);
+      ph = P.phases.find((p) => T >= p.from && T < p.to) || null;
+      this.pose(T, ph);
+      kapelle.update(T, d < 12 ? 1 : Math.max(0, 1 - (d - 12) / 75) ** 2);
+    },
+    // Figuren: wippen im Takt, Dirigent schlägt, Publikum klatscht beim Applaus
+    pose(T, ph) {
       const playing = ph && !ph.clap, beat = playing ? (T - ph.from) / ph.beat : 0;
       for (const b of band) {
         if (b.sticks) { b.sticks.forEach((s, i) => { s.rotation.x = playing ? -0.2 + Math.max(0, Math.sin((beat + i * 0.5) * Math.PI * 2)) * 0.6 : 0; }); continue; }
@@ -692,10 +735,6 @@ export function buildMusikpavillon(scene, world) {
       const clap = !!ph?.clap;
       if (clap || clapping) poseArms(clap, T);
       clapping = clap;
-      if (player) {
-        const d = Math.hypot(player.pos.x - STAGE_C[0], player.pos.z - STAGE_C[1]);
-        kapelle.update(T, d < 12 ? 1 : Math.max(0, 1 - (d - 12) / 75) ** 2);
-      }
     },
   };
 }

@@ -55,6 +55,8 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 40 | Großer Spielplatz | Auf dem neuen Spielplatz „Wilde Wasser“ rutschen und schaukeln. | beides erledigt | erledigt |
 | 41 | Kurlinie | Die ganze Buslinie von Rheinweiler Ort bis zum Thermalbad durchfahren, ohne auszusteigen. | an der Endhaltestelle angekommen | erledigt |
 | 42 | Bad-Bellingen-Kenner:in | Kurpark, Thermen, Rewe und Wendeschleife besuchen. | alle vier Orte besucht | erledigt |
+| 43 | Kurkonzert | Beim Kurkonzert im Kurpark das Badnerlied ganz anhören und danach mitklatschen (Belohnung: Musikverein-Uniform). | ganz zugehört und im Applaus geklatscht (E) | erledigt |
+| 44 | Hoch hinaus | Mit dem Aufzug an der Rheintreppe vom Kurpark hinauffahren und über den Steg zum Rathaus gehen. | oben am Rathaus angekommen | erledigt |
 
 ## Belohnungen
 
@@ -63,10 +65,10 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 ### Freischaltungen
 - Fahrzeuge: Nach „Easy Rider“ steht ein eigenes, schnelleres, spezielles Motorrad vor der Tür; nach „Man hilft sich aus“ darf man den Gabelstapler frei nutzen.
 - Orte: Nach „Andacht“ öffnet der Kirchturm mit Aussicht, nach „Weinlese“ der Weinkeller.
-- Schnellreise: Bushaltestellen und Bahnhöfe werden zu Teleportpunkten, sobald „Nutze die Öffis“ erledigt ist.
+- Schnellreise: Bushaltestellen und Bahnhöfe (Rheinweiler, Bad Bellingen) werden zu Teleportpunkten, sobald „Nutze die Öffis“ erledigt ist.
 
 ### Kosmetisch
-- Kleidung für die Spielfigur: Feuerwehrhelm, Metzgerschürze, Golfmütze, Motorradjacke, Bademantel, Rewe-Kappe, Sonnenbrille, Saunahandtuch, Schiebermütze (wählbar, sobald freigeschaltet).
+- Kleidung für die Spielfigur: Feuerwehrhelm, Metzgerschürze, Golfmütze, Motorradjacke, Bademantel, Rewe-Kappe, Sonnenbrille, Saunahandtuch, Schiebermütze, Musikverein-Uniform (wählbar, sobald freigeschaltet).
 - Fahrzeugfarben oder Hupen, z. B. das Storchen-Klappern als Hupe; dazu Rückwärts-Piepser, Aufguss-Zischen und Enten-Quaken, Lack Rewe-Rot und RVL-Blau.
 - Titel neben dem Namen im Multiplayer: „Ehrenbürger“, „Stammgast“, „Grillmeister“.
 
