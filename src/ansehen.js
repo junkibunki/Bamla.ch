@@ -17,28 +17,36 @@ const MURREN = ['Ah, du schu widder …', 'Hmpf.', 'Mit dir schwätz i nit.', 'B
 const SCHIMPF = ['Bisch bsoffe?! Lass s Auto stoh!', 'Schäm di, bsoffe fahre!', 'Fahr heim un schlof di us!',
   'Du Lump, du!', 'Langsam, do sin Kinder!', 'Hesch e Schuss?!', 'So öbbis, am helllichte Dag!'];
 
-// Sprechblase als Sprite über dem Kopf
+// Sprechblase als Sprite über dem Kopf; lange Sprüche (sprueche.js) werden auf mehrere Zeilen umbrochen
+const BUBBLE_MAX = 620; // Textbreite in Pixeln, ab der umbrochen wird
 function bubbleSprite(text, angry) {
   const c = document.createElement('canvas'), g = c.getContext('2d');
   const font = 'bold 36px system-ui, sans-serif';
   g.font = font;
-  c.width = Math.ceil(g.measureText(text).width) + 44;
-  c.height = 86;
+  const lines = [];
+  for (const w of text.split(' ')) {
+    const l = lines.length ? `${lines[lines.length - 1]} ${w}` : w;
+    if (lines.length && g.measureText(l).width <= BUBBLE_MAX) lines[lines.length - 1] = l; else lines.push(w);
+  }
+  const boxH = 60 + (lines.length - 1) * 44;
+  c.width = Math.ceil(Math.max(...lines.map((l) => g.measureText(l).width))) + 44;
+  c.height = boxH + 26;
   g.font = font;
   g.fillStyle = angry ? '#ffe1dc' : '#ffffff';
   g.strokeStyle = angry ? '#b3261e' : '#1d2633';
   g.lineWidth = 4;
-  g.beginPath(); g.roundRect(3, 3, c.width - 6, 60, 18); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(c.width / 2 - 12, 61); g.lineTo(c.width / 2, 83); g.lineTo(c.width / 2 + 10, 61); g.closePath(); g.fill();
-  g.beginPath(); g.moveTo(c.width / 2 - 12, 63); g.lineTo(c.width / 2, 83); g.lineTo(c.width / 2 + 10, 63); g.stroke();
+  g.beginPath(); g.roundRect(3, 3, c.width - 6, boxH, 18); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(c.width / 2 - 12, boxH + 1); g.lineTo(c.width / 2, boxH + 23); g.lineTo(c.width / 2 + 10, boxH + 1); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(c.width / 2 - 12, boxH + 3); g.lineTo(c.width / 2, boxH + 23); g.lineTo(c.width / 2 + 10, boxH + 3); g.stroke();
   g.fillStyle = angry ? '#7a1010' : '#1d2633';
   g.textBaseline = 'middle';
-  g.fillText(text, 22, 34);
+  lines.forEach((l, i) => g.fillText(l, 22, 34 + i * 44));
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
   s.renderOrder = 11;
-  s.scale.set((c.width / c.height) * 0.75, 0.75, 1);
+  s.center.set(0.5, 0); // unten verankert: die Spitze bleibt über dem Kopf, mehr Zeilen wachsen nach oben
+  s.scale.set(c.width * 0.75 / 86, c.height * 0.75 / 86, 1);
   return s;
 }
 
@@ -131,7 +139,7 @@ export class Ansehen {
     for (const b of this.bubbles) {
       b.left -= dt;
       const m = b.who.mesh;
-      b.s.position.set(m.position.x, m.position.y + 2.75, m.position.z);
+      b.s.position.set(m.position.x, m.position.y + 2.375, m.position.z);
       b.s.material.opacity = Math.min(1, b.left / 0.4);
       if (b.left <= 0) { this.ctx.scene.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); }
     }

@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { BUS_STOP } from './museum.js';
 import { Belohnungen } from './belohnungen.js';
 import { Ansehen } from './ansehen.js';
+import { Sprueche } from './sprueche.js';
 import { Postkarten } from './postkarten.js';
 
 const STORE = 'bamla.quests';
@@ -193,6 +194,7 @@ export class Quests {
     // Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Multiplayer; Grüßen und Dorffest; Postkarten
     this.belohnungen = new Belohnungen(this.ctx);
     this.ansehen = new Ansehen(this.ctx);
+    this.sprueche = new Sprueche(this.ctx, this.ansehen); // Sprüche uff Alemannisch an besonderen Orten
     this.postkarten = new Postkarten(this.ctx);
     this.renderTrack();
   }
@@ -358,6 +360,7 @@ export class Quests {
     for (const [id, upd] of this.updates) if (this.handles.get(id).active) upd(dt); // angenommen oder nebenbei
     this.belohnungen?.update(dt, input);
     this.ansehen?.update(dt);
+    this.sprueche?.update(dt);
     this.postkarten?.update(dt);
 
     // Marker: wippen, nur in der Nähe sichtbar (von weitem zeigt sie die Minimap)
