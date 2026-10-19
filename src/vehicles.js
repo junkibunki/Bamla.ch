@@ -465,7 +465,7 @@ export class Vehicle {
     let y = 0, pitch = 0, roll = 0;
     if (world) {
       const L = this.k.halfLen * 0.8, W = this.k.halfW * 0.8, fx = this.fx, fz = this.fz;
-      const h = (x, z) => world.groundAt(x, z, this.y); // auf der Brücke das Deck, darunter die Straße
+      const h = (x, z) => world.groundAt(x, z, this.y, 1); // auf der Brücke das Deck, darunter die Straße; auf dem Dach der First
       const hf = h(this.x + fx * L, this.z + fz * L), hb = h(this.x - fx * L, this.z - fz * L);
       const hl = h(this.x + fz * W, this.z - fx * W), hr = h(this.x - fz * W, this.z + fx * W);
       const ground = (hf + hb + hl + hr) / 4;

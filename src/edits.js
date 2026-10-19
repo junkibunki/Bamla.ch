@@ -169,7 +169,12 @@ export class ShedLayer {
       if (e?.kind === 'shed') this.list.push({ box: orientedBox(ring), e, building: i });
     });
     for (const e of world.edits.sheds) this.list.push({ box: shedBox(e), e });
-    for (const s of this.list) s.top = shedGeometry(s.box, s.e, world, bufs.walls, bufs.roofs, bufs.glass);
+    for (const s of this.list) {
+      const mark = bufs.roofs.pos.length;
+      s.top = shedGeometry(s.box, s.e, world, bufs.walls, bufs.roofs, bufs.glass);
+      s.roof = bufs.roofs.pos.slice(mark); // begehbares Dach
+      if (s.building != null) world.setRoof(s.building, s.roof);
+    }
     for (const [k, buf] of Object.entries(bufs)) {
       if (!buf.pos.length) continue;
       const m = new THREE.Mesh(buf.geometry(), this.mats[k]);
@@ -185,10 +190,11 @@ export class ShedLayer {
       const bi = this.slots[n++];
       world.buildings[bi] = ring;
       world.heights[bi] = s.top;
+      world.setRoof(bi, s.roof);
       const key = ring.map(([x, z]) => Math.floor(x / world.cell) + ',' + Math.floor(z / world.cell)).join(';');
       if (this.cells.get(bi) !== key) { world.addToGrid(ring, bi); this.cells.set(bi, key); }
       s.slot = bi;
     }
-    for (let j = n; j < this.slots.length; j++) { world.buildings[this.slots[j]] = []; world.heights[this.slots[j]] = -Infinity; }
+    for (let j = n; j < this.slots.length; j++) { world.buildings[this.slots[j]] = []; world.heights[this.slots[j]] = -Infinity; world.setRoof(this.slots[j], null); }
   }
 }

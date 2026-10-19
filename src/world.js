@@ -205,6 +205,7 @@ export class World {
     this.grid = new Map();
     this.decks = [];          // begehbare Flächen über dem Gelände (addDeck)
     this.walkTop = new Map(); // Hindernis-Index → Oberkante, auf der man stehen kann (addObstacle)
+    this.roofs = [];          // Hindernis-Index → begehbares Dach (setRoof)
     this.tunnels = [];        // begehbare Röhren unter dem Gelände: floorAt(x, z, prevY), push(x, z, r, y) (fusstunnel.js)
     this.buildingSrc = data.buildings.filter((b) => openRing(b.pts).length >= 3);
     // LoD2-Gebäude (public/roofs.json): den OSM-Umrissen zugeordnet, in OSM fehlende Gebäude ergänzt
@@ -269,7 +270,9 @@ export class World {
 
   // Boden für Figuren und Fahrzeuge: Gelände oder Brückendeck, je nachdem ob man von oben kommt
   // (prevY = bisherige Fußhöhe; ohne Angabe immer das Gelände).
-  groundAt(x, z, prevY = -Infinity) {
+  // reach: so viel höher dürfen Oberkanten von Mauern und Dächern zusätzlich liegen (Fahrzeuge messen an vier
+  // Punkten und sitzen auf dem First tiefer als der First selbst).
+  groundAt(x, z, prevY = -Infinity, reach = 0) {
     let h = groundHeight(this.bridges, this.terrain, x, z, prevY);
     for (const t of this.tunnels) h = t.floorAt(x, z, prevY) ?? h; // wer unter der Decke ist, läuft auf dem Röhrenboden
     for (const d of this.decks) { // Dachterrassen, Treppen: nur wer von oben (oder knapp darunter) kommt
@@ -280,7 +283,7 @@ export class World {
     if (prevY > -Infinity) { // Oberkanten von Mauern und Dächern: nur wer von oben (oder knapp darunter) kommt
       for (const bi of this.grid.get(Math.floor(x / this.cell) + ',' + Math.floor(z / this.cell)) || []) {
         const y = this.topAt(bi, x, z);
-        if (y !== null && y > h && prevY >= y - TOP_STEP) h = y;
+        if (y !== null && y > h && prevY + reach >= y - TOP_STEP) h = y;
       }
     }
     return h;
@@ -293,12 +296,26 @@ export class World {
     const roof = this.roofs?.[bi];
     if (roof) {
       if (x < roof.box[0] || x > roof.box[2] || z < roof.box[1] || z > roof.box[3]) return null;
-      return roof.flat ?? roofHeight(roof.tris, x, z);
+      if (roof.flat != null) return pointInPolygon(x, z, roof.ring) ? roof.flat : null;
+      return roofHeight(roof.tris, x, z);
     }
     if (bi < this.buildingSrc.length || this.walkTop.has(bi)) return null;
     const ring = this.buildings[bi], b = ringBox(ring);
     if (x < b[0] || x > b[2] || z < b[1] || z > b[3] || !pointInPolygon(x, z, ring)) return null;
     return this.heights[bi];
+  }
+
+  // Begehbares Dach von Hindernis bi: Dreiecke [x, y, z, …] oder { flat: Höhe, ring } (Flachdach); null: nicht begehbar.
+  setRoof(bi, roof) {
+    if (Array.isArray(roof)) {
+      const tris = Float32Array.from(roof), box = [Infinity, Infinity, -Infinity, -Infinity];
+      for (let k = 0; k < tris.length; k += 3) {
+        box[0] = Math.min(box[0], tris[k]); box[1] = Math.min(box[1], tris[k + 2]);
+        box[2] = Math.max(box[2], tris[k]); box[3] = Math.max(box[3], tris[k + 2]);
+      }
+      roof = { tris, box };
+    } else if (roof) roof = { ...roof, box: ringBox(roof.ring) };
+    this.roofs[bi] = roof;
   }
 
   // Steht man mit den Füßen auf Höhe y auf Hindernis bi (Kreis um x, z mit Radius r)? Dann stößt man sich nicht daran.

@@ -571,7 +571,7 @@ export function buildBuildings(world, rng) {
     const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
     const cz = ring.reduce((s, p) => s + p[1], 0) / ring.length;
     const edit = world.edits?.kindAt(cx, cz); // Karten-Editor (public/edits.json)
-    if (edit === 'remove') { heights.push(-Infinity); world.buildingInfo.push(null); return; }
+    if (edit === 'remove') { heights.push(-Infinity); world.buildingInfo.push(null); world.setRoof(i, null); return; }
     const ov = edit ? null : findOverride(cx, cz);
     if (ov?.ridge) box = boxAlong(ring, ...ov.ridge);
     let variant = r() < 0.6 ? 'shutter' : 'blind';
@@ -620,8 +620,8 @@ export function buildBuildings(world, rng) {
     const gMin = Math.min(...ground), gMax = Math.max(...ground);
     const lift = gMax - gMin + 0.3; // Wandstück unterhalb des Erdgeschosses
     const base = gMin - 0.3;
-    if (ov?.skip) { heights.push(gMax + ov.skip); world.buildingInfo.push(null); return; } // eigenes Modell (z. B. feuerwehr.js)
-    if (edit === 'shed') { heights.push(gMax + 3); world.buildingInfo.push(null); return; } // baut edits.js (ShedLayer)
+    if (ov?.skip) { heights.push(gMax + ov.skip); world.buildingInfo.push(null); world.setRoof(i, null); return; } // eigenes Modell (z. B. feuerwehr.js)
+    if (edit === 'shed') { heights.push(gMax + 3); world.buildingInfo.push(null); world.setRoof(i, null); return; } // baut edits.js (ShedLayer)
 
     // Wände
     const shape = new THREE.Shape(ring.map(([x, z]) => new THREE.Vector2(x, -z)));
@@ -650,6 +650,7 @@ export function buildBuildings(world, rng) {
     }
 
     let top = gMax + eave;
+    const marks = [roofBuf.pos.length, lodRoofBuf.pos.length, flatBuf.pos.length]; // Dachflächen dieses Gebäudes (begehbar)
     if (lod) {
       const r = lod2Geometry(lod, world, { wallCol, windows, floor: gMax, roofCol,
         skylights: ov?.skylights ? { n: ov.skylights, side: ov.skylightSide || 1 } : null,
@@ -670,6 +671,8 @@ export function buildBuildings(world, rng) {
     }
     heights.push(top);
     world.buildingInfo.push({ box, floor: gMax, eave: gMax + eave, top, lod: !!lod, kind });
+    const tris = [roofBuf, lodRoofBuf, flatBuf].flatMap((b, k) => b.pos.slice(marks[k]));
+    world.setRoof(i, tris.length ? tris : !lod && pitch === 0 ? { flat: top, ring } : null); // Flachdach: Deckel der Wände
   });
 
   // etwas abgedunkelt: Ziegel wirken in der Sonne sonst zu hell-orange
