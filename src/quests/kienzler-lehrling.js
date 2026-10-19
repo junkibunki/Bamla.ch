@@ -10,6 +10,7 @@ const DROP = [g0[0] + gu[0] * 1.9 + gu[1] * 2.3, g0[1] + gu[1] * 1.9 - gu[0] * 2
 
 export default {
   id: 'kienzler-lehrling', nr: 14, title: 'Lehrling bei Kienzler',
+  nurAngenommen: true, // Palette kommt erst mit dem Annehmen
   // Zettel am Pfosten an der Hallenecke zur Römerstraße (Street View: blaues Schild neben der Zypresse)
   board: { id: 'kienzler', name: 'Aushang bei Kienzler', ...xz(hallPt(HALL.w + 2.2, -1.5)), heading: Math.atan2(HALL.u[0] + HALL.u[1], HALL.u[1] - HALL.u[0]), style: 'zettel' },
   text: 'Schnupperlehre bei Kienzler Metalltechnik! Zeig, was du kannst: In der Ladezone unter Tor 1 steht eine Palette '

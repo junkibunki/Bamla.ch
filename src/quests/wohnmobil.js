@@ -8,6 +8,7 @@ const RECEPTION = [-322.8, 526.4];
 
 export default {
   id: 'wohnmobil', nr: 37, title: 'Wohnmobil-Urlaub', board: BOARD_THERMALBAD,
+  nurAngenommen: true, // Wohnmobil steht erst mit dem Annehmen da
   text: 'Familie Schmid hat genug vom Thermalbad und will an den Rhein! Fahr ihr Wohnmobil vom Stellplatz an der Therme runter zum Campingplatz „Lug ins Land“ – die Schranke ist offen.',
   goal: 'Wohnmobil vom Stellplatz zum Campingplatz fahren',
   steps: ['Ins Wohnmobil auf dem Stellplatz an der Therme steigen (E)', 'Zum Campingplatz „Lug ins Land“ fahren'],

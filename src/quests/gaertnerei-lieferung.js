@@ -39,6 +39,7 @@ function flowers(scene, world, [x, z]) {
 
 export default {
   id: 'gaertnerei-lieferung', nr: 16, title: 'Gärtnerei-Lieferung',
+  nurAngenommen: true, // Pflanzkiste gibt es nur mit der Aufgabe
   board: { id: 'gaertnerei-verkauf', name: 'Zettel am Verkaufshaus', x: bx, z: bz, heading: BOARD_H, style: 'zettel' },
   text: 'Gärtnerei Hugenschmidt: Fahrer:in gesucht! Eine Kiste Sommerblumen soll auf den Friedhof an der Kirche – oder, wenn dir das lieber ist, in den Garten vom Pflegeheim im Schloss Rheinweiler.',
   goal: 'Pflanzen am Ziel abgeben',

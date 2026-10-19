@@ -9,6 +9,7 @@ const PALLET = [...P(17.5, 76.6), H_U], FORK = [...P(9.5, 76.6), H_U], DROP_R = 
 
 export default {
   id: 'kuehlkette', nr: 32, title: 'Kühlkette', board: BOARD_REWE,
+  nurAngenommen: true, // Stapler und Palette kommen erst mit dem Annehmen
   text: 'Die Anlieferung hinterm Markt braucht Hilfe! Neben dem Sattelauflieger steht eine Palette Leergutkisten. Nimm den roten Stapler (E, Gabel mit R/Q) und stell sie vor das Rolltor „Leergut“ an der Südseite.',
   goal: 'Palette vor das Rolltor „Leergut“ bringen',
   steps: ['Palette an der Anlieferung mit dem Stapler aufnehmen', 'Vor das Rolltor „Leergut“ fahren und absetzen'],

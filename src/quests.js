@@ -1,13 +1,18 @@
 // Aufgaben (IDEEN.md): Aushänge in der Welt, Lesen und Annehmen, Fortschritt, Belohnungen, Dorfpass (Taste J).
 //
 // Jede Aufgabe ist eine eigene Datei in src/quests/ (wird automatisch gefunden) mit `export default {
-//   id, nr, title, text, goal, board, steps?, reward?, setup?(ctx, q) }`:
+//   id, nr, title, text, goal, board, steps?, reward?, nurAngenommen?, setup?(ctx, q) }`:
 // - board: Id eines Aushangs aus BOARDS unten oder ein eigener { id, name, x, z, heading, style: 'brett' | 'zettel' }
+// - Aufgaben lassen sich auch nebenbei erledigen, ohne sie anzunehmen: update(dt) läuft dann still mit (keine
+//   Meldungen, kein Ziel), q.active ist wahr, der Fortschritt steht in state.nebenbei und geht beim Annehmen mit.
+//   nurAngenommen: true für Aufgaben, die erst mit dem Annehmen etwas in die Welt bringen (Paletten, Figuren,
+//   Zeitläufe, eigene E-Aktionen) – die zählen nur angenommen.
 // - steps: Teilschritte als Text (z. B. ['Fleisch beim Metzger kaufen', 'Ins Altersheim bringen'])
 // - reward: { ansehen = 10, title, unlock: { id, text }, text }
 // - setup(ctx, q): einmal beim Start; ctx = Spielobjekte (wie window.game) plus quests.
 //   Gibt optional update(dt) zurück, das jeden Frame läuft, solange die Aufgabe angenommen und offen ist.
-// - q: active, done, step, data (wird gespeichert), complete(), advance(step), target(x, z, label) / target(null),
+// - q: active (angenommen oder nebenbei), accepted, done, step, data (wird gespeichert), complete(), advance(step),
+//   target(x, z, label) / target(null),
 //   toast(text), save()
 // Andere Module fragen Belohnungen über ctx.quests.unlocked(id) / onUnlock(id, fn) ab und können mit
 // quests.emit(name, data) Ereignisse melden, auf die Aufgaben mit quests.on(name, fn) hören.
@@ -51,10 +56,10 @@ const genderTitle = (t) => OLD_TITLES[t] ?? t;
 
 function loadState() {
   try {
-    const s = { quests: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) };
+    const s = { quests: {}, nebenbei: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) };
     if (s.title && !titleExists(s.title)) s.title = genderTitle(s.title) === s.title ? s.title + ':in' : genderTitle(s.title);
     return s;
-  } catch { return { quests: {}, unlocks: [], ansehen: 0, title: '' }; }
+  } catch { return { quests: {}, nebenbei: {}, unlocks: [], ansehen: 0, title: '' }; }
 }
 const titleExists = (t) => t === 'Ehrenbürger:in' || defs.some((d) => d.reward?.title === t);
 
@@ -196,23 +201,27 @@ export class Quests {
     if (this.handles.has(d.id)) return this.handles.get(d.id);
     const self = this;
     const st = () => this.state.quests[d.id];
+    const nebenbei = () => !st() && !d.nurAngenommen; // noch nicht angenommen, zählt aber schon
+    const cur = () => st() ?? (nebenbei() ? (this.state.nebenbei[d.id] ||= { step: 0, data: {} }) : null);
     const q = {
       def: d,
       get status() { return st()?.status ?? 'neu'; },
-      get active() { return st()?.status === 'active'; },
+      get accepted() { return st()?.status === 'active'; },
+      get active() { return q.accepted || nebenbei(); },
       get done() { return st()?.status === 'done'; },
-      get step() { return st()?.step ?? 0; },
-      get data() { const s = st(); if (!s) return {}; return (s.data ||= {}); },
+      get step() { return cur()?.step ?? 0; },
+      get data() { const s = cur(); if (!s) return {}; return (s.data ||= {}); },
       complete() { self.complete(d); },
       advance(step = q.step + 1) {
         if (!q.active || step === q.step) return;
-        st().step = step;
-        if (d.steps?.[step]) self.toast(`${d.title}: ${d.steps[step]}`);
+        cur().step = step;
         self.save();
+        if (!q.accepted) return;
+        if (d.steps?.[step]) self.toast(`${d.title}: ${d.steps[step]}`);
         self.renderTrack();
       },
       target(x, z, label) { q.targetPos = x == null ? null : { x, z, label }; },
-      toast: (t) => self.toast(t),
+      toast: (t) => { if (q.accepted) self.toast(t); },
       save: () => self.save(),
     };
     this.handles.set(d.id, q);
@@ -225,7 +234,9 @@ export class Quests {
 
   accept(d) {
     if (this.state.quests[d.id]) return;
-    this.state.quests[d.id] = { status: 'active', step: 0, data: {} };
+    const n = this.state.nebenbei[d.id]; // schon nebenbei Erreichtes geht mit
+    delete this.state.nebenbei[d.id];
+    this.state.quests[d.id] = { status: 'active', step: n?.step ?? 0, data: n?.data ?? {} };
     this.save();
     this.toast(`Neue Aufgabe: ${d.title}`);
     this.renderTrack();
@@ -233,7 +244,9 @@ export class Quests {
   }
 
   complete(d) {
-    const s = this.state.quests[d.id];
+    let s = this.state.quests[d.id];
+    const nebenbei = !s && !d.nurAngenommen;
+    if (nebenbei) { s = this.state.quests[d.id] = { data: this.state.nebenbei[d.id]?.data ?? {} }; delete this.state.nebenbei[d.id]; }
     if (!s || s.status === 'done') return;
     s.status = 'done';
     s.at = Date.now();
@@ -245,7 +258,7 @@ export class Quests {
     if (r.unlock) { this.unlock(r.unlock.id); parts.push(r.unlock.text); }
     if (r.text) parts.push(r.text);
     this.handle(d).targetPos = null;
-    this.toast(`✔ ${d.title} erledigt! ${parts.join(' · ')}`, 7);
+    this.toast(`✔ ${d.title} ${nebenbei ? 'nebenbei ' : ''}erledigt! ${parts.join(' · ')}`, 7);
     if (this.level() !== before) this.toast(`Dein Ansehen im Dorf: ${this.level()}`, 6);
     if (defs.length && defs.every((x) => this.state.quests[x.id]?.status === 'done')) {
       this.unlock('dorfpass-voll');
@@ -342,7 +355,7 @@ export class Quests {
       }
     } else if (input.hit('KeyJ')) this.show('pass');
 
-    for (const [id, upd] of this.updates) if (this.state.quests[id]?.status === 'active') upd(dt);
+    for (const [id, upd] of this.updates) if (this.handles.get(id).active) upd(dt); // angenommen oder nebenbei
     this.belohnungen?.update(dt, input);
     this.ansehen?.update(dt);
     this.postkarten?.update(dt);
@@ -371,7 +384,7 @@ export class Quests {
   }
 
   currentTarget() {
-    for (const q of this.handles.values()) if (q.active && q.targetPos) return q.targetPos;
+    for (const q of this.handles.values()) if (q.accepted && q.targetPos) return q.targetPos;
     return null;
   }
 
@@ -379,7 +392,7 @@ export class Quests {
   get markers() {
     const m = this.boards.filter((b) => b.fresh).map((b) => ({ x: b.x, z: b.z, glyph: '!', color: '#ffd400' }));
     m.push(...this.extraMarkers);
-    for (const q of this.handles.values()) if (q.active && q.targetPos) m.push({ ...q.targetPos, glyph: '▼', color: '#7fe07f' });
+    for (const q of this.handles.values()) if (q.accepted && q.targetPos) m.push({ ...q.targetPos, glyph: '▼', color: '#7fe07f' });
     return m;
   }
 

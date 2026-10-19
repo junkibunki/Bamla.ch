@@ -111,6 +111,7 @@ function buildBat() {
 
 export default {
   id: 'mutprobe', nr: 28, title: 'Mutprobe',
+  nurAngenommen: true, // Tunnelgeist spukt nur mit der Aufgabe
   board: { id: 'baerlauchweg', name: 'Zettel am Bärlauchweg', x: -257.5, z: -206.6, heading: 2.36, style: 'zettel' },
   text: 'Die Kinder im Dorf flüstern es sich zu: Im alten Fußgängertunnel unter der Bahn haust „de Tunnelgeischt“. ' +
     'Wer sich traut, geht den Bärlauchweg hinunter und einmal ganz durch den Tunnel – allein, im Dunkeln und ohne umzukehren. ' +

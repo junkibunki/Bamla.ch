@@ -43,6 +43,7 @@ function clearGlass(v, on) {
 
 export default {
   id: 'elterntaxi', nr: 12, title: 'Elterntaxi',
+  nurAngenommen: true, // Mia wartet nur mit der Aufgabe
   board: { id: 'kiga-zaun', name: 'Zettel am Kindergarten', x: zx, z: zz, heading: -KA, style: 'zettel' },
   text: 'Wer kann Mia (5) heute abholen? Die Eltern stecken im Stau. Mia wartet vor dem Kindergarten – bitte mit dem Auto, Kindersitz ist im Rucksack. Wohin es geht, sagt sie dir selbst.',
   goal: 'Mia abholen und ans Ziel fahren',

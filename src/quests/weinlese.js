@@ -39,6 +39,7 @@ function bunch(scene, world, [x, z]) {
 
 export default {
   id: 'weinlese', nr: 15, title: 'Weinlese',
+  nurAngenommen: true, // Trauben hängen nur mit der Aufgabe
   board: { id: 'rebberg', name: 'Zettel am Rebberg', x: bx, z: bz, heading: 2.4, style: 'zettel' },
   text: 'Herbschte! Die Gutedel-Trauben sind reif. Wer hilft beim Lesen? Schneid die Trauben ab und bring die volle Kiste zum Gasthof Storchen – der Wirt zahlt gut und zeigt dir seinen Weinkeller.',
   goal: 'Trauben im Storchen abgeben',

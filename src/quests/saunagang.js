@@ -14,6 +14,7 @@ const SWEAT = 6; // Sekunden in der Sauna
 
 export default {
   id: 'saunagang', nr: 36, title: 'Saunagang', board: BOARD_THERMALBAD,
+  nurAngenommen: true, // Sauna-Aufguss gibt es nur mit der Aufgabe
   text: 'Im Saunagarten der Balinea wartet das Saunahaus mit einem kräftigen Aufguss. Schwitz ordentlich – und danach ab ins kalte Becken nebenan!',
   goal: 'Saunahaus und danach das kalte Becken',
   steps: ['Ins Saunahaus im Saunagarten (E an der Tür)', 'Abkühlen im kalten Becken (E an der Treppe)'],

@@ -10,6 +10,7 @@ const OWN = [-319.5, 253.8];                    // eigener Stapler auf dem Hof z
 
 export default {
   id: 'gabelstapler', nr: 3, title: 'Man hilft sich aus',
+  nurAngenommen: true, // Palette kommt erst mit dem Annehmen
   // Brett am Kundenparkplatz der Gärtnerei Hugenschmidt (Kellermatten), am Weg zum Sonnensegel
   board: { id: 'gaertnerei', name: 'Schwarzes Brett der Gärtnerei', x: -299, z: -160, heading: 2.5, style: 'brett' },
   text: 'Für die Wege im Gewächshaus brauchen wir Gitterroste. Kienzler in der Römerstraße hat sie fertig auf einer Palette '

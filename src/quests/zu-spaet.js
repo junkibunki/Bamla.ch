@@ -33,6 +33,7 @@ function gong() {
 
 export default {
   id: 'zu-spaet', nr: 13, title: 'Zu spät!', board,
+  nurAngenommen: true, // Zeitlauf beginnt mit dem Annehmen
   text: `Mutprobe: Von der Baracke bis zur Sonnenrainschule, bevor der Gong schlägt! Du hast ${LIMIT} Sekunden – die Uhr läuft, sobald du annimmst.`,
   goal: 'Vor dem Gong in der Sonnenrainschule sein',
   steps: ['Schnell zur Sonnenrainschule, bevor der Gong schlägt!', 'Zu spät! Zurück zum Zettel an der Baracke für einen neuen Versuch'],

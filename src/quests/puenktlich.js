@@ -9,6 +9,7 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart
 
 export default {
   id: 'puenktlich', nr: 24, title: 'Pünktlich', board: BAHNHOF_BOARD,
+  nurAngenommen: true, // Zeitlauf beginnt mit dem Annehmen
   text: `Der Zug hatte Verspätung, der Anschluss wird knapp! Der Bus Richtung Bad Bellingen fährt in Bamlach an der ` +
     `Haltestelle am Museum. Du hast ${mmss(LIMIT)} Minuten, um dort einzusteigen.`,
   goal: 'Den Bus an der Haltestelle am Museum erwischen',

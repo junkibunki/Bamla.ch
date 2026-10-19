@@ -10,6 +10,7 @@ const BOX = SHELTERS[0], BOX_R = 3.2;
 
 export default {
   id: 'einkaufswagen', nr: 30, title: 'Einkaufswagen-Chip', board: BOARD_REWE,
+  nurAngenommen: true, // Einkaufswagen kommt erst mit dem Annehmen
   text: 'Immer dasselbe: Hinten am Ostende des Parkplatzes steht schon wieder ein Einkaufswagen herum. Schieb ihn zurück in die Box an der Einfahrt – im Pfandschloss steckt noch ein Euro!',
   goal: 'Herumstehenden Einkaufswagen in die Box schieben',
   steps: ['Den Einkaufswagen am Ostende des Parkplatzes holen (E)', 'In die Einkaufswagenbox an der Einfahrt schieben'],
