@@ -344,6 +344,7 @@ export class Vehicle {
     const h = this.home;
     this.x = h.x; this.z = h.z; this.y = h.y; this.heading = h.heading;
     this.speed = this.steer = this.lift = 0;
+    this.air = false;
     if (this.trailer) this.placeTrailer(true);
   }
 
@@ -373,16 +374,19 @@ export class Vehicle {
     const throttle = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
     const steerIn = input.axis(['KeyD', 'ArrowRight'], ['KeyA', 'ArrowLeft']);
     const handbrake = input.down('Space');
+    this.hops = true; // sync() lässt es über Kuppen abheben
 
-    if (throttle > 0) this.speed += (this.speed < 0 ? k.brake : k.accel * Math.max(0, 1 - this.speed / k.maxSpeed)) * dt;
-    else if (throttle < 0) this.speed -= (this.speed > 0.5 ? k.brake : k.revAccel ?? k.accel) * dt;
-    this.speed = Math.max(-k.rev, this.speed);
-    const drag = (throttle === 0 ? 2 : 0.2) + (0.15 / k.maxSpeed) * this.speed * this.speed + (handbrake ? 14 : 0);
-    this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), drag * dt);
+    if (!this.flying) { // in der Luft greifen weder Gas noch Bremse
+      if (throttle > 0) this.speed += (this.speed < 0 ? k.brake : k.accel * Math.max(0, 1 - this.speed / k.maxSpeed)) * dt;
+      else if (throttle < 0) this.speed -= (this.speed > 0.5 ? k.brake : k.revAccel ?? k.accel) * dt;
+      this.speed = Math.max(-k.rev, this.speed);
+      const drag = (throttle === 0 ? 2 : 0.2) + (0.15 / k.maxSpeed) * this.speed * this.speed + (handbrake ? 14 : 0);
+      this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), drag * dt);
 
-    // Hangabtrieb: bergab wird man schneller, bergauf langsamer
-    const sl = this.slope || 0;
-    this.speed -= (9.81 * sl / Math.sqrt(1 + sl * sl)) * 0.7 * dt;
+      // Hangabtrieb: bergab wird man schneller, bergauf langsamer
+      const sl = this.slope || 0;
+      this.speed -= (9.81 * sl / Math.sqrt(1 + sl * sl)) * 0.7 * dt;
+    }
 
     const maxSteer = 0.6 / (1 + Math.abs(this.speed) / 16);
     const target = steerIn * maxSteer * (handbrake ? 1.6 : 1);
@@ -393,7 +397,7 @@ export class Vehicle {
 
   integrate(dt, world) {
     const k = this.k;
-    this.heading += (this.speed * Math.tan(this.steer) / k.wheelbase) * dt;
+    if (!this.flying) this.heading += (this.speed * Math.tan(this.steer) / k.wheelbase) * dt;
     // In kleinen Schritten bewegen, damit schnelle Fahrzeuge nicht durch Wände fahren.
     const steps = Math.max(1, Math.ceil(Math.abs(this.speed * dt) / 0.5));
     for (let s = 0; s < steps; s++) {
@@ -426,6 +430,36 @@ export class Vehicle {
     t.z = hz - Math.cos(t.heading) * len;
   }
 
+  // Deutlich in der Luft (nicht nur knapp über dem Boden): kein Gas, keine Bremse, keine Lenkung.
+  get flying() { return this.air && this.gap > 0.25; }
+
+  // Senkrechte Bewegung: am Boden folgt das Fahrzeug der Steigung; müsste es über eine Kuppe stärker nach unten
+  // beschleunigen als mit der Schwerkraft, hebt es ab, fliegt mit der Geschwindigkeit weiter und landet wieder.
+  fly(dt, ground) {
+    const jumped = this.lx === undefined || Math.hypot(this.x - this.lx, this.z - this.lz) > Math.abs(this.speed) * dt + 3;
+    this.lx = this.x; this.lz = this.z;
+    const vg = this.speed * Math.max(-1, Math.min(1, this.slope)); // Steiggeschwindigkeit entlang des Bodens
+    if (jumped) { this.air = false; this.vy = vg; return ground; } // eingestiegen, Schnellreise, zurückgesetzt
+    if (!this.air) {
+      const vy = this.vy || 0;
+      if (Math.abs(this.speed) > 6 && (vg - vy) / dt < -9.81 * 1.3) {
+        const y = this.y + vy * dt - 4.9 * dt * dt;
+        if (y > ground) { this.air = true; this.gap = y - ground; this.vy = vy - 9.81 * dt; return y; }
+      }
+      this.vy = vg;
+      return ground;
+    }
+    this.vy -= 9.81 * dt;
+    const y = this.y + this.vy * dt;
+    this.gap = y - ground;
+    if (y > ground) return y;
+    const impact = vg - this.vy; // so viel schneller sinkt das Fahrzeug als der Boden unter ihm
+    if (impact > 3) this.speed *= Math.max(0.6, 1 - impact * 0.02);
+    this.sag = Math.min(0.35, impact * 0.04);
+    this.air = false; this.vy = vg;
+    return ground;
+  }
+
   // Auf das Gelände setzen und an Längs-/Querneigung anpassen.
   sync(dt = 0, world = null) {
     let y = 0, pitch = 0, roll = 0;
@@ -434,10 +468,21 @@ export class Vehicle {
       const h = (x, z) => world.groundAt(x, z, this.y); // auf der Brücke das Deck, darunter die Straße
       const hf = h(this.x + fx * L, this.z + fz * L), hb = h(this.x - fx * L, this.z - fz * L);
       const hl = h(this.x + fz * W, this.z - fx * W), hr = h(this.x - fz * W, this.z + fx * W);
-      y = this.y = (hf + hb + hl + hr) / 4;
+      const ground = (hf + hb + hl + hr) / 4;
       pitch = -Math.atan2(hf - hb, 2 * L);
       roll = Math.atan2(hl - hr, 2 * W);
       this.slope = (hf - hb) / (2 * L);
+      // Vom Spieler gelenkte Fahrzeuge heben über Kuppen ab; Mitspieler:innen in der Luft kommen mit ihrer Höhe an.
+      if (dt > 0 && (this.hops || this.air) && this.kind !== 'horse') y = this.fly(dt, ground);
+      else y = this.air || (this.remote && this.y > ground + 0.5) ? this.y : ground;
+      if (dt > 0) this.hops = false;
+      this.y = y;
+      if (this.air) { // in der Luft bleibt die Lage erhalten und dreht langsam auf den Boden darunter zu
+        const t = Math.min(1, dt * 2);
+        pitch = this.mesh.rotation.x + (pitch - this.mesh.rotation.x) * t;
+        roll = this.mesh.rotation.z + (roll - this.mesh.rotation.z) * t;
+      }
+      if (this.sag) { y -= this.sag; this.sag = this.sag > 0.005 ? this.sag * Math.exp(-dt * 6) : 0; } // Einfedern nach der Landung
     }
     this.mesh.position.set(this.x, y, this.z);
     this.mesh.rotation.set(pitch, this.heading, roll, 'YXZ');
