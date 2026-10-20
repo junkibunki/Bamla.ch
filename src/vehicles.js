@@ -370,6 +370,7 @@ export class Vehicle {
 
   // Spielersteuerung.
   drive(dt, input, world) {
+    if (this.k.drive) return this.k.drive(this, dt, input, world); // eigene Steuerung (Ruderboot)
     const k = this.k;
     const throttle = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
     const steerIn = input.axis(['KeyD', 'ArrowRight'], ['KeyA', 'ArrowLeft']);
@@ -396,6 +397,7 @@ export class Vehicle {
   }
 
   integrate(dt, world) {
+    if (this.k.integrate) return this.k.integrate(this, dt, world);
     const k = this.k;
     if (!this.flying) this.heading += (this.speed * Math.tan(this.steer) / k.wheelbase) * dt;
     // In kleinen Schritten bewegen, damit schnelle Fahrzeuge nicht durch Wände fahren.
@@ -462,6 +464,7 @@ export class Vehicle {
 
   // Auf das Gelände setzen und an Längs-/Querneigung anpassen.
   sync(dt = 0, world = null) {
+    if (world && this.k.sync) return this.k.sync(this, dt, world); // schwimmt (Ruderboot)
     let y = 0, pitch = 0, roll = 0;
     if (world) {
       const L = this.k.halfLen * 0.8, W = this.k.halfW * 0.8, fx = this.fx, fz = this.fz;
@@ -550,6 +553,7 @@ export class Vehicle {
   }
 
   npcUpdate(dt, world, vehicles, player) {
+    if (this.k.npcUpdate) return this.k.npcUpdate(this, dt, world, vehicles, player); // eigene KI (Ruderboot)
     const n = this.npc;
     if (n.update) return n.update(dt, vehicles, player); // eigene Steuerung (z. B. Gabelstapler auf dem Kienzler-Hof)
     if (n.path) return this.followPath(dt, vehicles, player);

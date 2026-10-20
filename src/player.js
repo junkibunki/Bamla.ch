@@ -58,7 +58,7 @@ export class Player {
     const side = sipping ? 0 : input.axis(['KeyA', 'ArrowLeft'], ['KeyD', 'ArrowRight']);
     const run = input.down('ShiftLeft', 'ShiftRight');
     const k = this.drunk?.level || 0;
-    const speed = (run ? 9 : 4.5) * (1 - 0.25 * k);
+    const speed = (run ? 9 : 4.5) * (1 - 0.25 * k) * (this.swimming ? 0.4 : 1); // im Rhein: schwimmen
 
     // Bewegung relativ zur Kamera: vorwärts = (-sin yaw, -cos yaw), rechts = (cos yaw, -sin yaw)
     let mx = -Math.sin(camYaw) * fwd + Math.cos(camYaw) * side;
@@ -90,7 +90,7 @@ export class Player {
     }
 
     // Springen und Schwerkraft
-    if (this.pos.y <= 0 && !sipping && input.hit('Space')) this.vy = 6.6; // gut 1,2 m hoch: auf Mauern und Brunnen
+    if (this.pos.y <= 0 && !sipping && !this.swimming && input.hit('Space')) this.vy = 6.6; // gut 1,2 m hoch: auf Mauern und Brunnen
     this.vy -= 18 * dt;
     this.pos.y = Math.max(0, this.pos.y + this.vy * dt);
     if (this.pos.y === 0) this.vy = Math.max(0, this.vy);
@@ -118,7 +118,10 @@ export class Player {
       this.mesh.armR.rotation.z = -0.4 * e;
       if (this.sip <= 0) { this.bottle.visible = this.glass.visible = false; this.onDrink?.(); }
     }
-    const ground = world.groundAt(this.pos.x, this.pos.z, feet); // auf der Brücke das Deck, darunter die Straße
+    let ground = world.groundAt(this.pos.x, this.pos.z, feet); // auf der Brücke das Deck, darunter die Straße
+    const swim = world.rhein?.swimAt(this.pos.x, this.pos.z); // tiefes Wasser: Kopf über Wasser, Füße 1,25 m darunter
+    this.swimming = swim != null && swim > ground;
+    if (this.swimming) ground = swim;
     // In der Luft oder über eine Kante (Mauer, Dach): die Füße behalten ihre Höhe, die Figur fällt hinunter.
     if (this.pos.y > 0 || ground < this.groundY - 0.4 - Math.hypot(this.vel.x, this.vel.y) * dt) {
       this.pos.y = Math.max(0, feet - ground);

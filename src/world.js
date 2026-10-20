@@ -36,6 +36,7 @@ import { paintGolf } from './golf-ground.js';
 import { findBridges, carveUnderBridges, railHeight, wayHeight, buildBridges, groundHeight, bridgePush } from './bridges.js';
 import { prepareAutobahn, buildAutobahn, MOTORWAY_W } from './autobahn.js';
 import { smoothRoads, underpassWays } from './roadsmooth.js';
+import { prepareRhein } from './rhein.js';
 
 export const ROAD_STYLE = {
   motorway:      { w: 11,  color: 0x55585e, y: 0.20, speed: 30, drive: true },
@@ -226,6 +227,7 @@ export class World {
     });
     this.buildings = this.buildingSrc.map((b) => openRing(b.pts));
     this.baseRings = this.buildings.slice(); // Umrisse wie geladen (Module ersetzen world.buildings[i] teils später)
+    this.rhein = prepareRhein(this); // Restrhein und Grand Canal: Bett ausheben, Wasserflächen, Uferweg (rhein.js)
     // Brücken (Eisenbahnbrücken und alles, was über eine Unterführung führt): Deckshöhe festlegen,
     // Gelände unter der Brücke für die Straße absenken
     this.bridges = findBridges(data.rails, data.roads, terrain, roadWidth);
@@ -378,6 +380,7 @@ export class World {
     // Reben: aus dem Luftbild erkannt (OSM-Rebflächen sind teils veraltet und bleiben Wiese)
     if (this.vineyards) paintVineyards(g, this.vineyards, t.minX, t.minZ);
     if (this.data.golf) paintGolf(g, this.data.golf, t.minX, t.minZ); // Golfplatz aus dem Luftbild
+    this.rhein.paint(g, t.minX, t.minZ); // Kiesufer am Rhein, Waldboden im Auwald
     for (const p of [...PAVED_AREAS, ...SITE_PAVED, ...KIRCHE_PAVED, ...MUSEUM_PAVED, ...SCHLOSS_PAVED, ...KIENZLER_PAVED, ...METZGEREI_PAVED, ...SCHULE_PAVED, ...KIGA_PAVED, ...KIGA_RW_PAVED,...RATHAUS_PAVED, ...GAERTNEREI_PAVED, ...BARACKE_PAVED, ...ECKE_PAVED, ...PROBSTEI_PAVED, ...KNEIPP_PAVED, ...REIT_PAVED, ...TUNNEL_PAVED, ...LEODEGAR_PAVED, ...REWE_PAVED, ...THERME_PAVED, ...KURHAUS_PAVED, ...KPP_PAVED, ...MUSIK_PAVED]) { path(p.pts); g.fillStyle = p.color; g.fill(); }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -453,7 +456,7 @@ export class World {
       if (sf && (pw || sf.paved)) { this.ribbon(r.pts, w, s.y, toHex(pw?.color || sf.color), this.paverRibbons, h); continue; }
       this.ribbon(r.pts, w, s.y, s.color, out, h);
     }
-    for (const w of this.data.waterways) this.ribbon(w.pts, w.type === 'river' ? 20 : 3, 0.21, 0x4f8fc0, out);
+    for (const w of this.data.waterways) if (!w.rhein) this.ribbon(w.pts, w.type === 'river' ? 20 : 3, 0.21, 0x4f8fc0, out); // Rhein: rhein.js
 
     // Gestrichelte Mittellinien auf größeren, zweispurigen Straßen.
     for (const r of this.data.roads) {
@@ -572,7 +575,7 @@ export class World {
       const tries = Math.min(4000, (maxX - minX) * (maxZ - minZ) * d);
       for (let i = 0; i < tries; i++) {
         const x = minX + r() * (maxX - minX), z = minZ + r() * (maxZ - minZ);
-        if (pointInPolygon(x, z, ring) && !this.nearRoad(x, z) && !this.data.treeFree?.some(([cx, cz, cr]) => (x - cx) ** 2 + (z - cz) ** 2 < cr * cr)) spots.push([x, z, a.kind === 'orchard' ? 0.6 : 0.8 + r() * 0.6]);
+        if (pointInPolygon(x, z, ring) && !this.nearRoad(x, z) && !this.rhein.inAue(x, z) && !this.data.treeFree?.some(([cx, cz, cr]) => (x - cx) ** 2 + (z - cz) ** 2 < cr * cr)) spots.push([x, z, a.kind === 'orchard' ? 0.6 : 0.8 + r() * 0.6]);
       }
     }
     const max = Math.min(spots.length, 9000);

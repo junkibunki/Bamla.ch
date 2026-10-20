@@ -1,9 +1,10 @@
 // Baut aus dem DGM1 des LGL Baden-Württemberg (1-m-Raster, XYZ, ETRS89/UTM32)
 // eine kompakte Höhenkarte im lokalen Spielkoordinatensystem (x = Ost, z = Süd, Meter).
 //
-// Quelle: https://opengeodata.lgl-bw.de (Datenlizenz Deutschland – Namensnennung 2.0)
+// Quelle: https://opengeodata.lgl-bw.de (Datenlizenz Deutschland – Namensnennung 2.0); westlich der Grenze RGE ALTI des IGN
+// (Géoplateforme, Licence Ouverte 2.0)
 // Erwartet entpackte Kacheln unter data/dgm/xyz/**.xyz (siehe README).
-import { createReadStream, readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
+import { createReadStream, readdirSync, statSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { createInterface } from 'node:readline';
@@ -68,7 +69,63 @@ for (let r = 0; r < rows; r++)
     out[r * cols + c] = dgmAt(e, n);
   }
 
-// 3) Lücken (außerhalb der Landesdaten, z. B. am Rhein) mit Nachbarwerten auffüllen
+// 3) Lücken westlich der Grenze (Rheininsel, Grand Canal d'Alsace) mit dem RGE ALTI (IGN, 1-m-Raster) füllen, abgefragt
+//    über den Höhendienst der Géoplateforme in einem 4-m-Raster (zwischengespeichert in data/ign-alti/).
+//    Der IGN glättet Wasserflächen auf einen festen Wert, beim Restrhein bis 1,8 m über dem DGM-Wasserspiegel: solche
+//    ebenen Stellen unter 223 m bleiben Lücke und werden unten vom deutschen Wasserspiegel her aufgefüllt.
+const IGN = 'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json';
+const IGN_CACHE = join(ROOT, 'data/ign-alti');
+mkdirSync(IGN_CACHE, { recursive: true });
+const gc = Math.ceil(cols / 2), gr = Math.ceil(rows / 2), coarse = new Float32Array(gc * gr).fill(NaN);
+const want = [];
+for (let r = 0; r < gr; r++)
+  for (let c = 0; c < gc; c++) {
+    let gap = false; // 4-m-Punkt neben einer Lücke?
+    for (let dr = -2; dr <= 2 && !gap; dr++) for (let dc = -2; dc <= 2 && !gap; dc++) {
+      const rr = r * 2 + dr, cc = c * 2 + dc;
+      gap = rr >= 0 && cc >= 0 && rr < rows && cc < cols && Number.isNaN(out[rr * cols + cc]);
+    }
+    if (gap) want.push(r * gc + c);
+  }
+console.log('IGN-Punkte (4 m):', want.length);
+for (let k = 0; k < want.length; k += 5000) {
+  const ids = want.slice(k, k + 5000), file = join(IGN_CACHE, `alti_${ids[0]}_${ids.length}.json`);
+  if (!existsSync(file)) {
+    const lon = [], lat = [];
+    for (const i of ids) {
+      const x = minX + (i % gc) * 2 * STEP, z = minZ + Math.floor(i / gc) * 2 * STEP;
+      lon.push((CENTER.lon + x / kx).toFixed(7)); lat.push((CENTER.lat - z / kz).toFixed(7));
+    }
+    const res = await fetch(IGN, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lon: lon.join('|'), lat: lat.join('|'), resource: 'ign_rge_alti_wld', zonly: 'true' }) });
+    const j = await res.json();
+    if (!j.elevations || j.elevations.length !== ids.length) throw new Error('IGN: ' + JSON.stringify(j).slice(0, 200));
+    writeFileSync(file, JSON.stringify(j.elevations));
+    console.log('IGN geladen:', k + ids.length, '/', want.length);
+  }
+  JSON.parse(readFileSync(file, 'utf8')).forEach((h, n) => { if (h > -1000) coarse[ids[n]] = h; });
+}
+const flatWater = (c, r) => { // geglättete Wasserfläche des Restrheins
+  const h = coarse[r * gc + c];
+  if (!(h < 223)) return false;
+  for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+    const v = coarse[(r + dr) * gc + c + dc];
+    if (!(Math.abs(v - h) < 0.015)) return false;
+  }
+  return true;
+};
+for (let r = 0; r < rows; r++)
+  for (let c = 0; c < cols; c++) {
+    const i = r * cols + c;
+    if (!Number.isNaN(out[i])) continue;
+    const fc = c / 2, fr = r / 2, c0 = Math.min(gc - 2, Math.floor(fc)), r0 = Math.min(gr - 2, Math.floor(fr)), tx = fc - c0, ty = fr - r0;
+    if (flatWater(Math.round(fc), Math.round(fr))) continue;
+    const a = coarse[r0 * gc + c0], b = coarse[r0 * gc + c0 + 1], d = coarse[(r0 + 1) * gc + c0], g = coarse[(r0 + 1) * gc + c0 + 1];
+    const v = (a * (1 - tx) + b * tx) * (1 - ty) + (d * (1 - tx) + g * tx) * ty;
+    if (!Number.isNaN(v)) out[i] = v;
+  }
+
+// 4) Verbleibende Lücken (Wasserflächen, Kartenrand) mit Nachbarwerten auffüllen
 let missing = out.reduce((s, v) => s + (Number.isNaN(v) ? 1 : 0), 0);
 console.log('fehlende Punkte:', missing);
 while (missing > 0) {
@@ -89,7 +146,7 @@ while (missing > 0) {
     }
 }
 
-// 4) Als 16-Bit-Werte (1 cm Auflösung) speichern, Höhe relativ zur Kartenmitte; je Zeile als Differenz zum
+// 5) Als 16-Bit-Werte (1 cm Auflösung) speichern, Höhe relativ zur Kartenmitte; je Zeile als Differenz zum
 //    linken Nachbarn und gzip-gepackt (5,5 → 2,1 MB, der Server packt .bin nicht), src/terrain.js entpackt
 let hmin = Infinity, hmax = -Infinity;
 for (const v of out) { hmin = Math.min(hmin, v); hmax = Math.max(hmax, v); }
@@ -101,6 +158,6 @@ for (let i = 0; i < u16.length; i++) delta[i] = i % cols ? u16[i] - u16[i - 1] :
 writeFileSync(join(ROOT, 'public/terrain.bin'), gzipSync(Buffer.from(delta.buffer), { level: 9 }));
 writeFileSync(join(ROOT, 'public/terrain.json'), JSON.stringify({
   minX, minZ, step: STEP, cols, rows, hmin, h0, scale: 0.01, encoding: 'delta-gzip',
-  source: 'DGM1 © LGL Baden-Württemberg, www.lgl-bw.de, dl-de/by-2-0',
+  source: 'DGM1 © LGL Baden-Württemberg, www.lgl-bw.de, dl-de/by-2-0; RGE ALTI © IGN, Licence Ouverte 2.0',
 }));
 console.log(`Höhenkarte ${cols}×${rows}, ${hmin.toFixed(1)}–${hmax.toFixed(1)} m NHN, Mitte ${h0.toFixed(1)} m`);
