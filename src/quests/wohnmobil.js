@@ -1,5 +1,5 @@
 // Aufgabe 37: Ein Wohnmobil vom Wohnmobilstellplatz an den Balinea Thermen zum Campingplatz „Lug ins Land“ fahren
-// (Fahrzeug 'wohnmobil' in vehicles.js). Belohnung: eigenes Wohnmobil, das danach immer am Stellplatz steht.
+// (Fahrzeug 'wohnmobil' in vehicles.js; jedes der geparkten Wohnmobile zählt). Belohnung: eigenes Wohnmobil, das danach immer am Stellplatz steht.
 import { BOARD_THERMALBAD } from './_bad-bellingen.js';
 import { Vehicle } from '../vehicles.js';
 
@@ -11,7 +11,7 @@ export default {
   nurAngenommen: true, // Wohnmobil steht erst mit dem Annehmen da
   text: 'Familie Schmid hat genug vom Thermalbad und will an den Rhein! Fahr ihr Wohnmobil vom Stellplatz an der Therme runter zum Campingplatz „Lug ins Land“ – die Schranke ist offen.',
   goal: 'Wohnmobil vom Stellplatz zum Campingplatz fahren',
-  steps: ['Ins Wohnmobil auf dem Stellplatz an der Therme steigen (E)', 'Zum Campingplatz „Lug ins Land“ fahren'],
+  steps: ['In ein Wohnmobil auf dem Stellplatz an der Therme steigen (E)', 'Zum Campingplatz „Lug ins Land“ fahren'],
   reward: { ansehen: 15, title: 'Camper-Chauffeur:in', unlock: { id: 'wohnmobil', text: 'Eigenes Wohnmobil am Stellplatz der Thermen' } },
   setup({ scene, vehicles, camping, quests, player }, q) {
     let wm = null;
@@ -19,11 +19,11 @@ export default {
     quests.onUnlock('wohnmobil', spawn);
     return () => {
       spawn();
-      const driving = player.car === wm;
+      const car = player.car, driving = car?.kind === 'wohnmobil'; // auch die geparkten Wohnmobile (kurparkplatz.js)
       q.advance(driving ? 1 : 0);
       if (driving) q.target(...RECEPTION, 'Campingplatz „Lug ins Land“');
       else q.target(wm.x, wm.z, 'Wohnmobil');
-      if (driving && camping.inside(wm.x, wm.z)) q.complete();
+      if (driving && camping.inside(car.x, car.z)) q.complete();
     };
   },
 };
