@@ -1,10 +1,17 @@
 // Aufgabe 34: Beim Rossmann Sonnencreme kaufen und auf einer Liege im Badegarten der Thermen eincremen (E).
 // Belohnung: Sonnenbrille (belohnungen.js).
-import { BOARD_THERMALBAD, ROSS_DOOR } from './_bad-bellingen.js';
-import { SITE } from '../therme-site.js';
+import { ROSS_DOOR } from './_bad-bellingen.js';
+import { SITE, ENTRANCE } from '../therme-site.js';
+
+// Zettel auf dem Vorplatz neben dem Haupteingang der Thermen, 4 m westlich der Tür, Blick zum Vorplatz
+const EL = Math.hypot(ENTRANCE.b[0] - ENTRANCE.a[0], ENTRANCE.b[1] - ENTRANCE.a[1]);
+const EU = [(ENTRANCE.b[0] - ENTRANCE.a[0]) / EL, (ENTRANCE.b[1] - ENTRANCE.a[1]) / EL]; // entlang der Front nach Osten
+const EN = [EU[1], -EU[0]];                                                               // nach außen zum Vorplatz
+const [bx, bz] = [ENTRANCE.door[0] - EU[0] * 4 + EN[0] * 1.5, ENTRANCE.door[1] - EU[1] * 4 + EN[1] * 1.5];
 
 export default {
-  id: 'sonnenschutz', nr: 34, title: 'Sonnenschutz', board: BOARD_THERMALBAD,
+  id: 'sonnenschutz', nr: 34, title: 'Sonnenschutz',
+  board: { id: 'therme-eingang', name: 'Zettel am Eingang der Thermen', x: bx, z: bz, heading: Math.atan2(EN[0], EN[1]), style: 'zettel' },
   text: 'Auf der Liegewiese brennt die Sonne! Hol dir beim Rossmann gegenüber vom Rewe eine Sonnencreme und creme dich auf einer der Liegen im Badegarten ordentlich ein.',
   goal: 'Mit Sonnencreme vom Rossmann auf einer Liege eincremen',
   steps: ['Sonnencreme beim Rossmann kaufen (4 €)', 'Auf einer Liege im Badegarten eincremen (E)'],

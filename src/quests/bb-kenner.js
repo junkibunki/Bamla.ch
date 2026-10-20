@@ -1,4 +1,5 @@
-// Aufgabe 42: In Bad Bellingen den Kurpark, die Balinea Thermen, den Rewe und die Wendeschleife am Thermalbad besuchen.
+// Aufgabe 42: In Bad Bellingen den Kurpark, die Balinea Thermen, den Rewe, die Wendeschleife am Thermalbad, die
+// Rheinstraße und das Rathaus besuchen.
 import { BOARD_THERMALBAD } from './_bad-bellingen.js';
 
 const AREAS = [
@@ -6,12 +7,14 @@ const AREAS = [
   { name: 'Balinea Thermen', c: [37, -1268], r: 45 },
   { name: 'Rewe und Rossmann', c: [105, -1600], r: 40 },
   { name: 'Wendeschleife am Thermalbad', c: [17, -1428], r: 20 },
+  { name: 'Rheinstraße', c: [356.9, -1574.2], r: 25 },          // Mitte der verkehrsberuhigten Straße (rheinstrasse-site.js)
+  { name: 'Rathaus Bad Bellingen', c: [383.57, -1685.22], r: 20 }, // Mitte Altbau (rathaus-bb.js)
 ];
 
 export default {
   id: 'bb-kenner', nr: 42, title: 'Bad-Bellingen-Kenner:in', board: BOARD_THERMALBAD,
-  text: 'Bamlach kennst du – aber kennst du auch Bad Bellingen? Schau dir den Kurpark, die Balinea Thermen, den Rewe und die Wendeschleife am Thermalbad an.',
-  steps: [0, 1, 2, 3, 4].map((n) => `Bad Bellingen erkunden (${n}/4)`),
+  text: 'Bamlach kennst du – aber kennst du auch Bad Bellingen? Schau dir den Kurpark, die Balinea Thermen, den Rewe, die Wendeschleife am Thermalbad, die Rheinstraße und das Rathaus an.',
+  steps: Array.from({ length: AREAS.length + 1 }, (_, n) => `Bad Bellingen erkunden (${n}/${AREAS.length})`),
   reward: { ansehen: 15, title: 'Bad-Bellingen-Kenner:in' },
   setup({ player }, q) {
     let check = 0;
@@ -23,7 +26,7 @@ export default {
       for (const a of AREAS) {
         if (seen.includes(a.name) || Math.hypot(x - a.c[0], z - a.c[1]) > a.r) continue;
         seen.push(a.name);
-        q.toast(`„${a.name}“ besucht (${seen.length}/4)`);
+        q.toast(`„${a.name}“ besucht (${seen.length}/${AREAS.length})`);
         q.advance(seen.length);
         q.save();
       }

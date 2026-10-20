@@ -54,7 +54,7 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 39 | Entenfütterung | Brezel bei Armbruster kaufen und am Kurparkweiher die Enten füttern. | am Ufer verfüttert, Enten kommen angeschwommen | erledigt |
 | 40 | Großer Spielplatz | Auf dem neuen Spielplatz „Wilde Wasser“ rutschen und schaukeln. | beides erledigt | erledigt |
 | 41 | Kurlinie | Die ganze Buslinie von Rheinweiler Ort bis zum Thermalbad durchfahren, ohne auszusteigen. | an der Endhaltestelle angekommen | erledigt |
-| 42 | Bad-Bellingen-Kenner:in | Kurpark, Thermen, Rewe und Wendeschleife besuchen. | alle vier Orte besucht | erledigt |
+| 42 | Bad-Bellingen-Kenner:in | Kurpark, Thermen, Rewe, Wendeschleife, Rheinstraße und Rathaus besuchen. | alle sechs Orte besucht | erledigt |
 | 43 | Kurkonzert | Beim Kurkonzert im Kurpark das Badnerlied ganz anhören und danach mitklatschen (Belohnung: Musikverein-Uniform). | ganz zugehört und im Applaus geklatscht (E) | erledigt |
 | 44 | Hoch hinaus | Mit dem Aufzug an der Rheintreppe vom Kurpark hinauffahren und über den Steg zum Rathaus gehen. | oben am Rathaus angekommen | erledigt |
 
