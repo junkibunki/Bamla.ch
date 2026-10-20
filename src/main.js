@@ -67,6 +67,8 @@ import { buildKurpark } from './kurpark.js';
 import { prepareRheintreppe, buildRheintreppe } from './rheintreppe.js';
 import { buildRhein } from './rhein.js';
 import { buildRuderboote } from './ruderboot.js';
+import { buildPanzerplatte } from './panzerplatte.js';
+import { preparePanzerplatte } from './panzerplatte-site.js';
 import { prepareKurpark } from './kurpark-site.js';
 import { buildKurparkplatz } from './kurparkplatz.js';
 import { prepareKurparkplatz } from './kurparkplatz-site.js';
@@ -89,7 +91,7 @@ const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
-const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto', ruderboot: 'Ruderboot' };
+const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto', ruderboot: 'Ruderboot', panzer: 'Panzer' };
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -155,6 +157,7 @@ clearStationenweg(data); // Lichtung um Bildstöcke und Steinkreuz am Stationenw
 prepareTherme(data); // Balinea Thermen: Umgang und Saunaweg baut therme.js, keine Waldbäume im Badegarten
 prepareKurpark(data); // Kurparkweiher: alten Zickzack-Steg nicht zeichnen (neuer Holzsteg in kurpark.js)
 prepareKurparkplatz(data); // Parkplatz an Rewe und Kurhaus: Gassen zeichnet kurparkplatz.js, keine Waldbäume am Wohnmobilstellplatz
+preparePanzerplatte(data); // Panzerplatte: Weg über die Platte mit eigenem Mesh, keine Waldbäume auf Platte und Liegewiese
 prepareRheintreppe(data); // Rheintreppe: Weg auf die Stufenmitte (DGM1), Stufen und Pflaster oben mit eigenem Mesh
 prepareRheinstrasse(data); // verkehrsberuhigte Rheinstraße: Pflaster von Wand zu Wand baut rheinstrasse.js
 prepareLeodegar(data); // St. Leodegar Bad Bellingen: keine Waldbäume auf Friedhof und Kirchplatz
@@ -327,6 +330,7 @@ spawnTraffic('bike', world.graphs.bike, 14, BIKE_COLORS);
 new AutobahnTraffic(scene, world, rng(55), vehicles); // A5: PKW und LKW, je Richtung zwei Fahrstreifen
 const rhein = buildRhein(scene, world, { rng: rng(1815) }); // Wasser, Auwald, Schranken am Uferweg, Bootsstege
 buildRuderboote(scene, world, vehicles, rhein.moorings, rng(1816)); // Ruderboote an den Stegen und auf dem Restrhein
+const panzerplatte = buildPanzerplatte(scene, world, { vehicles, rng: rng(1817) }); // Panzerplatte: Kinder, Panzer im Gebüsch
 const sharedVehicles = vehicles.slice(); // bei allen Spieler:innen gleich (fester Zufall): Index = Fahrzeug im Multiplayer
 
 for (let i = 0; i < 35; i++) pedestrians.push(new Pedestrian(scene, world.graphs.walk, world.graphs.walk.randomSpot(rand), rand));
@@ -538,7 +542,7 @@ function updateHud(dt) {
   else if (v?.kind === 'firetruck') hud.hint.textContent = (Math.abs(v.speed) > 6 ? '' : 'E: Aussteigen · ') + 'R: Wasser marsch · T/G: Rohr heben/senken'; // Wasserwerfer
   else if (v === ecar.car && ecar.driveHint()) hud.hint.textContent = ecar.driveHint();
   else if (v?.kind === 'ruderboot') hud.hint.textContent = 'E: Aussteigen · W/S: rudern · A/D: drehen';
-  else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider ? 'Absteigen' : 'Aussteigen'}`;
+  else if (v) hud.hint.textContent = Math.abs(v.speed) > 6 ? '' : `E: ${v.mesh.rider && v.kind !== 'panzer' ? 'Absteigen' : 'Aussteigen'}`;
   else if (riding()) hud.hint.textContent = riding().riderHint();
   else if (quests.hint(player)) hud.hint.textContent = quests.hint(player); // Schwarzes Brett, Aushänge
   else if (carry.hint(player)) hud.hint.textContent = carry.hint(player) + (nearBar() && !carry.takesE(player) ? ' · ' + barHint(nearBar()) : ''); // Läden, Abgabeorte
@@ -552,7 +556,7 @@ function updateHud(dt) {
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
-    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' ? 'nehmen' : n?.mesh.rider ? 'aufsteigen' : 'einsteigen';
+    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' ? 'nehmen' : n?.mesh.rider && n.kind !== 'panzer' ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
       : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
@@ -646,6 +650,7 @@ function frame() {
   bus.update(dt, vehicles, player);
   camping.update(dt);
   rhein.update(dt); // Wellen ziehen mit der Strömung
+  panzerplatte.update(dt); // Kinder, Gischt, Bugwelle des Panzers
   tennis.update(dt);
   grillplatz.update(dt, player); // Volleyball, Bolzen
   kneipp.update(dt, player); // Spritzer beim Wassertreten

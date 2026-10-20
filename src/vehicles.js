@@ -389,6 +389,7 @@ export class Vehicle {
       this.speed -= (9.81 * sl / Math.sqrt(1 + sl * sl)) * 0.7 * dt;
     }
 
+    if (k.pivot && !this.flying) this.heading += steerIn * k.pivot * Math.max(0, 1 - Math.abs(this.speed) / 3) * dt; // Kettenfahrzeug: dreht auf der Stelle
     const maxSteer = 0.6 / (1 + Math.abs(this.speed) / 16);
     const target = steerIn * maxSteer * (handbrake ? 1.6 : 1);
     this.steer += (target - this.steer) * Math.min(1, dt * 8);
@@ -405,6 +406,13 @@ export class Vehicle {
     for (let s = 0; s < steps; s++) {
       this.x += (this.fx * this.speed * dt) / steps;
       this.z += (this.fz * this.speed * dt) / steps;
+      const ahead = k.halfLen * Math.sign(this.speed);
+      if (k.wade && (world.rhein?.depthAt(this.x + this.fx * ahead, this.z + this.fz * ahead) ?? 0) > k.wade) { // zu tiefes Wasser (Panzer)
+        this.x -= (this.fx * this.speed * dt) / steps;
+        this.z -= (this.fz * this.speed * dt) / steps;
+        this.speed = 0;
+        break;
+      }
       let hit = false;
       for (const off of k.circles) {
         const p = world.collide(this.x + this.fx * off, this.z + this.fz * off, k.r, this.y);

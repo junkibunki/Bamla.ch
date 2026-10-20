@@ -8,6 +8,7 @@
 // Bett ausheben, Uferweg in die Wegdaten. buildRhein() baut danach Wasser, Bäume, Schranken und Stege.
 import * as THREE from 'three';
 import { canvasTex, mat } from './bauteile.js';
+import { raiseFurt } from './panzerplatte-site.js';
 
 const WATERS = {
   // probe: so weit um die OSM-Achse wird der Wasserspiegel gesucht; depth/ramp: Bett in der Mitte, Übergang vom Ufer
@@ -237,6 +238,7 @@ export function prepareRhein(world) {
     });
   }
 
+  if (river) raiseFurt(t, river); // Panzerplatte: Furt durchs Flussbett
   const path = river ? uferweg(world, river) : { segs: [], barriers: [] };
   const rhein = {
     river, waters: all, path,
@@ -371,6 +373,7 @@ function plantAue(scene, world, rand) {
       if (roll > 0.2 && !(edge && roll < 0.36)) continue;
       const x = aue.x0 + (c + rand()) * aue.cell, z = aue.z0 + (r + rand()) * aue.cell;
       if (!R.inAue(x, z) || R.depthAt(x, z) > -0.3 || world.nearRoad(x, z) || world.collide(x, z, 1.2)) continue;
+      if (world.data.treeFree?.some(([cx, cz, cr]) => (x - cx) ** 2 + (z - cz) ** 2 < cr * cr)) continue;
       if (roll <= 0.2) trees.push([x, z, rand(), R.depthAt(x, z) > -3 ? 1 : 0]); // nah am Wasser: Weiden
       else bushes.push([x, z, rand()]);
     }
