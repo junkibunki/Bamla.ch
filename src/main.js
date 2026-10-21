@@ -19,6 +19,7 @@ import { buildStrassengruen } from './strassengruen.js';
 import { buildFeuerwehr } from './feuerwehr.js';
 import { buildMuseum, buildBusStop } from './museum.js';
 import { buildOrtseingaenge } from './ortseingang.js';
+import { buildBlitzer } from './blitzer.js';
 import { buildStorchen } from './storchen.js';
 import { buildRathaus } from './rathaus.js';
 import { buildTennis } from './tennis.js';
@@ -179,6 +180,7 @@ const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen
 buildRathaus(scene, world); // ehemaliges Rathaus gegenüber, Brunnen davor
 buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
+const blitzer = buildBlitzer(scene, world); // Blitzer an der Kreisstraße vor der Abzweigung zu Rewe und Rossmann (70 km/h)
 await step(0.59, 'Tennis, Grillplatz und Reitzentrum …', 0.6);
 const tennis = buildTennis(scene, world, rng(77));
 const grillplatz = buildGrillplatz(scene, world); // Grillplatz mit Hütte, Feuerstelle, Bolzplatz, Beachvolleyball, Spielgeräten
@@ -602,7 +604,7 @@ multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
+window.game = { renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -682,6 +684,7 @@ function frame() {
   backofen.update(dt); // Holzfeuer, Temperatur, Backen, Brotschieber
 
   drunk.update(dt);
+  blitzer.update(dt, player, quests);
   camera.layers[(!player.car && baracke.inside(player.pos)) || reit.inside(player.pos) ? 'disable' : 'enable'](ROOF_LAYER); // Hallendach (Baracke, Reithalle)
   updateCamera(dt);
   returnVehicles(dt);

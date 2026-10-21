@@ -129,7 +129,7 @@ function zone30(end = false) {
   });
 }
 
-function roundSign(text) {
+export function roundSign(text) {
   return canvasTex(256, 256, (g, W) => {
     g.fillStyle = '#fafafa'; g.beginPath(); g.arc(W / 2, W / 2, 126, 0, Math.PI * 2); g.fill();
     g.strokeStyle = RED; g.lineWidth = 30; g.beginPath(); g.arc(W / 2, W / 2, 106, 0, Math.PI * 2); g.stroke();
@@ -219,7 +219,7 @@ function cityLimit(scene, world, fr, along, side, { name, top, sub, next, km, bi
 }
 
 // Pfosten mit Verkehrszeichen; signs: [{ kind, tex, w, h, y }] von oben nach unten
-function signPost(scene, world, pos, ry, signs, poleH = 2.9) {
+export function signPost(scene, world, pos, ry, signs, poleH = 2.9) {
   const g = new THREE.Group();
   cyl(g, 0.032, 0.032, poleH, mat(STEEL), 0, poleH / 2, -0.04, 8);
   for (const s of signs) {
