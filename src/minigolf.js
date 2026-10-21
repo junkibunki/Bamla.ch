@@ -16,7 +16,7 @@ const KIOSK = { c: [222.2, -1473], a: (15 * Math.PI) / 180, w: 7.3, d: 9 };
 export const KIOSK_SPOT = [216.8, -1468.5];      // Ausgabe der Schläger an der Westterrasse
 
 // Bahnen: Mittellinie vom Abschlag zum Loch, Breite w, Belag, Par; obst in Bahnkoordinaten (s ab Abschlag, d nach links):
-// Kreise [s, d, r] oder Wände [s0, d0, s1, d1]; prof: Höhe über der Grundlinie [[s, dh], …]
+// Kreise [s, d, r] oder Wände [s0, d0, s1, d1] (guides: Wände nur für den Ball, ohne Mauer); prof: Höhe über der Grundlinie [[s, dh], …]
 export const LANES = [
   { name: 'Dampfbad', pts: [[206.5, -1471.5], [208, -1466]], w: 2.6, surf: 'stone', par: 3, deco: 'dampf',
     circ: [[1.2, 0.6, 0.3], [1.8, -0.7, 0.3], [2.6, 0.15, 0.3], [3.3, -0.5, 0.3], [3.9, 0.8, 0.3], [4.5, -0.15, 0.25]] },
@@ -26,7 +26,7 @@ export const LANES = [
   { name: 'Baumstämme', pts: [[205.5, -1440.5], [200.5, -1436]], w: 2.0, surf: 'turf', par: 3, deco: 'staemme',
     circ: [[1.8, 0.4, 0.2], [2.6, -0.5, 0.2], [3.4, 0.3, 0.18], [4.2, -0.25, 0.2], [5.0, 0.55, 0.17]] },
   { name: 'Weinberg', pts: [[203, -1429.5], [195.5, -1425.5]], w: 2.6, surf: 'turf', par: 3, deco: 'fass',
-    walls: [[4.8, 1.3, 4.8, 0.19], [4.8, -0.19, 4.8, -1.3]] },
+    walls: [[4.8, 1.3, 4.8, 0.33], [4.8, -0.33, 4.8, -1.3]], guides: [[4.3, 0.25, 5.3, 0.25], [4.3, -0.25, 5.3, -0.25]] }, // liegendes Fass in der Lücke, der Ball rollt hindurch
   { name: 'Findlinge', pts: [[207, -1423], [200.5, -1418]], w: 4.2, surf: 'turf', par: 3, deco: 'findlinge',
     circ: [[1.6, 1.0, 0.4], [2.5, -0.9, 0.45], [3.4, 0.4, 0.35], [4.6, -0.3, 0.4], [5.6, 1.2, 0.35], [6.3, -1.2, 0.3], [7.0, 0.2, 0.3]] },
   { name: 'Steinlabyrinth', pts: [[194, -1413], [188.5, -1407]], w: 3.0, surf: 'turf', par: 4, deco: 'labyrinth',
@@ -59,19 +59,31 @@ function prepare(lane, world) {
     L += l;
   }
   lane.L = L; lane.segs = segs;
-  const y0 = world.heightAt(...pts[0]) + 0.1, y1 = world.heightAt(...pts[pts.length - 1]) + 0.1;
-  const prof = lane.prof || [[0, 0], [L, 0]];
-  lane.hAt = (s) => {
-    s = Math.max(0, Math.min(L, s));
-    let dh = 0;
-    for (let i = 1; i < prof.length; i++) if (s <= prof[i][0] || i === prof.length - 1) { const [p0, h0] = prof[i - 1], [p1, h1] = prof[i]; dh = h0 + (h1 - h0) * Math.max(0, Math.min(1, (s - p0) / (p1 - p0 || 1))); break; }
-    return y0 + (y1 - y0) * (s / L) + dh;
-  };
   // Punkt in Bahnkoordinaten → Welt (Gehrung an den Knicken über die Segmentwahl)
   lane.P = (s, d) => {
     const sg = segs.find((g) => s <= g.s0 + g.l) || segs[segs.length - 1], t = s - sg.s0;
     return [sg.ax + sg.dx * t - sg.dz * d, sg.az + sg.dz * t + sg.dx * d];
   };
+  const y0 = world.heightAt(...pts[0]) + 0.1, y1 = world.heightAt(...pts[pts.length - 1]) + 0.1;
+  const prof = lane.prof || [[0, 0], [L, 0]];
+  const base = (s) => {
+    s = Math.max(0, Math.min(L, s));
+    let dh = 0;
+    for (let i = 1; i < prof.length; i++) if (s <= prof[i][0] || i === prof.length - 1) { const [p0, h0] = prof[i - 1], [p1, h1] = prof[i]; dh = h0 + (h1 - h0) * Math.max(0, Math.min(1, (s - p0) / (p1 - p0 || 1))); break; }
+    return y0 + (y1 - y0) * (s / L) + dh;
+  };
+  // Am Hang nicht unter dem Gelände: Grundlinie so wenig wie möglich linear anheben (Anhub a am Abschlag, b am Ende),
+  // bis die Fläche über die ganze Breite mindestens 3 cm über dem Boden liegt
+  const ex = [];
+  for (let s = 0; s <= L + 1e-6; s += 0.25) ex.push([s / L, Math.max(...[-0.5, -0.25, 0, 0.25, 0.5].map((f) => world.heightAt(...lane.P(s, f * lane.w)))) + 0.03 - base(s)]);
+  const ok = ([a, b]) => a >= 0 && b >= 0 && ex.every(([t, e]) => a + (b - a) * t >= e - 1e-6);
+  const cand = [[0, 0]];
+  for (const [ti, ei] of ex) {
+    cand.push([ei, ei]); if (ti < 1) cand.push([ei / (1 - ti), 0]); if (ti > 0) cand.push([0, ei / ti]);
+    for (const [tj, ej] of ex) if (tj > ti) { const k = (ej - ei) / (tj - ti); cand.push([ei - k * ti, ei + k * (1 - ti)]); }
+  }
+  const [la, lb] = cand.filter(ok).reduce((m, c) => (c[0] + c[1] < m[0] + m[1] ? c : m), [Infinity, Infinity]);
+  lane.hAt = (s) => base(s) + la + (lb - la) * Math.max(0, Math.min(1, s / L));
   // Welt → (s, d) über das nächste Segment
   lane.toSD = (x, z) => {
     let best = null;
@@ -95,7 +107,7 @@ function prepare(lane, world) {
   lane.walls = [];
   for (let i = 0; i < lane.ring.length; i++) lane.walls.push([lane.ring[i], lane.ring[(i + 1) % lane.ring.length]]);
   lane.circles = (lane.circ || []).map(([s, d, r]) => [...lane.P(s, d), r]);
-  for (const [s0, d0, s1, d1] of lane.wallsDef || []) lane.walls.push([lane.P(s0, d0), lane.P(s1, d1)]);
+  for (const [s0, d0, s1, d1] of [...(lane.wallsDef || []), ...(lane.guides || [])]) lane.walls.push([lane.P(s0, d0), lane.P(s1, d1)]);
   lane.tee = lane.P(0.5, 0);
   lane.cup = lane.P(lane.cupAt ?? L - 0.6, 0);
 }
@@ -205,7 +217,16 @@ export class Minigolf {
         for (let k = 0; k < 14; k++) { const [x2, z2] = P(lane.L + 1.2 + (k % 4) * 0.8, -2 + Math.floor(k / 4) * 1.2), y2 = w.heightAt(x2, z2); rock(x2, y2, z2, 0.25 + (k % 3) * 0.12); }
         break;
       }
-      case 'fass': for (const [s, d, hh] of [[4.8, 0, 1.0], [5.6, 1.6, 0.9]]) { const [x, z] = P(s, d), b = cyl(g, 0.45, 0.45, hh, 0xb9a680, x, h(s) + hh / 2, z, 14); for (const y of [0.15, hh - 0.15]) cyl(g, 0.46, 0.46, 0.05, 0x222222, x, h(s) + y, z, 14); } break;
+      case 'fass': { // liegendes, offenes Weinfass über der Lücke (unten 3 cm in die Bahn eingelassen), daneben ein stehendes
+        const bulge = (y) => 0.26 + 0.05 * (1 - 4 * y * y), sd = lane.segs[0], [x, z] = P(4.8, 0), f = new THREE.Group();
+        f.position.set(x, h(4.8) + 0.23, z); f.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(sd.dx, 0, sd.dz)); g.add(f);
+        const prof = []; for (let i = 0; i <= 8; i++) { const y = -0.5 + i / 8; prof.push(new THREE.Vector2(bulge(y), y)); }
+        const shell = new THREE.Mesh(new THREE.LatheGeometry(prof, 18), mat(0xb9a680, { side: THREE.DoubleSide })); shell.castShadow = true; f.add(shell);
+        for (const y of [-0.42, -0.2, 0.2, 0.42]) { const r = new THREE.Mesh(new THREE.TorusGeometry(bulge(y) + 0.006, 0.012, 4, 18).rotateX(Math.PI / 2), mat(0x222222)); r.position.y = y; f.add(r); }
+        const [x2, z2] = P(5.6, lane.w / 2 + 0.6), y2 = w.heightAt(x2, z2);
+        cyl(g, 0.45, 0.45, 0.9, 0xb9a680, x2, y2 + 0.45, z2, 14); for (const y of [0.15, 0.75]) cyl(g, 0.46, 0.46, 0.05, 0x222222, x2, y2 + y, z2, 14);
+        break;
+      }
       case 'labyrinth': for (const [a, b] of (lane.wallsDef || []).map(([s0, d0, s1, d1]) => [P(s0, d0), P(s1, d1)])) { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let t = 0.2; t < L; t += 0.45) { const x = a[0] + (b[0] - a[0]) * t / L, z = a[1] + (b[1] - a[1]) * t / L; rock(x, h(lane.toSD(x, z).s) + 0.15, z, 0.22, 0xa8a69a); } } break;
       case 'ruinen': { const [x, z] = P(lane.L + 0.8, 0.8), y = w.heightAt(x, z); for (let k = 0; k < 4; k++) box(g, 1.2 - k * 0.2, 1.4 - k * 0.3, 0.3, 0x8b583f, x + k * 0.2, y + (1.4 - k * 0.3) / 2, z, ry + 0.3); break; }
       case 'roemerbad': { const [x, z] = P(lane.L / 2, lane.w / 2 + 0.6); box(g, 0.25, 0.25, lane.L, 0x3a3a3a, ...[x, h(lane.L / 2) + 0.02, z], ry); break; }
