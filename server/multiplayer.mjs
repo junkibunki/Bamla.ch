@@ -52,11 +52,12 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
     }, 5000);
   };
   const dorfMsg = () => {
-    const all = Object.entries(dorf.best);
+    const all = Object.entries(dorf.best).sort((a, b) => b[1].n - a[1].n);
     return {
       t: 'dorf',
-      top: all.filter(([, b]) => b.n > 0).sort((a, b) => b[1].n - a[1].n).slice(0, TOP).map(([n, b]) => ({ n, c: b.n })),
-      ehren: all.filter(([, b]) => b.e).map(([n]) => n).slice(0, 40),
+      // Bestenliste ohne Ehrenbürger; die stehen alle in einer eigenen Liste
+      top: all.filter(([, b]) => b.n > 0 && !b.e).slice(0, TOP).map(([n, b]) => ({ n, c: b.n })),
+      ehren: all.filter(([, b]) => b.e).map(([n]) => n),
       lief: dorf.lief, ziel: ZIEL,
     };
   };

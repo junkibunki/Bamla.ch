@@ -238,14 +238,19 @@ export class Belohnungen {
       fill.style.width = `${(100 * n) / d.ziel}%`;
       bar.append(fill);
       box.append(bar, el('div', 'qsmall', `Alle zusammen bisher: ${d.lief} Lieferungen`));
+      if (d.ehren.length) { // alle mit vollem Dorfpass, ohne Begrenzung
+        const gold = el('div', 'qehren');
+        gold.append(el('b', null, `Ehrenbürger:innen – alle Aufgaben erledigt (${d.ehren.length})`));
+        const ol = el('ol');
+        for (const n of d.ehren) ol.append(el('li', n === this.mp.name ? 'me' : '', n));
+        gold.append(ol);
+        box.append(gold);
+      }
       box.append(el('b', null, 'Bestenliste – erledigte Aufgaben'));
       const ol = el('ol');
-      for (const e of d.top) {
-        const li = el('li', e.n === this.mp.name ? 'me' : '', `${e.n} – ${e.c}`);
-        if (d.ehren.includes(e.n)) li.textContent += ' · Ehrenbürger:in';
-        ol.append(li);
-      }
-      if (!d.top.length) ol.append(el('li', null, 'Noch niemand – sei der Erste!'));
+      const top = d.top.filter((e) => !d.ehren.includes(e.n)); // ältere Server schickten Ehrenbürger mit
+      for (const e of top) ol.append(el('li', e.n === this.mp.name ? 'me' : '', `${e.n} – ${e.c}`));
+      if (!top.length) ol.append(el('li', null, 'Noch niemand – sei als Erste:r dabei!'));
       box.append(ol);
     }
     p.append(box);
