@@ -49,6 +49,9 @@ const ORTE = [
   ] },
   { id: 'dorf', at: [-68.5, -26.5], face: [-74, -50], r: 25, sprueche: [
     'Z\'Bamla kennt jede jede. Und weiß, was jede letscht Ziischtig gmacht het.',
+    'S\'Lebe isch kei Ponyhof. Usser im Reitzentrum an dr Stroß noch Rheiwiler, do scho.',
+    'Am Samschtig spielt dr FC Bad Bellingen. Wer nit kicke cha, goht zum Bolzplatz in Bamlach und tuet so, als ob.',
+    'Ich ha emol für dr FC Bad Bellingen gspielt. Drei Minute, ei Ballkontakt. Dr Ball het gwunne.',
   ] },
 ];
 
