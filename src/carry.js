@@ -255,6 +255,13 @@ export class Carry {
   // Zuletzt Eingepacktes ist in der Hand; Verzehrbares mit G
   get held() { return this.items[this.items.length - 1] || null; }
   get edible() { return [...this.items].reverse().find((it) => ITEMS[it.id].eat) || null; }
+  // „G: Trinken“, solange G gerade wirkt (Touch-Knopf, main.js)
+  eatHint(player) {
+    const it = !player.car && !(player.sip > 0) && this.eating <= 0 && this.edible;
+    if (!it) return '';
+    const v = ITEMS[it.id].eat;
+    return 'G: ' + v[0].toUpperCase() + v.slice(1);
+  }
 
   // ---------- Jeden Frame (nach player.update) ----------
   update(dt, input, player) {
