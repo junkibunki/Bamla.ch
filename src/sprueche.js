@@ -52,6 +52,7 @@ const ORTE = [
     'S\'Lebe isch kei Ponyhof. Usser im Reitzentrum an dr Stroß noch Rheiwiler, do scho.',
     'Am Samschtig spielt dr FC Bad Bellingen. Wer nit kicke cha, goht zum Bolzplatz in Bamlach und tuet so, als ob.',
     'Ich ha emol für dr FC Bad Bellingen gspielt. Drei Minute, ei Ballkontakt. Dr Ball het gwunne.',
+    'Im Schloss Rheiwiler het früehner dr Adel gwohnt. Hüt wohne do so alti Lüt, die hän des no erläbt.',
   ] },
 ];
 
