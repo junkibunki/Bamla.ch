@@ -226,7 +226,8 @@ export class Carry {
     let best = null, bd = Infinity;
     for (const s of this.spots) {
       const d = Math.hypot(s.x - player.pos.x, s.z - player.pos.z);
-      if (d < s.r && d < bd && (!s.when || s.when()) && s.hint()) { bd = d; best = s; }
+      // gleich weit (Orte auf derselben Stelle, z. B. Freibier und Traubenabgabe am Storchen): der mit E gewinnt
+      if (d < s.r && (d < bd || (d === bd && s.act && !best.act)) && (!s.when || s.when()) && s.hint()) { bd = d; best = s; }
     }
     return best;
   }
