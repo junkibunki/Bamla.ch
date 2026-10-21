@@ -20,7 +20,7 @@ const ORTE = [
     'Ich chumm nit wäge dr Musik. Ich chumm wäge dr Bank im Schatte.',
     'Eimol im Johr isch Lichterfescht im Kurpark. Des isch soo schön – endlich isch emol ebbis los!',
   ] },
-  { id: 'rhein', at: [-676, -437], face: [-720, -440], r: 30, sprueche: [
+  { id: 'rhein', at: [-816, -158], face: [-830, -167], r: 30, sprueche: [   // oben neben dem Bamlacher Bootssteg
     'Do äne isch Frankrich. Luegt grad gliich us, numme s\'Baguette isch besser.',
     'Ich ha emol e Stei bis ins Elsass gschmisse. Sitdem luege d\'Franzose so komisch rüber.',
   ] },
