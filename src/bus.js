@@ -82,11 +82,17 @@ class Route {
     this.length = this.s[this.s.length - 1];
   }
 
+  // letzter Stützpunkt bei oder vor Bogenlänge s
+  index(s) {
+    let lo = 0, hi = this.s.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (this.s[m] <= s) lo = m; else hi = m; }
+    return lo;
+  }
+
   // Punkt und Fahrtrichtung bei Bogenlänge s
   at(s) {
     s = Math.max(0, Math.min(this.length, s));
-    let lo = 0, hi = this.s.length - 1;
-    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (this.s[m] <= s) lo = m; else hi = m; }
+    const lo = this.index(s), hi = Math.min(lo + 1, this.s.length - 1);
     const t = (s - this.s[lo]) / (this.s[hi] - this.s[lo] || 1);
     const a = this.pts[lo], b = this.pts[hi], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, dx: (b[0] - a[0]) / l, dz: (b[1] - a[1]) / l };
@@ -96,6 +102,18 @@ class Route {
     let best = 0, bd = Infinity;
     this.pts.forEach(([x, z], i) => { const d = Math.hypot(x - px, z - pz); if (d < bd) { bd = d; best = i; } });
     return this.s[best];
+  }
+
+  // Punkt bis 6 m neben dem Abschnitt s0–s1: Bogenlänge, Querversatz (rechts positiv) und Fahrtrichtung dort, sonst null
+  locate(x, z, s0, s1) {
+    let best = -1, bd = 36;
+    for (let i = this.index(Math.max(0, s0)); i < this.pts.length && this.s[i] <= s1; i++) {
+      const d = (this.pts[i][0] - x) ** 2 + (this.pts[i][1] - z) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (best < 0) return null;
+    const p = this.at(this.s[best]), rx = x - this.pts[best][0], rz = z - this.pts[best][1];
+    return { s: this.s[best] + rx * p.dx + rz * p.dz, off: -rx * p.dz + rz * p.dx, dx: p.dx, dz: p.dz };
   }
 }
 
@@ -264,9 +282,10 @@ export class BusLine {
   start(layover = false) {
     const L = this.lines[this.next];
     this.next = 1 - this.next;
-    this.trip = { L, route: L.route, s: -LEN, v: VMAX, dwell: 0, stopped: false, doorT: 0, boarding: 0, blockT: 0, stop: 0, reqS: null, at: null, here: null };
+    this.trip = { L, route: L.route, s: -LEN, v: VMAX, dwell: 0, stopped: false, doorT: 0, boarding: 0, blockT: 0, slowT: 0, pass: null, stop: 0, reqS: null, at: null, here: null };
     if (layover) Object.assign(this.trip, { s: L.stops[0].s - 1, v: 0, stopped: true, at: 'stop', here: L.stops[0], stop: 1, doorT: 1, dwell: this.nextWait + 14 });
     this.lane = layover ? LANE_STOP : LANE;
+    this.laneLog = []; // [Bogenlänge, Spur] des Bugs, damit die Hinterachse beim Spurwechsel der Spur des Bugs folgt
     this.nextWait = 50 + this.r() * 70; // Pause bis zur nächsten Fahrt (schon jetzt bekannt, für die Anzeige an der Haltestelle)
     this.setDisplay(L.display);
     this.mesh.visible = true;
@@ -296,14 +315,86 @@ export class BusLine {
     return g;
   }
 
-  // Hindernis bis 9 m voraus in der eigenen Spur (Spieler zu Fuß oder Fahrzeuge)?
-  blocked(front, vehicles, player) {
-    const inLane = (x, z) => {
-      const rx = x - front.x, rz = z - front.z, along = rx * front.dx + rz * front.dz;
-      return along > -0.5 && along < 9 && Math.abs(rx * front.dz - rz * front.dx) < 2.2;
+  // Verkehr entlang der Strecke vom Heck bis 200 m vor dem Bug: Abstand der Mitte zum Bug (d), Querversatz (off),
+  // halbe Länge/Breite, Tempo in Fahrtrichtung des Busses (v, Gegenverkehr negativ)
+  traffic(vehicles, player) {
+    const t = this.trip, nose = this.place(t.s, 0), list = [];
+    const add = (o, x, z, hl, hw, h, speed, foot) => {
+      if (Math.abs(x - nose.x) > 210 || Math.abs(z - nose.z) > 210) return;
+      const q = t.route.locate(x, z, t.s - LEN - 4, t.s + 200);
+      if (q) list.push({ o, d: q.s - t.s, off: q.off, hl, hw, v: speed * (Math.sin(h) * q.dx + Math.cos(h) * q.dz), foot });
     };
-    if (!player.car && !this.rider && inLane(player.pos.x, player.pos.z)) return true;
-    return vehicles.some((v) => inLane(v.x, v.z));
+    if (!player.car && !this.rider) add(player, player.pos.x, player.pos.z, 0.4, 0.4, 0, 0, true);
+    for (const o of vehicles) {
+      add(o, o.x, o.z, o.k.halfLen, o.k.halfW, o.heading, o.speed);
+      if (o.trailer) add(o.trailer, o.trailer.x, o.trailer.z, 2, 1.05, o.trailer.heading, o.speed);
+    }
+    return list;
+  }
+
+  // Vordermann in der eigenen Spur (ohne das Fahrzeug, das gerade überholt wird)
+  lead(traffic, skip) {
+    let best = null;
+    for (const e of traffic)
+      if (e.o !== skip && e.d > -1 && Math.abs(e.off - this.lane) < WID / 2 + e.hw + 0.3 && !(best && best.d < e.d)) best = e;
+    return best;
+  }
+
+  // Langsam (Fahrrad, Traktor, Pferd, Dreirad …) in der rechten Spur unterwegs?
+  slow(e) { return !e.foot && e.off > 0 && e.v > -0.5 && e.v < VMAX * 0.6; }
+
+  // Überholspur: links der Mitte, Fahrräder mit 1,5 m Seitenabstand
+  passLane(e) { return Math.max(-2, Math.min(-0.3, e.off - e.hw - WID / 2 - 1.5)); }
+
+  // Reicht die freie Gegenspur, um e (samt langsamer Kolonne direkt davor) zu überholen und 4 m vor ihr wieder einzuscheren?
+  clear(traffic, e, goal, slack = 0) {
+    const t = this.trip, lane = this.passLane(e);
+    let front = e.d + e.hl;
+    for (const x of [...traffic].sort((a, b) => a.d - b.d))
+      if (x.d > e.d && x.d - x.hl < front + 10 && this.slow(x)) front = Math.max(front, x.d + x.hl);
+    const rel = front + LEN + 4; // so viel muss der Bus gegenüber der Kolonne gutmachen
+    let T = 0, gain = 0, v = t.v;
+    while (gain < rel && T < 20) { v = Math.min(VMAX, v + ACC * 0.25); gain += (v - Math.max(0, e.v)) * 0.25; T += 0.25; }
+    if (T >= 20) return false;
+    const travel = Math.max(0, e.v) * T + rel;
+    if (Math.min(goal, t.route.length) - t.s < travel + 50 - slack) return false; // vorher kommt ein Halt oder das Streckenende
+    for (const x of traffic) {
+      if (x === e || x.d + x.hl < -LEN || x.off - x.hw > lane + WID / 2 + 0.3) continue; // hinter dem Bus oder rechts neben der Überholspur
+      const need = x.v < -0.5 ? travel - x.v * T + 15 : travel + 10; // Gegenverkehr kommt in der Zeit entgegen
+      if (x.d - x.hl < need - slack) return false;
+    }
+    return true;
+  }
+
+  // Überholen: langsamen Vordermann links umfahren, wenn die Gegenspur weit genug frei ist; danach wieder rechts einscheren
+  overtake(dt, traffic, lead, goal, player) {
+    const t = this.trip, p = t.pass;
+    if (p) {
+      p.t += dt;
+      const e = traffic.find((x) => x.o === p.o);
+      if (e && e.d + e.hl > -LEN - 3) { // noch nicht vorbei; kommt Gegenverkehr, bevor der Bus daneben ist: abbrechen
+        if (e.d - e.hl > 0 && !this.clear(traffic, e, goal, 15)) t.pass = null;
+        return;
+      }
+      const next = traffic.find((x) => x.o !== p.o && this.slow(x) && x.d + x.hl > -LEN - 3 && x.d - x.hl < 12); // Kolonne: gleich weiter
+      if (next && p.t < 40) { p.o = next.o; p.lane = Math.min(p.lane, this.passLane(next)); return; }
+      const room = !traffic.some((x) => x.d + x.hl > -LEN - 2 && x.d - x.hl < 4 && Math.abs(x.off - LANE) < WID / 2 + x.hw + 0.3);
+      if (room || p.t > 40) t.pass = null;
+      return;
+    }
+    // erst eine Weile hinterherfahren; Stehende nur, wenn sie nicht selbst im Stau stehen
+    const ok = lead && lead.o !== player && this.slow(lead) && lead.d - lead.hl < 20 && !(lead.v < 0.5 && lead.o.npc?.blocker);
+    t.slowT = ok ? t.slowT + dt : 0;
+    if (ok && t.s > 0 && t.slowT > (lead.v < 0.5 ? 3 : 1.5) && this.clear(traffic, lead, goal))
+      t.pass = { o: lead.o, lane: this.passLane(lead), t: 0 };
+  }
+
+  // Spur des Bugs, als er bei Bogenlänge s war
+  laneAt(s) {
+    const log = this.laneLog;
+    for (let i = log.length - 1; i > 0; i--)
+      if (log[i - 1][0] <= s) return s >= log[i][0] ? log[i][1] : log[i - 1][1] + ((log[i][1] - log[i - 1][1]) * (s - log[i - 1][0])) / (log[i][0] - log[i - 1][0]);
+    return log.length ? log[0][1] : this.lane;
   }
 
   // ---------- Mitfahren ----------
@@ -403,12 +494,14 @@ export class BusLine {
         }
       } else if (t.dwell <= 0) { t.stopped = false; t.doorT = 0; }
     } else {
-      // Zielgeschwindigkeit: vor dem Halteziel bremsen, bei Hindernis anhalten
-      const front = this.place(t.s, this.lane);
+      // Zielgeschwindigkeit: vor dem Halteziel bremsen, hinter dem Vordermann mit Abstand herfahren
       let target = VMAX;
       if (goal < Infinity) target = Math.min(target, Math.sqrt(2 * DEC * Math.max(0, goal - t.s)));
-      // Hindernis: warten; steht es nach 15 s noch da, schiebt sich der Bus vorbei (pushOut)
-      if (this.blocked(front, vehicles, player)) { if ((t.blockT += dt) < 15) target = 0; } else t.blockT = 0;
+      const traffic = this.traffic(vehicles, player), lead = this.lead(traffic, t.pass?.o);
+      // steht der Vordermann nach 15 s noch da, schiebt sich der Bus vorbei (pushOut)
+      if (lead && lead.v < 0.5 && lead.d - lead.hl < 6) t.blockT += dt; else t.blockT = 0;
+      if (lead && t.blockT < 15) target = Math.min(target, Math.max(0, Math.max(0, lead.v) + (lead.d - lead.hl - 4) * 0.7));
+      this.overtake(dt, traffic, lead, goal, player);
       t.v = t.v < target ? Math.min(target, t.v + ACC * dt) : Math.max(target, t.v - DEC * 2 * dt);
       t.s += t.v * dt;
       if (goal < Infinity && t.s >= goal - 0.3) {
@@ -438,10 +531,16 @@ export class BusLine {
       return;
     }
 
-    // Spur: vor einem Halt näher an den Bordstein
-    const want = t.stopped || goal - t.s < 25 ? LANE_STOP : LANE;
-    this.lane += Math.max(-0.5 * dt, Math.min(0.5 * dt, want - this.lane));
-    const f = this.place(t.s - 2.6, this.lane), b = this.place(t.s - LEN + 3.2, this.lane);
+    // Spur: vor einem Halt näher an den Bordstein, beim Überholen links der Mitte
+    const want = t.pass ? t.pass.lane : t.stopped || goal - t.s < 25 ? LANE_STOP : LANE;
+    const rate = t.pass || this.lane < LANE - 0.05 ? 1.2 : 0.5, was = this.lane;
+    this.lane += Math.max(-rate * dt, Math.min(rate * dt, want - this.lane));
+    const log = this.laneLog;
+    if (t.v < 1) for (const e of log) e[1] += this.lane - was; // im Stand rückt der ganze Bus seitlich
+    if (!log.length || t.s > log[log.length - 1][0] + 0.5) log.push([t.s, this.lane]);
+    else log[log.length - 1][1] = this.lane;
+    while (log.length > 2 && log[1][0] < t.s - LEN) log.shift();
+    const f = this.place(t.s - 2.6, this.laneAt(t.s - 2.6)), b = this.place(t.s - LEN + 3.2, this.laneAt(t.s - LEN + 3.2));
     const fy = this.world.heightAt(f.x, f.z), by = this.world.heightAt(b.x, b.z);
     const c = this.car;
     c.heading = Math.atan2(f.x - b.x, f.z - b.z);
