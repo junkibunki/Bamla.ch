@@ -57,7 +57,7 @@ Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 | Client → Server | `{ t: 'stand', n, voll }` | Zahl der erledigten Aufgaben, voller Dorfpass (nach dem Verbinden und jedem Abschluss) |
 | Client → Server | `{ t: 'lieferung' }` | eine Lieferung fürs Dorfziel (höchstens eine alle 10 s pro Name) |
 | Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` / `piepser` / `aufguss` / `quak` (höchstens alle 0,7 s) |
-| Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (10 Plätze ohne Ehrenbürger), alle Ehrenbürger (goldene Liste im Dorfpass, Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
+| Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (20 Plätze ohne Ehrenbürger), alle Ehrenbürger (goldene Liste im Dorfpass, Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
 | Server → Client | `{ t: 'feuerwerk', n, von }` | alle 50 Lieferungen: Feuerwerk über dem Rhein bei allen |
 | Server → Client | `{ t: 'hupe', id, k }` | ein Mitspieler hupt (leiser mit der Entfernung) |
 

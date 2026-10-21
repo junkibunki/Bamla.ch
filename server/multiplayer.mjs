@@ -19,7 +19,7 @@ const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 
 const OUTFITS = ['helm', 'schuerze', 'golfmuetze', 'motorradjacke', 'schaerpe', 'bademantel', 'kappe', 'sonnenbrille', 'saunatuch', 'schiebermuetze', 'uniform']; // Kleidung (src/person.js)
 const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn', 'piepser', 'aufguss', 'quak']; // Hupen (src/belohnungen.js)
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein
-const TOP = 10;         // Plätze in der Bestenliste
+const TOP = 20;         // Plätze in der Bestenliste
 const MAX_NAMES = 500;  // gemerkte Namen (die mit den wenigsten Aufgaben fliegen zuerst)
 const RUHE = 30000;     // ms ohne Bewegung, ab denen jemand im Anmeldeprotokoll nicht mehr als aktiv zählt
 
