@@ -220,28 +220,56 @@ export class Multiplayer {
     this.extra = {};          // { tr: Tennisschläger in der Hand } – setzt tennisspiel.js
     this.handlers = new Map(); // weitere Nachrichten: welcome, dorf, feuerwerk, hupe
     this.status = document.getElementById('players');
+    // Handy/Tablet: im Hintergrund (Tab gewechselt, Bildschirm aus) friert der Browser die Seite ein, der Server trennt
+    // nach 15–30 s ohne Pong. Neu verbunden wird erst, wenn die Seite wieder sichtbar ist – sonst meldet sich die
+    // Seite im Hintergrund alle paar Sekunden neu an und ab. Beim Zurückkommen eine still tote Verbindung gleich ersetzen.
+    const wake = () => {
+      if (document.hidden) return;
+      if (this.ws?.readyState === WebSocket.OPEN && performance.now() - this.lastMsg > 3000) this.drop();
+      else if (!this.ws) this.connect();
+    };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('pageshow', wake); // aus dem Zurück-Cache
     this.connect();
   }
 
   connect() {
+    clearTimeout(this.retry);
+    this.retry = null;
     const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/mp`;
     const ws = this.ws = new WebSocket(url);
+    this.lastMsg = performance.now();
     ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', name: this.name }));
-    ws.onmessage = (e) => this.receive(JSON.parse(e.data));
-    ws.onclose = (e) => {
-      this.online = false;
-      for (const r of this.remotes.values()) r.dispose();
-      this.remotes.clear();
-      this.renderStatus(e.code === 4001 ? 'Server voll' : 'Offline – verbinde neu …');
-      setTimeout(() => this.connect(), 5000);
-    };
+    ws.onmessage = (e) => { this.lastMsg = performance.now(); this.receive(JSON.parse(e.data)); };
+    ws.onclose = (e) => this.closed(ws, e.code);
+  }
+
+  // Verbindung weg: andere ausblenden, bei sichtbarer Seite nach 5 s neu verbinden, im Hintergrund erst beim Zurückkommen
+  closed(ws, code) {
+    if (ws !== this.ws) return;
+    ws.onclose = ws.onmessage = null;
+    this.ws = null;
+    this.online = false;
+    for (const r of this.remotes.values()) r.dispose();
+    this.remotes.clear();
+    this.renderStatus(code === 4001 ? 'Server voll' : 'Offline – verbinde neu …');
+    clearTimeout(this.retry);
+    this.retry = setTimeout(() => { this.retry = null; if (!document.hidden && !this.ws) this.connect(); }, 5000);
+  }
+
+  // tote Verbindung sofort ersetzen (ohne auf das close-Ereignis zu warten)
+  drop() {
+    const ws = this.ws;
+    this.closed(ws, 1000);
+    ws.close();
+    this.connect();
   }
 
   on(t, fn) {
     if (!this.handlers.has(t)) this.handlers.set(t, []);
     this.handlers.get(t).push(fn);
   }
-  send(msg) { if (this.online) this.ws.send(JSON.stringify(msg)); }
+  send(msg) { if (this.online && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg)); }
 
   receive(m) {
     for (const fn of this.handlers.get(m.t) || []) fn(m);
@@ -377,7 +405,7 @@ export class Multiplayer {
       : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };
-    this.ws.send(JSON.stringify({ t: 'state', ...state, ti: title || undefined, ...this.look, ...this.extra }));
+    this.send({ t: 'state',...state, ti: title || undefined, ...this.look, ...this.extra });
   }
 
   // Für die Minimap
