@@ -2,10 +2,17 @@
 // Rolltor „Leergut“ in der Südwand bringen (Paletten und Gabel aus kienzler.js). Belohnung: Lack Rewe-Rot, Hupe
 // Rückwärts-Piepser (belohnungen.js).
 import { BOARD_REWE } from './_bad-bellingen.js';
-import { P, A, DOCK_AT } from '../rewe-site.js';
+import { P, A, toUV, HALL, ANNEX, SOUTH, DOCK, DOCK_AT } from '../rewe-site.js';
 
 const H_U = Math.atan2(Math.cos(A), Math.sin(A)); // Blick entlang der Hallenachse u (nach Osten)
 const PALLET = [...P(17.5, 76.6), H_U], FORK = [...P(9.5, 76.6), H_U], DROP_R = 2.6;
+const RESPAWN_R = 25; // so weit muss die Figur weg sein, bevor eine im Markt verschwundene Palette zurückkommt
+
+// Die Gabel ragt vor den Stapler, so kann die Palette durch die Wand in den Markt geschoben werden
+const inside = ([u, v]) => (u > ANNEX.u0 && u < 0 && v > 0 && v < ANNEX.v1)
+  || (u >= 0 && u < HALL.u1 && v > 0 && v < HALL.v1) || (u > SOUTH.u0 && u < HALL.u1 && v >= HALL.v1 && v < SOUTH.v1);
+// hinter dem Rolltor durchgerutscht zählt auch als abgegeben
+const behindDock = ([u, v]) => Math.abs(u - DOCK.u) < DOCK.w / 2 + 1.5 && v > SOUTH.v1 - 3 && v <= SOUTH.v1;
 
 export default {
   id: 'kuehlkette', nr: 32, title: 'Kühlkette', board: BOARD_REWE,
@@ -14,7 +21,7 @@ export default {
   goal: 'Palette vor das Rolltor „Leergut“ bringen',
   steps: ['Palette an der Anlieferung mit dem Stapler aufnehmen', 'Vor das Rolltor „Leergut“ fahren und absetzen'],
   reward: { ansehen: 15, text: 'Lack Rewe-Rot und Hupe Rückwärts-Piepser im Dorfpass (J)' },
-  setup({ kienzler, vehicles }, q) {
+  setup({ kienzler, vehicles, player }, q) {
     let fork = null, pallet = null;
     return () => {
       if (!fork) { // eigener Stapler in Rewe-Rot (wie der Belohnungsstapler bei Kienzler: ohne Fahrer, bleibt stehen)
@@ -25,12 +32,18 @@ export default {
         vehicles.push(fork);
       }
       pallet ??= kienzler.addPallet(...(q.data.at ?? PALLET), 'crate');
-      const m = pallet.mesh;
+      let m = pallet.mesh;
       if (kienzler.isCarried(pallet)) { q.advance(1); q.target(...DOCK_AT, 'Rolltor „Leergut“'); return; }
+      const uv = toUV(m.position.x, m.position.z);
+      if (q.step > 0 && (Math.hypot(m.position.x - DOCK_AT[0], m.position.z - DOCK_AT[1]) < DROP_R || behindDock(uv))) { q.complete(); return; }
+      if (inside(uv) && Math.hypot(player.pos.x - m.position.x, player.pos.z - m.position.z) > RESPAWN_R) {
+        kienzler.removePallet(pallet); // im Markt unerreichbar: neue Palette an der Anlieferung
+        pallet = kienzler.addPallet(...PALLET, 'crate');
+        m = pallet.mesh;
+      }
       const at = [+m.position.x.toFixed(2), +m.position.z.toFixed(2), +m.rotation.y.toFixed(3)];
       if (String(at) !== String(q.data.at)) { q.data.at = at; q.save(); }
-      if (q.step > 0 && Math.hypot(m.position.x - DOCK_AT[0], m.position.z - DOCK_AT[1]) < DROP_R) q.complete();
-      else q.target(m.position.x, m.position.z, 'Leergut-Palette');
+      q.target(m.position.x, m.position.z, 'Leergut-Palette');
     };
   },
 };
