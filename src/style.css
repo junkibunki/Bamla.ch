@@ -68,6 +68,16 @@ canvas { display: block; }
 #players i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
 body.editing #players { display: none; }
 
+/* Chat-Eingabe (src/chat.js): Enter öffnet, Enter sendet, Esc bricht ab */
+#chat { display: none; position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9; width: min(520px, calc(100vw - 32px)); }
+#chat.open { display: block; }
+#chat input {
+  width: 100%; box-sizing: border-box; padding: 10px 14px; border: 0; border-radius: 10px;
+  background: #fffffff0; color: #1d2633; font: 16px system-ui, sans-serif; box-shadow: 0 4px 16px #0006;
+}
+#chat input:focus { outline: 2px solid #ffd400; outline-offset: 1px; }
+body.touch #chat { top: 60px; }
+
 #hud {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
   text-align: center; pointer-events: none;

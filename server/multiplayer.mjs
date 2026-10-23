@@ -1,7 +1,7 @@
 // Multiplayer-Server: verteilt Name und Position aller Spieler per WebSocket (Pfad /mp).
 // Jeder Client simuliert die Welt selbst; der Server reicht nur die Spielerzustände weiter.
 // Dazu das Dorf (README, Multiplayer): Bestenliste der erledigten Aufgaben, Ehrenbürger, gemeinsamer
-// Lieferzähler mit Feuerwerk alle ZIEL Lieferungen, Hupen der Mitspieler.
+// Lieferzähler mit Feuerwerk alle ZIEL Lieferungen, Hupen der Mitspieler, kurze Chat-Sätze (Sprechblase über dem Kopf).
 // Im Dev-Server hängt er sich an Vite (vite.config.js), im Betrieb läuft er eigenständig:
 //   PORT=8787 node server/multiplayer.mjs   (Caddy leitet /mp dorthin weiter)
 import { createServer } from 'node:http';
@@ -21,10 +21,12 @@ const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn', 'piepser', 'aufguss', 
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein
 const TOP = 20;         // Plätze in der Bestenliste
 const MAX_NAMES = 500;  // gemerkte Namen (die mit den wenigsten Aufgaben fliegen zuerst)
+const CHAT_LEN = 80;    // Zeichen pro Chat-Satz
 const RUHE = 30000;     // ms ohne Bewegung, ab denen jemand im Anmeldeprotokoll nicht mehr als aktiv zählt
 
 const num = (v, lim) => (Number.isFinite(v) ? Math.max(-lim, Math.min(lim, v)) : 0);
 const cleanName = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 20);
+const cleanText = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, CHAT_LEN);
 const dauer = (ms) => { // Aufenthaltsdauer als h:mm:ss
   const s = Math.round(ms / 1000), zwei = (n) => String(n).padStart(2, '0');
   return `${Math.floor(s / 3600)}:${zwei(Math.floor(s / 60) % 60)}:${zwei(s % 60)}`;
@@ -139,6 +141,12 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
         if (now - p.lastHorn < 700 || !HORNS.includes(m.k)) return;
         p.lastHorn = now;
         for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'hupe', id: p.id, k: m.k });
+      } else if (m.t === 'chat' && p) {
+        // kurzer Satz, den die anderen 15 s als Sprechblase über dem Kopf sehen (src/chat.js); höchstens einer pro Sekunde
+        const now = Date.now(), x = cleanText(m.x);
+        if (now - (p.lastChat || 0) < 1000 || !x) return;
+        p.lastChat = now;
+        for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'chat', id: p.id, x });
       } else if (m.t === 'tennis' && p) {
         // Tennisschlag (src/tennisspiel.js): Ball in Platzkoordinaten [x, y, z, vx, vy, vz]
         const now = Date.now(), b = m.b;

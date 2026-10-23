@@ -48,6 +48,7 @@ import { AutobahnTraffic } from './autobahn.js';
 import { ShedLayer } from './edits.js';
 import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
+import { Chat } from './chat.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows, StaticBatcher } from './tiles.js';
@@ -602,9 +603,18 @@ sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
 multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
+const chat = new Chat(scene, multiplayer, input); // kurze Sätze als Sprechblase über dem Kopf
+touch.chatBtn?.addEventListener('click', () => chat.openInput());
+// Spitze der eigenen Sprechblase: wo die anderen das Namensschild sehen (multiplayer.js), etwas darüber
+function headTop() {
+  const v = player.car, r = riding();
+  if (v) return [v.x, (v.y ?? 0) + (v.k.labelY ?? (v.mesh.rider ? 2.7 : 3.2)) + 0.4, v.z];
+  if (r) return [r.car.x, (r.car.y ?? world.heightAt(r.car.x, r.car.z)) + 4, r.car.z];
+  return [player.pos.x, player.mesh.position.y + 2.95, player.pos.z];
+}
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
+window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
 window.game.statics = statics;
 const clock = new THREE.Clock();
@@ -635,6 +645,7 @@ function frame() {
   if (!editing && input.hit('KeyR') && !player.car && !riding() && nearBar()?.wine) player.drink('schorle'); // Weinschorle
   else if (!editing && input.hit('KeyR') && !riding() && andacht.spot(player)) andacht.sing(player, andacht.spot(player));
   if (!editing && input.hit('KeyT') && !riding() && andacht.canClimb(player)) andacht.climb(player);
+  if (!editing && (input.hit('Enter') || input.hit('NumpadEnter'))) chat.openInput();
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);
@@ -693,6 +704,7 @@ function frame() {
   touch.update(editing, eat ? [...hud.hint.textContent.split(' · ').filter((s) => s && !s.startsWith('G:')), eat].join(' · ') : hud.hint.textContent);
   quests.update(dt, input, player, camera);
   multiplayer.update(dt, player, riding() || bus, quests.title);
+  chat.update(headTop());
   minimap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, cam.yaw, vehicles, multiplayer.others, quests.markers);
   if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, multiplayer.others, quests.markers);
 

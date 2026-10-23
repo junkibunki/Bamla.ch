@@ -57,9 +57,11 @@ Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 | Client → Server | `{ t: 'stand', n, voll }` | Zahl der erledigten Aufgaben, voller Dorfpass (nach dem Verbinden und jedem Abschluss) |
 | Client → Server | `{ t: 'lieferung' }` | eine Lieferung fürs Dorfziel (höchstens eine alle 10 s pro Name) |
 | Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` / `piepser` / `aufguss` / `quak` (höchstens alle 0,7 s) |
+| Client → Server | `{ t: 'chat', x }` | Chat-Satz, höchstens 80 Zeichen (höchstens einer pro Sekunde) |
 | Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (20 Plätze ohne Ehrenbürger), alle Ehrenbürger (goldene Liste im Dorfpass, Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
 | Server → Client | `{ t: 'feuerwerk', n, von }` | alle 50 Lieferungen: Feuerwerk über dem Rhein bei allen |
 | Server → Client | `{ t: 'hupe', id, k }` | ein Mitspieler hupt (leiser mit der Entfernung) |
+| Server → Client | `{ t: 'chat', id, x }` | ein Mitspieler sagt etwas: 15 s Sprechblase über seinem Kopf (`src/chat.js`) |
 
 Bestenliste und Lieferzähler schreibt der eigenständige Server nach `~deploy/bamla-dorf.json` (anderer Pfad über
 `DORF_STATE`); im Dev-Server leben sie nur im Speicher und sind nach einem Neustart weg.
@@ -158,10 +160,11 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 | R / Q | Gabel heben / senken (Gabelstapler) |
 | X | hupen (im Fahrzeug; Klang im Dorfpass wählbar, Mitspieler hören mit) |
 | J | Dorfpass: Stempel, Titel, Kleidung, Hupe, Lack, Postkarten, Bestenliste |
+| Enter | Chat: kurzen Satz schreiben, Enter sendet (Esc bricht ab); steht 15 s als Sprechblase über dem eigenen Kopf, bei allen Mitspieler:innen |
 | Mausrad | Kamera-Zoom |
 | H | Hilfe ein/aus |
 
-Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der ersten Berührung): links ziehen = Stick zum Laufen/Fahren (weit ziehen: rennen), rechts wischen = Kamera, zwei Finger = Zoom; rechts unten Aktion (E) und Springen (Leertaste), darüber die Tasten, die der Hinweis gerade nennt (z. B. R, T/G); oben Dorfpass, Hupe, Steuerung und Vollbild. Die Knöpfe drücken virtuelle Tasten in `Input`, die PC-Steuerung bleibt unverändert.
+Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der ersten Berührung): links ziehen = Stick zum Laufen/Fahren (weit ziehen: rennen), rechts wischen = Kamera, zwei Finger = Zoom; rechts unten Aktion (E) und Springen (Leertaste), darüber die Tasten, die der Hinweis gerade nennt (z. B. R, T/G); oben Dorfpass, Hupe, Chat, Steuerung und Vollbild. Die Knöpfe drücken virtuelle Tasten in `Input`, die PC-Steuerung bleibt unverändert.
 
 ## Aufbau
 
@@ -212,6 +215,7 @@ Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der
 - `src/vehicles.js` – Auto, Traktor (+ Anhänger), Fahrrad, Motorrad, Quad, Pferd: Fahrphysik und Verkehrs-KI
 - `src/pedestrians.js`, `src/person.js` – Fußgänger und Figuren (mit Kleidung aus dem Dorfpass)
 - `src/belohnungen.js`, `src/ansehen.js`, `src/postkarten.js`, `src/feuerwerk.js`, `src/hupe.js` – Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Ehrentafel, Bestenliste und Dorfziel; Grüßen, Beschimpfen, Dorffest; Postkarten; Feuerwerk und Klänge
+- `src/chat.js` – Chat: Eingabefeld (Enter, Touch: 💬), Sprechblasen über den Köpfen für 15 s
 - `src/player.js`, `src/input.js`, `src/minimap.js`, `src/main.js`
 
 Kartendaten © OpenStreetMap-Mitwirkende (ODbL). Gelände (DGM1), Rebflächen, befestigte Flächen und Golfplatz (abgeleitet aus DOP20): © LGL Baden-Württemberg, www.lgl-bw.de, [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0).

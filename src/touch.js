@@ -64,6 +64,7 @@ export class Touch {
     const bar = el('div', 'tbar', document.body);
     this.button('', 'KeyJ', '📜', 'Dorfpass', bar);
     this.button('', 'KeyX', '📯', 'Hupe', bar);
+    this.chatBtn = el('button', '', bar, '<b>💬</b><span>Chat</span>'); // öffnet das Eingabefeld direkt (chat.js)
     this.button('', 'KeyH', '❔', 'Steuerung', bar);
     if (document.documentElement.requestFullscreen) {
       const fs = el('button', '', bar, '<b>⛶</b><span>Vollbild</span>');
