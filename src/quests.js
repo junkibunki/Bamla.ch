@@ -9,6 +9,9 @@
 //   Zeitläufe, eigene E-Aktionen) – die zählen nur angenommen.
 // - steps: Teilschritte als Text (z. B. ['Fleisch beim Metzger kaufen', 'Ins Altersheim bringen'])
 // - reward: { ansehen = 10, title, unlock: { id, text }, text }
+// - repeat: { lohn, text? }: nach dem Abschluss als Auftrag wiederholbar (am Aushang „Nochmal“). Jede weitere Runde
+//   zahlt lohn € (text: was es insgesamt gibt, wenn die Aufgabe selbst noch Geld gibt) und zählt fürs Dorfziel.
+//   Eine Runde hat eigenes step/data; q.runde zählt hoch (0 = erstes Mal), damit Aufgaben ihre Welt zurücksetzen können.
 // - setup(ctx, q): einmal beim Start; ctx = Spielobjekte (wie window.game) plus quests.
 //   Gibt optional update(dt) zurück, das jeden Frame läuft, solange die Aufgabe angenommen und offen ist.
 // - q: active (angenommen oder nebenbei), accepted, done, step, data (wird gespeichert), complete(), advance(step),
@@ -57,10 +60,10 @@ const genderTitle = (t) => OLD_TITLES[t] ?? t;
 
 function loadState() {
   try {
-    const s = { quests: {}, nebenbei: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) };
+    const s = { quests: {}, nebenbei: {}, auftraege: {}, unlocks: [], ansehen: 0, title: '', ...JSON.parse(localStorage.getItem(STORE)) };
     if (s.title && !titleExists(s.title)) s.title = genderTitle(s.title) === s.title ? s.title + ':in' : genderTitle(s.title);
     return s;
-  } catch { return { quests: {}, nebenbei: {}, unlocks: [], ansehen: 0, title: '' }; }
+  } catch { return { quests: {}, nebenbei: {}, auftraege: {}, unlocks: [], ansehen: 0, title: '' }; }
 }
 const titleExists = (t) => t === 'Ehrenbürger:in' || defs.some((d) => d.reward?.title === t);
 
@@ -204,11 +207,13 @@ export class Quests {
     const self = this;
     const st = () => this.state.quests[d.id];
     const nebenbei = () => !st() && !d.nurAngenommen; // noch nicht angenommen, zählt aber schon
-    const cur = () => st() ?? (nebenbei() ? (this.state.nebenbei[d.id] ||= { step: 0, data: {} }) : null);
+    const runde = () => this.runde(d); // laufende Wiederholung
+    const cur = () => runde() ?? st() ?? (nebenbei() ? (this.state.nebenbei[d.id] ||= { step: 0, data: {} }) : null);
     const q = {
       def: d,
       get status() { return st()?.status ?? 'neu'; },
-      get accepted() { return st()?.status === 'active'; },
+      get accepted() { return st()?.status === 'active' || !!runde(); },
+      get runde() { return runde() ? (self.state.auftraege[d.id].n || 0) + 1 : 0; },
       get active() { return q.accepted || nebenbei(); },
       get done() { return st()?.status === 'done'; },
       get step() { return cur()?.step ?? 0; },
@@ -234,7 +239,21 @@ export class Quests {
     try { localStorage.setItem(STORE, JSON.stringify(this.state)); } catch { /* privater Modus */ }
   }
 
+  // Wiederholbare Aufträge: auftraege[id] = { n: erledigte Wiederholungen, run: { step, data } solange einer läuft }
+  runde(d) { return d.repeat && this.isDone(d.id) ? this.state.auftraege[d.id]?.run ?? null : null; }
+  canRepeat(d) { return !!d.repeat && this.isDone(d.id) && !this.runde(d); }
+  running(d) { return this.state.quests[d.id]?.status === 'active' || !!this.runde(d); }
+  offers(b) { return b.quests.filter((d) => !this.state.quests[d.id] || this.canRepeat(d)); } // am Aushang annehmbar
+
   accept(d) {
+    if (this.canRepeat(d)) {
+      (this.state.auftraege[d.id] ||= { n: 0 }).run = { step: 0, data: {} };
+      this.save();
+      this.toast(`Neuer Auftrag: ${d.title}`);
+      this.renderTrack();
+      if (this.open && this.open !== 'pass') this.renderBoard(this.open);
+      return;
+    }
     if (this.state.quests[d.id]) return;
     const n = this.state.nebenbei[d.id]; // schon nebenbei Erreichtes geht mit
     delete this.state.nebenbei[d.id];
@@ -246,6 +265,18 @@ export class Quests {
   }
 
   complete(d) {
+    if (this.runde(d)) {
+      const a = this.state.auftraege[d.id];
+      a.n = (a.n || 0) + 1;
+      delete a.run;
+      this.handle(d).targetPos = null;
+      this.toast(`✔ Auftrag „${d.title}“ erledigt (${a.n + 1}. Mal) – am Aushang gibt’s den nächsten`, 6);
+      if (d.repeat.lohn) this.ctx.carry.earn(d.repeat.lohn, `Lohn: ${d.title}`);
+      this.save();
+      this.renderTrack();
+      this.emit('lieferung'); // jede Wiederholung zählt fürs Dorfziel
+      return;
+    }
     let s = this.state.quests[d.id];
     const nebenbei = !s && !d.nurAngenommen;
     if (nebenbei) { s = this.state.quests[d.id] = { data: this.state.nebenbei[d.id]?.data ?? {} }; delete this.state.nebenbei[d.id]; }
@@ -351,7 +382,7 @@ export class Quests {
     else if (this.open) {
       if (input.hit('Escape') || input.hit('KeyE') || input.hit('KeyF') || (this.open === 'pass' && input.hit('KeyJ'))) this.close();
       else if (this.open !== 'pass') {
-        const offer = this.open.quests.filter((d) => !this.state.quests[d.id]);
+        const offer = this.offers(this.open);
         for (let i = 0; i < 9; i++) if (input.hit('Digit' + (i + 1)) && offer[i]) this.accept(offer[i]);
         if (input.hit('Enter') && offer[0]) this.accept(offer[0]);
       }
@@ -433,11 +464,15 @@ export class Quests {
       if (d.reward?.title || d.reward?.unlock) {
         card.append(el('div', 'qreward', 'Belohnung: ' + [d.reward.title && `Titel „${d.reward.title}“`, d.reward.unlock?.text].filter(Boolean).join(' · ')));
       }
-      if (!s) {
-        const btn = el('button', 'qaccept', `Annehmen (${++n})`);
+      if (d.repeat) card.append(el('div', 'qreward', `Wiederholbar: ${d.repeat.text ?? d.repeat.lohn + ' € Lohn'} pro Auftrag`));
+      const wdh = this.state.auftraege[d.id]?.n;
+      if (s) card.append(el('div', 'qstatus', this.runde(d) ? '📜 Auftrag läuft'
+        : s.status === 'done' ? `✔ Erledigt${wdh ? ` · ${wdh}× wiederholt` : ''}` : '📜 Angenommen'));
+      if (!s || this.canRepeat(d)) {
+        const btn = el('button', 'qaccept', `${s ? 'Nochmal' : 'Annehmen'} (${++n})`);
         btn.dataset.accept = d.id;
         card.append(btn);
-      } else card.append(el('div', 'qstatus', s.status === 'done' ? '✔ Erledigt' : '📜 Angenommen'));
+      }
       p.append(card);
     }
     p.append(el('div', 'qfoot', 'Zahl / Enter: annehmen · E / Esc: schließen · J: Dorfpass'));
@@ -458,7 +493,8 @@ export class Quests {
       const s = this.state.quests[d.id];
       const c = el('div', 'qstamp ' + (s?.status ?? 'neu'));
       c.append(el('i', null, s?.status === 'done' ? '✔' : String(d.nr)), el('span', null, s ? d.title : '???'));
-      c.title = s ? `${d.title}: ${d.goal || d.text}` : 'Noch nicht gefunden – halte Ausschau nach Aushängen';
+      const wdh = this.state.auftraege[d.id]?.n;
+      c.title = s ? `${d.title}: ${d.goal || d.text}${wdh ? ` (${wdh}× wiederholt)` : ''}` : 'Noch nicht gefunden – halte Ausschau nach Aushängen';
       grid.append(c);
     }
     p.append(grid);
@@ -480,9 +516,9 @@ export class Quests {
   renderTrack() {
     const t = this.track;
     t.replaceChildren();
-    const active = defs.filter((d) => this.state.quests[d.id]?.status === 'active');
+    const active = defs.filter((d) => this.running(d));
     for (const d of active.slice(0, 4)) { // höchstens vier, der Rest steht im Dorfpass
-      const s = this.state.quests[d.id];
+      const s = this.runde(d) ?? this.state.quests[d.id];
       const row = el('div');
       row.append(el('b', null, d.title), document.createTextNode(' – ' + (d.steps?.[s.step] ?? d.goal ?? d.text)));
       t.append(row);

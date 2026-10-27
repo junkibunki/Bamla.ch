@@ -45,9 +45,13 @@ export default {
   goal: 'Pflanzen am Ziel abgeben',
   steps: ['Pflanzkiste am Verkaufshaus abholen (E)', 'Pflanzen auf den Friedhof oder in den Schlossgarten bringen (E)'],
   reward: { ansehen: 15, title: 'Blumenbot:in', text: 'Die Blumen bleiben stehen · 5 € Trinkgeld' },
-  setup({ scene, world, carry }, q) {
-    const plant = (ziel) => { for (const b of ZIELE[ziel].beds) flowers(scene, world, b); };
-    if (q.done && q.data.ziel) plant(q.data.ziel);
+  repeat: { lohn: 8, text: '8 € Fahrerlohn und 5 € Trinkgeld' },
+  setup({ scene, world, carry, quests }, q) {
+    const planted = new Set(); // jedes Ziel bekommt seine Blumenschalen nur einmal
+    const plant = (ziel) => { if (!planted.has(ziel)) for (const b of ZIELE[ziel].beds) flowers(scene, world, b); planted.add(ziel); };
+    // bepflanzte Ziele im Stand der erledigten Aufgabe (nicht in den Daten einer Wiederholung)
+    const kept = () => quests.state.quests['gaertnerei-lieferung']?.data ?? {};
+    if (q.done) for (const z of kept().ziele ?? [kept().ziel]) if (z) plant(z);
     carry.spot({
       x: PICKUP[0], z: PICKUP[1], r: 2.4,
       hint: () => (q.active && !carry.has('pflanzen') ? 'E: Pflanzkiste abholen' : ''),
@@ -59,10 +63,12 @@ export default {
         hint: () => (q.active && carry.has('pflanzen') ? 'E: Blumen einpflanzen' : ''),
         act: () => {
           carry.give('pflanzen', `🌷 Die Blumen stehen jetzt am ${z.name === 'Friedhof' ? 'Friedhofskreuz' : 'Rosenrondell'}.`);
-          q.data.ziel = ziel;
           plant(ziel);
           carry.earn(5, 'Trinkgeld');
           q.complete();
+          const k = kept();
+          k.ziele = [...new Set([...(k.ziele ?? [k.ziel]), ziel])].filter(Boolean);
+          q.save();
         },
       });
     }

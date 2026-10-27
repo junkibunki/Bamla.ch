@@ -18,9 +18,12 @@ export default {
   goal: 'Palette Stahlprofile vor die Garage bringen',
   steps: ['Stahlprofile in der Ladezone mit dem Stapler aufnehmen', 'Vor das Garagentor fahren und absetzen'],
   reward: { ansehen: 10, title: 'Azubi' },
+  repeat: { lohn: 6 },
   setup({ kienzler }, q) {
-    let pallet = null;
+    let pallet = null, runde = q.runde;
     return () => {
+      if (pallet && runde !== q.runde) { kienzler.removePallet(pallet); pallet = null; } // neue Runde: frische Palette
+      runde = q.runde;
       pallet ??= kienzler.addPallet(...(q.data.at ?? [...PICK, H_IN]), 'profiles');
       const m = pallet.mesh;
       if (kienzler.isCarried(pallet)) {

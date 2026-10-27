@@ -66,6 +66,31 @@ function piece(g, geo, color, x, y, z) {
 }
 const BOX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 
+// Euroschein als Textur (Geldschein-Anzug): Farbverlauf, Rahmen, Torbogen, Silberstreifen, Wert; einmal je Wert
+const NOTES = { 10: ['#b8463c', '#eaa298'], 20: ['#3e69ad', '#aac4e8'], 50: ['#d27325', '#f4c28e'] };
+const noteTex = {};
+function banknote(v) {
+  if (noteTex[v]) return noteTex[v];
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 64;
+  const g = c.getContext('2d'), [dark, light] = NOTES[v];
+  const grad = g.createLinearGradient(0, 0, 128, 64);
+  grad.addColorStop(0, dark); grad.addColorStop(0.55, light); grad.addColorStop(1, dark);
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 64);
+  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 2; g.strokeRect(3, 3, 122, 58);
+  g.fillStyle = 'rgba(255,255,255,0.4)';
+  g.beginPath(); g.arc(62, 38, 13, Math.PI, 0); g.lineTo(75, 56); g.lineTo(49, 56); g.fill();
+  g.fillStyle = '#c9ccd2'; g.fillRect(96, 0, 9, 64);
+  g.textBaseline = 'top';
+  g.fillStyle = '#fff'; g.font = 'bold 24px sans-serif'; g.fillText(v, 8, 6);
+  g.font = 'bold 10px sans-serif'; g.fillText('EURO', 8, 46);
+  g.fillStyle = dark; g.font = 'bold 15px sans-serif'; g.fillText(v, 108, 44);
+  const t = noteTex[v] = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const noteMat = (v) => new THREE.MeshLambertMaterial({ map: banknote(v) });
+
 export const OUTFITS = {
   helm: { name: 'Feuerwehrhelm', build(g) {
     // Leuchtgelber Helm mit Nackenschutz, Visier und reflektierendem Band
@@ -143,6 +168,19 @@ export const OUTFITS = {
     piece(g, BOX(0.06, 0.32, 0.015), 0x23476e, 0, 1.42, 0.2);
     for (const x of [-0.2, 0.2]) piece(g, BOX(0.12, 0.5, 0.02), 0x1a4277, x, 1.33, 0.185).rotation.z = x > 0 ? 0.12 : -0.12; // Revers
   } },
+  // Versteckt: nur nach einem Cheatcode im Chat (belohnungen.js)
+  geldscheine: { name: 'Geldschein-Anzug', scheine: [50, 20, 20, 10, 10, 20, 50], build(g) {
+    // Die ganze Figur aus Scheinen (scheine: Rumpf, Arme, Beine, Kopf, Haar), dazu ein Fächer auf dem Kopf
+    // und lose Scheine an Brust und Rücken
+    [[-0.09, 0.35, 10], [0, 0, 50], [0.09, -0.35, 20]].forEach(([x, rz, v]) => {
+      const n = piece(g, BOX(0.12, 0.24, 0.004), noteMat(v), x, 2.2, 0);
+      n.rotation.z = rz;
+    });
+    [[-0.12, 1.4, 0.18, 0.4, 20], [0.14, 1.12, 0.18, -0.3, 10], [0.05, 1.45, -0.18, 0.2, 50]].forEach(([x, y, z, rz, v]) => {
+      const n = piece(g, BOX(0.26, 0.13, 0.004), noteMat(v), x, y, z);
+      n.rotation.set(z > 0 ? -0.15 : 0.15, 0, rz);
+    });
+  } },
 };
 
 // Kleidung anziehen (id aus OUTFITS oder ''), alte ablegen
@@ -155,11 +193,16 @@ export function dressPerson(g, id) {
   const pantsMats = [g.legL.children[0].material, g.legR.children[0].material];
   for (const m of shirtMats) { m.userData.shirt ??= m.color.getHex(); m.color.setHex(m.userData.shirt); }
   for (const m of pantsMats) { m.userData.pants ??= m.color.getHex(); m.color.setHex(m.userData.pants); }
+  const headMats = [g.head.material, g.hair.material];
+  for (const m of headMats) { m.userData.base ??= m.color.getHex(); m.color.setHex(m.userData.base); }
+  const bodyMats = [...shirtMats, ...pantsMats, ...headMats];
+  for (const m of bodyMats) if (m.map) { m.map = null; m.needsUpdate = true; }
   g.hair.visible = true;
   const o = OUTFITS[id];
   if (!o) return;
   if (o.shirt != null) for (const m of shirtMats) m.color.setHex(o.shirt);
   if (o.pants != null) for (const m of pantsMats) m.color.setHex(o.pants);
+  if (o.scheine) bodyMats.forEach((m, i) => { m.map = banknote(o.scheine[i]); m.color.setHex(0xffffff); m.needsUpdate = true; });
   g.outfit = new THREE.Group();
   o.build(g.outfit);
   g.add(g.outfit);

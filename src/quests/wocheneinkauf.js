@@ -10,6 +10,7 @@ export default {
   goal: 'Einkaufstüte vom Rewe im Marienheim abgeben',
   steps: ['Im Rewe eine Einkaufstüte kaufen (8 €)', 'Die Tüte ins Marienheim nach Bamlach bringen (Hof am Probsteiweg)'],
   reward: { ansehen: 15, title: 'Versorger:in', unlock: { id: 'brezel-gutschein', text: 'Gutschein: Brezel gratis bei Armbruster' } },
+  repeat: { lohn: 6, text: 'Geld zurück, 2 € Trinkgeld und 6 € Botenlohn' },
   setup({ carry, quests }, q) {
     quests.on('complete', (d) => { if (d.id === 'wocheneinkauf') carry.addVoucher('brezel', 1); });
     carry.spot({

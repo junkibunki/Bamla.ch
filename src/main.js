@@ -603,7 +603,14 @@ sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
 multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
-const chat = new Chat(scene, multiplayer, input); // kurze Sätze als Sprechblase über dem Kopf
+// kurze Sätze als Sprechblase über dem Kopf; Cheatcodes geben Geld und schalten einmalig den versteckten
+// Geldschein-Anzug im Dorfpass frei (belohnungen.js)
+const chat = new Chat(scene, multiplayer, input, (n) => {
+  carry.earn(n, 'Cheatcode');
+  if (quests.unlocked('cheater')) return;
+  quests.unlock('cheater');
+  quests.toast('🤫 Geheimer Skin freigeschaltet: Geldschein-Anzug – im Dorfpass (J) unter Kleidung', 8);
+});
 touch.chatBtn?.addEventListener('click', () => chat.openInput());
 // Spitze der eigenen Sprechblase: wo die anderen das Namensschild sehen (multiplayer.js), etwas darüber
 function headTop() {

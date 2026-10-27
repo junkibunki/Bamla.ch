@@ -49,11 +49,12 @@ export default {
   goal: 'Mia abholen und ans Ziel fahren',
   steps: ['Mit dem Auto zum Kindergarten Bamlach fahren und neben Mia halten', 'Mia ans Ziel fahren', 'Mia steigt aus'],
   reward: { ansehen: 15, title: 'Elterntaxi' },
+  repeat: { lohn: 10 },
   setup({ scene, world, player }, q) {
     const kid = buildKid();
     kid.visible = false;
     scene.add(kid);
-    let phase = 'wait', car = null, x = WAIT[0], z = WAIT[1], walk = 0, t = 0, told = '';
+    let phase = 'wait', car = null, x = WAIT[0], z = WAIT[1], walk = 0, t = 0, told = '', runde = q.runde;
     if (q.active && q.step > 0) q.advance(0); // nach dem Neuladen wartet Mia wieder am Kindergarten
     const ziel = () => ZIELE[q.data.ziel] ?? ZIELE.schule;
     const say = (key, text) => { if (told !== key) { told = key; q.toast(`Mia: „${text}“`); } };
@@ -72,6 +73,7 @@ export default {
     };
 
     return (dt) => {
+      if (runde !== q.runde) { runde = q.runde; phase = 'wait'; car = null; [x, z] = WAIT; told = ''; } // neue Runde
       t += dt;
       kid.visible = phase !== 'gone';
       const v = player.car, dv = v ? Math.hypot(v.x - x, v.z - z) : Infinity;

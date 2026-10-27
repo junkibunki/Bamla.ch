@@ -67,6 +67,7 @@ export default {
   goal: 'Fleisch vom Metzger im Pflegeheim abgeben',
   steps: ['Fleischpaket beim Metzger Dosenbach kaufen (12 €)', 'Fleischpaket ins Pflegeheim bringen (Turmportal im Schlosshof)'],
   reward: { ansehen: 15, title: 'Essensbot:in', unlock: { id: 'freiessen', text: 'Gutschein: 2× Freiessen beim Metzger' }, text: 'Die Senior:innen winken dir zu' },
+  repeat: { lohn: 5, text: 'Geld zurück, 3 € Trinkgeld und 5 € Botenlohn' },
   setup(ctx, q) {
     const { carry, quests } = ctx;
     if (q.done) seniors(ctx);

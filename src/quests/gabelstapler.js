@@ -18,6 +18,7 @@ export default {
   goal: 'Palette Gitterroste per Stapler auf den Hof der Gärtnerei bringen',
   steps: ['Palette bei Kienzler vor Tor 1 mit dem Stapler aufnehmen', 'Zur Gärtnerei fahren und auf dem Hof absetzen'],
   reward: { ansehen: 15, title: 'Staplerfahrer:in', unlock: { id: 'gabelstapler', text: 'Eigener Gabelstapler bei Kienzler' } },
+  repeat: { lohn: 12 },
   setup({ kienzler, vehicles, quests }, q) {
     let own = null;
     quests.onUnlock('gabelstapler', () => {
@@ -26,8 +27,10 @@ export default {
       vehicles.push(own);
     });
 
-    let pallet = null;
+    let pallet = null, runde = q.runde;
     return () => {
+      if (pallet && runde !== q.runde) { kienzler.removePallet(pallet); pallet = null; } // neue Runde: frische Palette
+      runde = q.runde;
       // Palette erst nach dem Annehmen hinstellen, nach dem Neuladen dort, wo sie zuletzt stand
       pallet ??= kienzler.addPallet(...(q.data.at ?? [...PICK, H_IN]), 'grating');
       const m = pallet.mesh;

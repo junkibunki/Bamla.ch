@@ -6,6 +6,7 @@ const SHOW = 15;      // s, so lange steht die Blase
 const FADE = 1;       // s Ausblenden am Ende
 const MAX_LEN = 80;   // Zeichen (wie der Server)
 const PX = 0.5 / 64;  // Meter pro Pixel der Blase (Namensschild: 0,6 m auf 64 px)
+const CHEATS = { motherlode: 10, rosebud: 10 }; // Cheatcode im Chat -> € (geht nicht an die anderen, auch offline)
 
 // Sprechblase mit Spitze nach unten; die Spitze liegt auf der Position des Sprites
 function bubbleSprite(text) {
@@ -45,10 +46,11 @@ function bubbleSprite(text) {
 }
 
 export class Chat {
-  constructor(scene, mp, input) {
+  constructor(scene, mp, input, onCheat) {
     this.scene = scene;
     this.mp = mp;
     this.input = input;
+    this.onCheat = onCheat; // (€) => …, main.js
     this.bubbles = new Map(); // Spieler-Id (eigene: 'me') -> { sprite, until: performance.now() in ms }
     mp.on('chat', (m) => this.show(m.id, m.x));
 
@@ -60,7 +62,9 @@ export class Chat {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const x = this.field.value.replace(/\s+/g, ' ').trim().slice(0, MAX_LEN);
-      if (x && this.mp.online) {
+      const cheat = CHEATS[x.toLowerCase()];
+      if (cheat) this.onCheat(cheat);
+      else if (x && this.mp.online) {
         this.mp.send({ t: 'chat', x });
         this.show('me', x);
       }

@@ -10,7 +10,8 @@ import { Feuerwerk } from './feuerwerk.js';
 const OUTFIT_FROM = { helm: { quest: 'ehrenamt' }, schuerze: { quest: 'essen-auf-raedern' }, golfmuetze: { quest: 'hole-in-one' },
   motorradjacke: { quest: 'easy-rider' }, schaerpe: { unlock: 'dorfpass-voll' },
   bademantel: { quest: 'kurgast' }, kappe: { quest: 'einkaufswagen' }, sonnenbrille: { quest: 'sonnenschutz' },
-  saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' }, uniform: { quest: 'kurkonzert' } };
+  saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' }, uniform: { quest: 'kurkonzert' },
+  geldscheine: { unlock: 'cheater', hidden: true } }; // hidden: erst nach der Freischaltung im Dorfpass (Cheatcode im Chat)
 const HORN_FROM = { hupe: {}, glocke: { quest: 'andacht' }, storch: { quest: 'stammgast' }, martinshorn: { quest: 'ehrenamt' },
   piepser: { quest: 'kuehlkette' }, aufguss: { quest: 'saunagang' }, quak: { quest: 'entenfuetterung' } };
 const LACKE = {
@@ -223,7 +224,7 @@ export class Belohnungen {
       }
       p.append(r);
     };
-    const outfits = Object.entries(OUTFIT_FROM).filter(([id]) => OUTFITS[id]).map(([id, f]) => [id, OUTFITS[id].name, this.has(f)]);
+    const outfits = Object.entries(OUTFIT_FROM).filter(([id, f]) => OUTFITS[id] && (!f.hidden || this.has(f))).map(([id, f]) => [id, OUTFITS[id].name, this.has(f)]);
     row('Kleidung: ', [['', 'eigene', true], ...outfits], 'outfit', this.st.outfit);
     row('Hupe (X): ', Object.entries(HORN_FROM).map(([id, f]) => [id, HORNS[id].name, this.has(f)]), 'hupe', this.st.hupe || 'hupe');
     row('Lack: ', [['', 'original', true], ...Object.entries(LACKE).map(([id, l]) => [id, l.name, this.has(l)])], 'lack', this.st.lack);

@@ -21,8 +21,9 @@ export default {
   goal: 'Palette vor das Rolltor „Leergut“ bringen',
   steps: ['Palette an der Anlieferung mit dem Stapler aufnehmen', 'Vor das Rolltor „Leergut“ fahren und absetzen'],
   reward: { ansehen: 15, text: 'Lack Rewe-Rot und Hupe Rückwärts-Piepser im Dorfpass (J)' },
+  repeat: { lohn: 8 },
   setup({ kienzler, vehicles, player }, q) {
-    let fork = null, pallet = null;
+    let fork = null, pallet = null, runde = q.runde;
     return () => {
       if (!fork) { // eigener Stapler in Rewe-Rot (wie der Belohnungsstapler bei Kienzler: ohne Fahrer, bleibt stehen)
         fork = kienzler.ownForklift(...FORK);
@@ -31,6 +32,8 @@ export default {
         fork.color = 0xcc071e;
         vehicles.push(fork);
       }
+      if (pallet && runde !== q.runde) { kienzler.removePallet(pallet); pallet = null; } // neue Runde: frische Palette
+      runde = q.runde;
       pallet ??= kienzler.addPallet(...(q.data.at ?? PALLET), 'crate');
       let m = pallet.mesh;
       if (kienzler.isCarried(pallet)) { q.advance(1); q.target(...DOCK_AT, 'Rolltor „Leergut“'); return; }
