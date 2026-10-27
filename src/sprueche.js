@@ -8,6 +8,11 @@ import { buildBather } from './camping.js';
 
 const SAY_SECS = 5.5, COOL = 14, TALK = 14, WALKER = 10, FASNACHT_SIEHT = 18;
 const FASNACHT = 'Des chunnt sicher an dr Fasnacht – Bamlacher Neuschti Noochrichte!';
+// Ganz selten erinnert sich ein:e Fußgänger:in an die Geld-Cheats bei den Sims (Cheats im Chat, chat.js) – in zwei Blasen
+const SIMS = [
+  'Bi de Sims hesch domols eifach ebbis igtippt, un scho isch ‘s Gäld do gsi. Schad, dass ‘s im Läbe nit so goht. Oder?',
+  'Aber pass uf: Wer z’gierig wird, dem nimmt ‘s Läbe alles wieder ewäg.',
+], SIMS_ALLE = 300; // im Schnitt alle 300 s ein Versuch, klappt nur mit Fußgänger:in in der Nähe
 
 // at = Standort der Ortsfigur, face = Blickrichtung (Punkt), r = Umkreis, in dem Sprüche fallen
 const ORTE = [
@@ -95,6 +100,7 @@ export class Sprueche {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       o.mesh.rotation.y += d * Math.min(1, dt * 4);
     }
+    if (this.sims && (this.sims.left -= dt) <= 0) { this.speak(this.sims.who, SIMS[1]); this.sims = null; }
     if ((this.cool -= dt) > 0) return;
     const v = player.car;
     // Betrunken reiten ist erlaubt (ansehen.js), aber wer es sieht, weiß schon, was an der Fasnacht kommt
@@ -105,6 +111,15 @@ export class Sprueche {
     }
     if (v && Math.abs(v.speed) > 5) return;
     if (this.ctx.quests.state.ansehen < 0) return; // mit schlechtem Ruf wird nur gemurrt (ansehen.js)
+    if (Math.random() < dt / SIMS_ALLE) {
+      const who = this.speaker(null, WALKER, 0); // nur Fußgänger:innen, keine Ortsfigur
+      if (who) {
+        who.pause = Math.max(who.pause, 2 * SAY_SECS);
+        this.speak(who, SIMS[0]);
+        this.sims = { who, left: SAY_SECS };
+        return;
+      }
+    }
     const o = this.orte.find((o) => Math.hypot(px - o.x, pz - o.z) < o.r);
     if (!o) return;
     const who = this.speaker(o, WALKER, TALK);
