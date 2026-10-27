@@ -127,6 +127,25 @@ body.touch #chat { top: 60px; }
   background: #0006; padding: 3px 8px; border-radius: 6px;
   opacity: 0; pointer-events: none; transition: opacity 0.6s;
 }
+/* Fehler oder Idee melden (src/melden.js, Taste L): unauffälliger Link ganz unten in der Steuerung */
+#melden { margin-top: 4px; font-size: 12px; opacity: .7; }
+#melden a { color: #cde; }
+body.touch #melden span { display: none; }
+#meldenBox {
+  display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9;
+  width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+  background: #000c; box-shadow: 0 4px 16px #0006; font-size: 14px;
+}
+#meldenBox.open { display: block; }
+#meldenBox small { display: block; opacity: .7; margin: 2px 0 8px; }
+#meldenBox textarea {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; border: 0; border-radius: 8px; resize: vertical;
+  background: #fffffff0; color: #1d2633; font: 15px system-ui, sans-serif;
+}
+#meldenBox textarea:focus { outline: 2px solid #ffd400; outline-offset: 1px; }
+#meldenBox div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+#meldenBox button { padding: 6px 14px; border: 0; border-radius: 6px; background: #fff3; color: #fff; font: inherit; cursor: pointer; }
+#meldenBox button[type=submit] { background: #ffd400; color: #1d2633; font-weight: 600; }
 body.helpHidden #help { opacity: 0; pointer-events: none; }
 body.helpHidden #helpTag { opacity: 1; }
 

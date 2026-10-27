@@ -46,9 +46,11 @@ export class Touch {
     };
 
     const help = document.getElementById('help');
+    const melden = document.getElementById('melden'); // Fehler/Idee melden (melden.js) bleibt unter der Steuerung
     if (help) help.innerHTML = '<b>Steuerung</b><br />Links ziehen: laufen / fahren · weit ziehen: rennen<br />'
       + 'Rechts wischen: Kamera · zwei Finger: Zoom<br />Knöpfe rechts: Aktion, Springen und was gerade geht<br />'
       + 'Karte antippen: Vollbildkarte · ❔: Steuerung aus/an';
+    if (help && melden) help.append(melden);
     const attr = document.getElementById('attribution');
     if (help && attr) help.append(attr); // unten rechts liegen die Knöpfe; Quellen stehen bei der Steuerung
     const tag = document.getElementById('helpTag');

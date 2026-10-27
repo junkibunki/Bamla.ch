@@ -49,6 +49,7 @@ import { ShedLayer } from './edits.js';
 import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
 import { Chat } from './chat.js';
+import { Melden } from './melden.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows, StaticBatcher } from './tiles.js';
@@ -574,11 +575,8 @@ function updateHud(dt) {
     hud.street.textContent = r?.name || (r?.type === 'motorway' ? 'A5' : r?.type === 'track' ? 'Feldweg' : '');
   }
   hud.buzz.textContent = drunk.left > 0 ? `${player.lastDrink === 'schorle' ? '🍷' : '🍺'} Betrunken – noch ${Math.ceil(drunk.left)} s` : '';
-  helpAt ||= performance.now() + 12000; // Steuerung nach dem Start 12 s zeigen, dann ausblenden
-  if (helpAt > 0 && performance.now() > helpAt) { helpAt = -1; document.body.classList.add('helpHidden'); }
-  if (input.hit('KeyH')) { helpAt = -1; document.body.classList.toggle('helpHidden'); }
+  if (input.hit('KeyH')) document.body.classList.toggle('helpHidden'); // Steuerung ist anfangs ausgeblendet (index.html)
 }
-let helpAt = 0; // Zeitpunkt (ms) zum Ausblenden der Steuerung, gesetzt beim ersten Bild
 
 const editor = new Editor({ world, camera, cam, canvas: renderer.domElement, input, minimap, sheds, player });
 const IDLE = { down: () => false, hit: () => false, axis: () => 0 }; // Spielsteuerung ruht, solange der Editor offen ist
@@ -620,6 +618,11 @@ const chat = new Chat(scene, multiplayer, input, (n, code) => {
   quests.toast('🤫 Geheimer Skin freigeschaltet: Geldschein-Anzug – im Dorfpass (J) unter Kleidung', 8);
 });
 touch.chatBtn?.addEventListener('click', () => chat.openInput());
+// Fehler oder Idee mit dem eigenen Standort an den Server melden (L oder Link unter der Steuerung)
+const melden = new Melden(multiplayer, input, quests, () => {
+  const v = player.car, r = riding()?.car, p = v || r || player.pos;
+  return { px: p.x, py: v || r ? p.y ?? world.heightAt(p.x, p.z) : player.mesh.position.y, pz: p.z, s: hud.street.textContent, v: v?.kind };
+});
 // Spitze der eigenen Sprechblase: wo die anderen das Namensschild sehen (multiplayer.js), etwas darüber
 function headTop() {
   const v = player.car, r = riding();
@@ -662,6 +665,7 @@ function frame() {
   else if (!editing && input.hit('KeyR') && !riding() && andacht.spot(player)) andacht.sing(player, andacht.spot(player));
   if (!editing && input.hit('KeyT') && !riding() && andacht.canClimb(player)) andacht.climb(player);
   if (!editing && (input.hit('Enter') || input.hit('NumpadEnter'))) chat.openInput();
+  if (!editing && input.hit('KeyL')) melden.openInput();
 
   for (const v of vehicles) {
     if (v === player.car) v.drive(dt, editing ? IDLE : input, world);

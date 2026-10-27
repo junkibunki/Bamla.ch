@@ -2,6 +2,7 @@
 // Jeder Client simuliert die Welt selbst; der Server reicht nur die Spielerzustände weiter.
 // Dazu das Dorf (README, Multiplayer): Bestenliste der erledigten Aufgaben, Ehrenbürger, gemeinsamer
 // Lieferzähler mit Feuerwerk alle ZIEL Lieferungen, Hupen der Mitspieler, kurze Chat-Sätze (Sprechblase über dem Kopf).
+// Außerdem Fehler- und Ideenmeldungen mit Standort (src/melden.js), die nur in einer Datei auf dem Server landen.
 // Im Dev-Server hängt er sich an Vite (vite.config.js), im Betrieb läuft er eigenständig:
 //   PORT=8787 node server/multiplayer.mjs   (Caddy leitet /mp dorthin weiter)
 import { createServer } from 'node:http';
@@ -22,11 +23,12 @@ const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem
 const TOP = 20;         // Plätze in der Bestenliste
 const MAX_NAMES = 500;  // gemerkte Namen (die mit den wenigsten Aufgaben fliegen zuerst)
 const CHAT_LEN = 80;    // Zeichen pro Chat-Satz
+const MELDUNG_LEN = 500; // Zeichen pro Fehler-/Ideenmeldung
 const RUHE = 30000;     // ms ohne Bewegung, ab denen jemand im Anmeldeprotokoll nicht mehr als aktiv zählt
 
 const num = (v, lim) => (Number.isFinite(v) ? Math.max(-lim, Math.min(lim, v)) : 0);
 const cleanName = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 20);
-const cleanText = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, CHAT_LEN);
+const cleanText = (s, len = CHAT_LEN) => String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, len);
 const dauer = (ms) => { // Aufenthaltsdauer als h:mm:ss
   const s = Math.round(ms / 1000), zwei = (n) => String(n).padStart(2, '0');
   return `${Math.floor(s / 3600)}:${zwei(Math.floor(s / 60) % 60)}:${zwei(s % 60)}`;
@@ -35,9 +37,11 @@ const dauer = (ms) => { // Aufenthaltsdauer als h:mm:ss
 // joinLog: Datei, in die jede Anmeldung als Zeile „Zeitpunkt (UTC) <Tab> Name <Tab> an“ und jede Abmeldung als
 //   „Zeitpunkt (UTC) <Tab> Name <Tab> ab <Tab> Dauer (h:mm:ss) <Tab> aktiv Dauer“ angehängt wird (nur auf dem Server, nicht im Spiel)
 // chatLog: Datei, in die jeder Chat-Satz als Zeile „Zeitpunkt (UTC) <Tab> Name <Tab> Satz“ angehängt wird
+// meldungLog: Datei, in die jede Fehler-/Ideenmeldung als Zeile
+//   „Zeitpunkt (UTC) <Tab> Name <Tab> x <Tab> y <Tab> z <Tab> Straße <Tab> Fahrzeug <Tab> Gerät <Tab> Text“ angehängt wird
 // stateFile: kleine JSON-Datei für Bestenliste und Lieferzähler; ohne sie gehen beide beim Neustart verloren
-export function attachMultiplayer(httpServer, { joinLog, chatLog, stateFile } = {}) {
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
+export function attachMultiplayer(httpServer, { joinLog, chatLog, meldungLog, stateFile } = {}) {
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 }); // Meldungen: 500 Zeichen
   const players = new Map(); // ws -> { id, name, s }
   let nextId = 1;
 
@@ -150,6 +154,16 @@ export function attachMultiplayer(httpServer, { joinLog, chatLog, stateFile } = 
         p.lastChat = now;
         anhaengen(chatLog, 'Chatprotokoll', `${p.name}\t${x}`);
         for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'chat', id: p.id, x });
+      } else if (m.t === 'meldung' && p) {
+        // Fehler oder Idee an der Stelle, wo der Spieler steht (src/melden.js); höchstens eine alle 15 s
+        const now = Date.now(), x = cleanText(m.x, MELDUNG_LEN);
+        if (!x) return;
+        if (now - (p.lastMeldung || 0) < 15000) return send(ws, { t: 'gemeldet', ok: 0 });
+        p.lastMeldung = now;
+        const f = (v) => num(v, 5000).toFixed(1);
+        anhaengen(meldungLog, 'Meldungen', [p.name, f(m.px), f(m.py), f(m.pz), cleanName(m.s) || '-',
+          VEHICLES.includes(m.v) ? m.v : '-', m.g === 'touch' ? 'touch' : 'maus', x].join('\t'));
+        send(ws, { t: 'gemeldet', ok: 1 });
       } else if (m.t === 'cheat' && p) {
         // Cheatcode im Chat (src/main.js): nur ins Chatprotokoll; über 100 € ercheatet fängt der Spieler von vorne an,
         // dann fliegt er auch aus Bestenliste und Ehrentafel
@@ -205,8 +219,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   // außerhalb von ~/bamla-mp, das beim Deploy per rsync --delete ersetzt wird
   const joinLog = process.env.JOIN_LOG || join(homedir(), 'bamla-joins.log');
   const chatLog = process.env.CHAT_LOG || join(homedir(), 'bamla-chat.log');
+  const meldungLog = process.env.MELDUNG_LOG || join(homedir(), 'bamla-meldungen.log');
   const stateFile = process.env.DORF_STATE || join(homedir(), 'bamla-dorf.json');
-  const wss = attachMultiplayer(server, { joinLog, chatLog, stateFile });
+  const wss = attachMultiplayer(server, { joinLog, chatLog, meldungLog, stateFile });
   for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { wss.alleAbmelden(); process.exit(0); });
-  server.listen(port, '127.0.0.1', () => console.log(`Bamla.ch Multiplayer auf ws://127.0.0.1:${port}${PATH}, Anmeldungen in ${joinLog}, Chat in ${chatLog}, Dorfstand in ${stateFile}`));
+  server.listen(port, '127.0.0.1', () => console.log(`Bamla.ch Multiplayer auf ws://127.0.0.1:${port}${PATH}, Anmeldungen in ${joinLog}, Chat in ${chatLog}, Meldungen in ${meldungLog}, Dorfstand in ${stateFile}`));
 }

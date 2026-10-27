@@ -58,6 +58,8 @@ Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 | Client → Server | `{ t: 'lieferung' }` | eine Lieferung fürs Dorfziel (höchstens eine alle 10 s pro Name) |
 | Client → Server | `{ t: 'hupe', k }` | Hupe `hupe` / `storch` / `glocke` / `martinshorn` / `piepser` / `aufguss` / `quak` (höchstens alle 0,7 s) |
 | Client → Server | `{ t: 'chat', x }` | Chat-Satz, höchstens 80 Zeichen (höchstens einer pro Sekunde) |
+| Client → Server | `{ t: 'meldung', x, px, py, pz, s, v, g }` | Fehler oder Idee (`src/melden.js`), höchstens 500 Zeichen und eine alle 15 s: Text, Standort, Straße, Fahrzeug, Gerät (`maus`/`touch`) |
+| Server → Client | `{ t: 'gemeldet', ok }` | Meldung gespeichert (`ok: 1`) oder zu schnell nach der letzten (`ok: 0`) |
 | Server → Client | `{ t: 'dorf', top, ehren, lief, ziel }` | Bestenliste (20 Plätze ohne Ehrenbürger), alle Ehrenbürger (goldene Liste im Dorfpass, Tafel am alten Rathaus), Lieferungen aller Spieler, Ziel 50 |
 | Server → Client | `{ t: 'feuerwerk', n, von }` | alle 50 Lieferungen: Feuerwerk über dem Rhein bei allen |
 | Server → Client | `{ t: 'hupe', id, k }` | ein Mitspieler hupt (leiser mit der Entfernung) |
@@ -76,6 +78,11 @@ Servers (Deploy) werden alle Angemeldeten noch abgemeldet.
 
 Jeden Chat-Satz schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name <Tab> Satz` nach `~deploy/bamla-chat.log`
 (anderer Pfad über `CHAT_LOG`); im Dev-Server wird nichts gespeichert. Ansehen: `cat ~/bamla-chat.log`.
+
+Fehler- und Ideenmeldungen (Taste L) schreibt der Server als Zeile
+`Zeitpunkt (UTC) <Tab> Name <Tab> x <Tab> y <Tab> z <Tab> Straße <Tab> Fahrzeug <Tab> Gerät <Tab> Text` nach
+`~deploy/bamla-meldungen.log` (anderer Pfad über `MELDUNG_LOG`; Koordinaten wie im Spiel, `-` für keine Straße oder zu Fuß);
+im Dev-Server wird nichts gespeichert, die Spieler:innen bekommen trotzdem ihr „Danke“. Abrufen: `ssh deploy@<Host> cat bamla-meldungen.log`.
 
 ## Rohdaten
 
@@ -165,7 +172,8 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 | J | Dorfpass: Stempel, Titel, Kleidung, Hupe, Lack, Postkarten, Bestenliste |
 | Enter | Chat: kurzen Satz schreiben, Enter sendet (Esc bricht ab); steht 15 s als Sprechblase über dem eigenen Kopf, bei allen Mitspieler:innen |
 | Mausrad | Kamera-Zoom |
-| H | Hilfe ein/aus |
+| H | Hilfe ein/aus (anfangs aus; oben links steht nur „H: Steuerung“) |
+| L | Fehler oder Idee melden: kleines Formular, der Text geht mit dem eigenen Standort an den Server (Strg+Enter sendet, Esc bricht ab); auch als Link ganz unten in der Steuerung, auf Touch-Geräten nur dort |
 
 Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der ersten Berührung): links ziehen = Stick zum Laufen/Fahren (weit ziehen: rennen), rechts wischen = Kamera, zwei Finger = Zoom; rechts unten Aktion (E) und Springen (Leertaste), darüber die Tasten, die der Hinweis gerade nennt (z. B. R, T/G); oben Dorfpass, Hupe, Chat, Steuerung und Vollbild. Die Knöpfe drücken virtuelle Tasten in `Input`, die PC-Steuerung bleibt unverändert.
 
