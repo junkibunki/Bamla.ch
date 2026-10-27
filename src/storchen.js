@@ -675,7 +675,7 @@ export function buildStorchen(scene, world) {
   mergeByMaterial(g);
   // Innenraum (Windfang, Saal, Theke, Küche): eigene Gruppe, ebenfalls je Material zusammengefasst
   const gi = new THREE.Group();
-  const innen = buildInterior({ world, gi, K: { O, U, V, P, FLOOR1 } });
+  const innen = buildInterior({ scene, world, gi, K: { O, U, V, P, FLOOR1 } });
   mergeByMaterial(gi);
   // Türflügel der Haustür, Angel an der Westseite, öffnet nach innen
   const leaf = new THREE.Group();
