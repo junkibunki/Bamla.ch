@@ -200,6 +200,11 @@ export class Quests {
     this.sprueche = new Sprueche(this.ctx, this.ansehen); // Sprüche uff Alemannisch an besonderen Orten
     this.postkarten = new Postkarten(this.ctx);
     this.renderTrack();
+    if (this.state.strafeHinweis) { // nach cheatStrafe
+      delete this.state.strafeHinweis;
+      this.save();
+      this.toast('🚨 Zu viel gecheatet: Dorfpass leer, alle Aufgaben beginnen von vorne', 8);
+    }
   }
 
   handle(d) {
@@ -310,6 +315,17 @@ export class Quests {
     this.fireUnlock(id);
   }
   unlocked(id) { return this.state.unlocks.includes(id); }
+
+  // Mehr als 100 € ercheatet (main.js): alle Aufgaben, ihre Freischaltungen, Titel und Ansehen sind weg, der
+  // Cheat-Zähler beginnt bei 0, das Spiel lädt neu. Geld, Gutscheine und der Geldschein-Anzug bleiben.
+  cheatStrafe() {
+    const s = this.state;
+    Object.assign(s, { quests: {}, nebenbei: {}, auftraege: {}, ansehen: 0, title: '', cheat: 0, strafen: (s.strafen || 0) + 1, strafeHinweis: true });
+    s.unlocks = s.unlocks.filter((u) => u === 'cheater');
+    this.save();
+    this.toast('🚨 Mehr als 100 € ercheatet! Alle Aufgaben sind weg – du fängst von vorne an', 6);
+    setTimeout(() => location.reload(), 4000);
+  }
   onUnlock(id, fn) {
     if (!this.unlockFns.has(id)) this.unlockFns.set(id, []);
     this.unlockFns.get(id).push(fn);

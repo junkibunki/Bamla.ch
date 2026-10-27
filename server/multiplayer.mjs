@@ -150,6 +150,12 @@ export function attachMultiplayer(httpServer, { joinLog, chatLog, stateFile } = 
         p.lastChat = now;
         anhaengen(chatLog, 'Chatprotokoll', `${p.name}\t${x}`);
         for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'chat', id: p.id, x });
+      } else if (m.t === 'cheat' && p) {
+        // Cheatcode im Chat (src/main.js): nur ins Chatprotokoll; über 100 € ercheatet fängt der Spieler von vorne an,
+        // dann fliegt er auch aus Bestenliste und Ehrentafel
+        const n = Number(m.n) || 0, sum = Number(m.sum) || 0;
+        anhaengen(chatLog, 'Chatprotokoll', `${p.name}\t[Cheat ${cleanText(String(m.x))} +${n} €, seit Neustart ${sum} €${sum > 100 ? ' → Aufgaben zurückgesetzt' : ''}]`);
+        if (sum > 100 && dorf.best[p.name]) { delete dorf.best[p.name]; changed(); }
       } else if (m.t === 'tennis' && p) {
         // Tennisschlag (src/tennisspiel.js): Ball in Platzkoordinaten [x, y, z, vx, vy, vz]
         const now = Date.now(), b = m.b;

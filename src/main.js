@@ -604,9 +604,15 @@ multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fä
 multiplayer.onTakeover = takeOver;
 andacht.mp = multiplayer; // andere singen hören, Haltung beim Beten und Singen senden
 // kurze Sätze als Sprechblase über dem Kopf; Cheatcodes geben Geld und schalten einmalig den versteckten
-// Geldschein-Anzug im Dorfpass frei (belohnungen.js)
-const chat = new Chat(scene, multiplayer, input, (n) => {
+// Geldschein-Anzug im Dorfpass frei (belohnungen.js). Das ercheatete Geld wird im Spielstand gezählt und dem
+// Server gemeldet (Chatprotokoll); über 100 € sind alle Aufgaben weg (quests.cheatStrafe)
+const chat = new Chat(scene, multiplayer, input, (n, code) => {
   carry.earn(n, 'Cheatcode');
+  const s = quests.state;
+  s.cheat = (s.cheat || 0) + n;
+  quests.save();
+  multiplayer.send({ t: 'cheat', x: code, n, sum: s.cheat });
+  if (s.cheat > 100) return quests.cheatStrafe();
   if (quests.unlocked('cheater')) return;
   quests.unlock('cheater');
   quests.toast('🤫 Geheimer Skin freigeschaltet: Geldschein-Anzug – im Dorfpass (J) unter Kleidung', 8);
