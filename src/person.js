@@ -91,6 +91,41 @@ function banknote(v) {
 }
 const noteMat = (v) => new THREE.MeshLambertMaterial({ map: banknote(v) });
 
+// Fester Zufall, damit der Anzug bei allen gleich aussieht
+function rng(seed) {
+  return () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+// Viele kleine, schief übereinandergeklebte Scheine (52 × 26 px ≈ 12 × 6 cm) für eine Fläche von w × h px (~420 px/m)
+function collage(w, h) {
+  const key = `${w}x${h}`;
+  if (noteTex[key]) return noteTex[key];
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d'), r = rng(w * 7 + h);
+  g.fillStyle = '#d9a35a'; g.fillRect(0, 0, w, h);
+  g.textBaseline = 'top';
+  g.font = 'bold 12px sans-serif';
+  for (let i = Math.ceil((w * h) / 760); i > 0; i--) {
+    const v = [10, 20, 50, 50][Math.floor(r() * 4)], [dark, light] = NOTES[v];
+    g.save();
+    g.translate(r() * (w + 40) - 20, r() * (h + 30) - 15);
+    g.rotate((r() - 0.5) * 1.1);
+    g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(-25, -12, 54, 28);                  // Schatten des Scheins
+    const grad = g.createLinearGradient(-26, 0, 26, 0);
+    grad.addColorStop(0, dark); grad.addColorStop(0.55, light); grad.addColorStop(1, dark);
+    g.fillStyle = grad; g.fillRect(-26, -13, 52, 26);
+    g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.strokeRect(-24, -11, 48, 22); // heller Papierrand
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.arc(0, 4, 6, Math.PI, 0); g.lineTo(6, 11); g.lineTo(-6, 11); g.fill(); // Torbogen
+    g.fillStyle = '#d8dade'; g.fillRect(12, -13, 4, 26);                               // Silberstreifen
+    g.fillStyle = '#fff'; g.fillText(v, -22, -10);
+    g.restore();
+  }
+  const t = noteTex[key] = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export const OUTFITS = {
   helm: { name: 'Feuerwehrhelm', build(g) {
     // Leuchtgelber Helm mit Nackenschutz, Visier und reflektierendem Band
@@ -169,17 +204,24 @@ export const OUTFITS = {
     for (const x of [-0.2, 0.2]) piece(g, BOX(0.12, 0.5, 0.02), 0x1a4277, x, 1.33, 0.185).rotation.z = x > 0 ? 0.12 : -0.12; // Revers
   } },
   // Versteckt: nur nach einem Cheatcode im Chat (belohnungen.js)
-  geldscheine: { name: 'Geldschein-Anzug', scheine: [50, 20, 20, 10, 10, 20, 50], build(g) {
-    // Die ganze Figur aus Scheinen (scheine: Rumpf, Arme, Beine, Kopf, Haar), dazu ein Fächer auf dem Kopf
-    // und lose Scheine an Brust und Rücken
-    [[-0.09, 0.35, 10], [0, 0, 50], [0.09, -0.35, 20]].forEach(([x, rz, v]) => {
-      const n = piece(g, BOX(0.12, 0.24, 0.004), noteMat(v), x, 2.2, 0);
-      n.rotation.z = rz;
-    });
-    [[-0.12, 1.4, 0.18, 0.4, 20], [0.14, 1.12, 0.18, -0.3, 10], [0.05, 1.45, -0.18, 0.2, 50]].forEach(([x, y, z, rz, v]) => {
-      const n = piece(g, BOX(0.26, 0.13, 0.004), noteMat(v), x, y, z);
-      n.rotation.set(z > 0 ? -0.15 : 0.15, 0, rz);
-    });
+  // scheine: Klebe-Textur (collage, Größe in px) für Rumpf, Arme, Beine, Kopf und Haar
+  geldscheine: { name: 'Geldschein-Anzug', scheine: [[256, 320], [72, 288], [72, 288], [96, 340], [96, 340], [160, 160], [160, 160]], build(g) {
+    // Dazu kleben 36 Scheinchen an Rumpf und Kopf, jeweils mit einer leicht abstehenden Kante
+    const r = rng(7);
+    const faces = [ // [Mitte x, y, z, Drehung y, Breite, Höhe]
+      [0, 1.25, 0.176, 0, 0.56, 0.7], [0, 1.25, -0.176, Math.PI, 0.56, 0.7],
+      [0.301, 1.25, 0, Math.PI / 2, 0.31, 0.7], [-0.301, 1.25, 0, -Math.PI / 2, 0.31, 0.7],
+      [0, 1.85, 0.181, 0, 0.32, 0.3], [0, 1.85, -0.181, Math.PI, 0.32, 0.3],
+    ];
+    for (let i = 0; i < 36; i++) {
+      const [x, y, z, ry, w, h] = faces[i % faces.length];
+      const u = (r() - 0.5) * w, s = new THREE.Group();
+      s.position.set(x + Math.cos(ry) * u, y + (r() - 0.5) * h, z - Math.sin(ry) * u);
+      s.rotation.y = ry;
+      piece(s, BOX(0.12, 0.06, 0.003).translate(0, 0.03, 0), noteMat([10, 20, 50][i % 3]), 0, 0, 0)
+        .rotation.set(0.2 + r() * 0.35, 0, (r() - 0.5) * 2);
+      g.add(s);
+    }
   } },
 };
 
@@ -202,7 +244,7 @@ export function dressPerson(g, id) {
   if (!o) return;
   if (o.shirt != null) for (const m of shirtMats) m.color.setHex(o.shirt);
   if (o.pants != null) for (const m of pantsMats) m.color.setHex(o.pants);
-  if (o.scheine) bodyMats.forEach((m, i) => { m.map = banknote(o.scheine[i]); m.color.setHex(0xffffff); m.needsUpdate = true; });
+  if (o.scheine) bodyMats.forEach((m, i) => { m.map = collage(...o.scheine[i]); m.color.setHex(0xffffff); m.needsUpdate = true; });
   g.outfit = new THREE.Group();
   o.build(g.outfit);
   g.add(g.outfit);
