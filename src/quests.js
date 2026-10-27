@@ -47,9 +47,10 @@ export const BOARDS = [
 ];
 function xz([x, z]) { return { x, z }; }
 
-// Dorf-Ansehen: Stufen (ab 30 grüßen Fußgänger, ab 150 Dorffest, siehe ansehen.js)
-export const LEVELS = [[-Infinity, 'Dorfschreck'], [0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar:in'], [150, 'Bamlacher:in'], [250, 'Ehrenbürger:in']];
-const EHREN = 250;
+// Dorf-Ansehen: Stufen (ab 30 grüßen Fußgänger, ab 150 Dorffest, siehe ansehen.js; ab 250 Titel „Urgestein“).
+// Ehrenbürger:in wird nur, wer alle Aufgaben erledigt hat (Dorfpass voll).
+export const LEVELS = [[-Infinity, 'Dorfschreck'], [0, 'Zugezogen'], [30, 'Bekanntes Gesicht'], [80, 'Nachbar:in'], [150, 'Bamlacher:in'], [250, 'Urgestein']];
+const URGESTEIN = 250;
 
 const defs = Object.values(import.meta.glob('./quests/*.js', { eager: true }))
   .map((m) => m.default).filter(Boolean).sort((a, b) => a.nr - b.nr);
@@ -65,7 +66,7 @@ function loadState() {
     return s;
   } catch { return { quests: {}, nebenbei: {}, auftraege: {}, unlocks: [], ansehen: 0, title: '' }; }
 }
-const titleExists = (t) => t === 'Ehrenbürger:in' || defs.some((d) => d.reward?.title === t);
+const titleExists = (t) => t === 'Ehrenbürger:in' || t === 'Urgestein' || defs.some((d) => d.reward?.title === t);
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -336,7 +337,8 @@ export class Quests {
   // Wählbare Titel: aus erledigten Aufgaben, Ansehen-Stufe und vollem Dorfpass
   titles() {
     const t = defs.filter((d) => this.state.quests[d.id]?.status === 'done' && d.reward?.title).map((d) => d.reward.title);
-    if (this.unlocked('dorfpass-voll') || this.state.ansehen >= EHREN) t.push('Ehrenbürger:in');
+    if (this.unlocked('dorfpass-voll')) t.push('Ehrenbürger:in');
+    if (this.state.ansehen >= URGESTEIN) t.push('Urgestein');
     if (this.postkarten?.complete) t.push('Heimatkundler');
     return [...new Set(t)];
   }

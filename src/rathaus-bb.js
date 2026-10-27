@@ -21,7 +21,9 @@ export const RATHAUS_BB_OVERRIDES = [
   { c: [385.18, -1695.97], skip: 14 },   // Anbau
   { c: [392.24, -1708.66], skip: 8 },    // Bürgersaal
 ];
-export const RATHAUS_SITE = [[364.0, -1700.6], [361.9, -1686.3], [367.1, -1679.6], [374.0, -1673.9], [381.7, -1664.2], [389.4, -1660.8], [397.0, -1671.8],
+// Haustür auf der Ostseite für den Bürgermeister (ansehen.js), wie RATHAUS_TUER in rathaus.js
+export const RATHAUS_BB_TUER = { door: F.P(OLD.w - 0.1, -7.88), out: F.P(OLD.w + 2.2, -7.88), y: OLD.floor, steps: 0.7 };
+export const RATHAUS_SITE =[[364.0, -1700.6], [361.9, -1686.3], [367.1, -1679.6], [374.0, -1673.9], [381.7, -1664.2], [389.4, -1660.8], [397.0, -1671.8],
   [400.7, -1669.8], [406.6, -1687.2], [415.0, -1707.4], [419.9, -1716.9], [410.4, -1720.2], [377.3, -1711.9], [370.5, -1707.1]];
 
 const shutterTex = (flip) => canvasTex(64, 128, (g, w, h) => {

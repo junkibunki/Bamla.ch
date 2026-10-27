@@ -101,7 +101,7 @@ export class Sprueche {
       o.mesh.rotation.y += d * Math.min(1, dt * 4);
     }
     if (this.sims && (this.sims.left -= dt) <= 0) { this.speak(this.sims.who, SIMS[1]); this.sims = null; }
-    if ((this.cool -= dt) > 0) return;
+    if ((this.cool -= dt) > 0 || this.ansehen.bm) return; // Bürgermeister redet gerade (ansehen.js)
     const v = player.car;
     // Betrunken reiten ist erlaubt (ansehen.js), aber wer es sieht, weiß schon, was an der Fasnacht kommt
     if (v?.kind === 'horse' && this.ctx.drunk.level > 0) {

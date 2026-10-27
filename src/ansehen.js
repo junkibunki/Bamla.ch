@@ -1,10 +1,14 @@
 // Dorf-Ansehen in der Welt (quests.js, LEVELS): ab „Bekanntes Gesicht“ grüßen Fußgänger mit Winken und Sprechblase,
 // ab „Bamlacher:in“ feiert das Dorf ein Fest vor der Gemeindehalle (Brückleweg 2) mit Feuerwerk beim ersten Besuch.
 // Wer betrunken fährt (drunk.js), verliert Ansehen (betrunken reiten ist erlaubt) und wird von Fußgängern beschimpft; mit schlechtem Ruf murren sie.
+// Ehrenbürger:innen (alle Aufgaben erledigt, Dorfpass voll), die zu Fuß an ein Rathaus (Bamlach, Bad Bellingen) kommen, holt der Bürgermeister an der Tür ab:
+// Händeschütteln, Glückwunsch und Einladung an den Stammtisch im Storchen, beim nächsten Mal nur ein kurzer Gruß.
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 import { beerBottle } from './baracke.js';
 import { P as KIGA, A as KIGA_A } from './kindergarten-site.js';
+import { RATHAUS_TUER } from './rathaus.js';
+import { RATHAUS_BB_TUER } from './rathaus-bb.js';
 import { rng } from './world.js';
 
 const GREET_FROM = 30, FEST_FROM = 150;
@@ -16,6 +20,34 @@ const GRUSS_FREUND = ['{n}! Wie goht\'s?', '{n}! Schön di z\'sehne!', 'Solli {n
 const MURREN = ['Ah, du schu widder …', 'Hmpf.', 'Mit dir schwätz i nit.', 'Bisch hüt wenigstens nüechter?'];
 const SCHIMPF = ['Bisch bsoffe?! Lass s Auto stoh!', 'Schäm di, bsoffe fahre!', 'Fahr heim un schlof di us!',
   'Du Lump, du!', 'Langsam, do sin Kinder!', 'Hesch e Schuss?!', 'So öbbis, am helllichte Dag!'];
+
+// Bürgermeister: kommt bis 6 m an die Tür, wieder scharf, wenn man 25 m weg war
+const BM_NAH = 6, BM_WEG = 25, BM_SATZ = 4.8, BM_HAND = 2.6;
+const RATHAEUSER = [
+  { key: 'bamlach', ...RATHAUS_TUER, saetze: ['Solli {n}! I ha di scho vum Fenschter us gsehne – wart, i chumm grad use!',
+    'Im Name vo de ganze Gmeind: Herzliche Glückwunsch! Ehrebürger:in vo Bamlach – des hesch dir redlich verdient.',
+    'Am Stammtisch im Storche isch für di ab jetz immer e Platz frei. Isch jo grad schräg vis-à-vis – chumm doch emol verbii!',
+    'So, i muess widder ine an mi Schriibtisch. Mach\'s guet!'] },
+  { key: 'bb', ...RATHAUS_BB_TUER, saetze: ['Solli {n}! I ha di scho vum Fenschter us gsehne – wart, i chumm grad use!',
+    'Herzliche Glückwunsch zur Ehrebürgerschaft! Ganz Bad Bellinge isch stolz uf di.',
+    'Am Stammtisch im Storche z\'Bamlach isch für di ab jetz immer e Platz frei. Chumm doch emol verbii!',
+    'So, d\'Baustell ruft. Mach\'s guet!'] },
+];
+const BM_WIEDER = ['Solli {n}! Hocksch hüt Obe au am Stammtisch im Storche?', 'Mach\'s guet – un e Gruess an dr Stammtisch!'];
+
+// Bürgermeister: dunkler Anzug, weißes Hemd, rote Krawatte, Amtskette, graue Haare
+function buildMayor() {
+  const m = buildPerson(rng(1604), 0x2b2f3a);
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  for (const leg of [m.legL, m.legR]) leg.children[0].material = lam(0x23262f);
+  m.hair.material = lam(0xb8b8b8);
+  const add = (w, h, d, c, x, y, z, rz = 0) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c)); b.position.set(x, y, z); b.rotation.z = rz; m.add(b); };
+  add(0.2, 0.5, 0.02, 0xf2f2f0, 0, 1.36, 0.18);                       // Hemd
+  add(0.07, 0.4, 0.025, 0xb3261e, 0, 1.33, 0.19);                     // Krawatte
+  for (const s of [-1, 1]) add(0.03, 0.42, 0.03, 0xd4af37, s * 0.12, 1.42, 0.2, s * 0.45); // Amtskette
+  add(0.13, 0.13, 0.03, 0xd4af37, 0, 1.2, 0.21);                       // Medaille
+  return m;
+}
 
 // Sprechblase als Sprite über dem Kopf; lange Sprüche (sprueche.js) werden auf mehrere Zeilen umbrochen
 const BUBBLE_MAX = 620; // Textbreite in Pixeln, ab der umbrochen wird
@@ -64,6 +96,9 @@ export class Ansehen {
     this.drunkTimer = 0;
     this.t = 0;
     this.fest = null;
+    this.bm = null;      // laufender Besuch beim Bürgermeister
+    this.bmCheck = 0;
+    this.bmScharf = new Set(RATHAEUSER.map((r) => r.key));
   }
 
   get name() { return this.ctx.multiplayer?.name || 'du'; }
@@ -135,6 +170,8 @@ export class Ansehen {
       else { arm.rotation.z = 0.2; arm.rotation.x = -2.6 + Math.sin(now * 16) * 0.35; }
     }
 
+    this.updateBuergermeister(dt);
+
     // Sprechblasen folgen dem Kopf und verblassen
     for (const b of this.bubbles) {
       b.left -= dt;
@@ -146,6 +183,74 @@ export class Ansehen {
     this.bubbles = this.bubbles.filter((b) => b.left > 0);
 
     this.updateFest(dt);
+  }
+
+  // ---------- Bürgermeister an der Rathaustür ----------
+  updateBuergermeister(dt) {
+    const { player, world, scene } = this.ctx;
+    const px = player.pos.x, pz = player.pos.z;
+    let b = this.bm;
+    if (!b) {
+      if ((this.bmCheck -= dt) > 0) return;
+      this.bmCheck = 0.5;
+      for (const r of RATHAEUSER) {
+        const d = Math.hypot(px - r.out[0], pz - r.out[1]);
+        if (d > BM_WEG) this.bmScharf.add(r.key);
+        else if (d < BM_NAH && !player.car && this.bmScharf.has(r.key) && this.q.unlocked('dorfpass-voll')) {
+          this.bmScharf.delete(r.key);
+          const erst = !this.st.bmGratuliert?.includes(r.key);
+          this.bmMesh ??= buildMayor();
+          scene.add(this.bmMesh);
+          b = this.bm = { r, mesh: this.bmMesh, x: r.door[0], z: r.door[1], phase: 'raus', t: 0, satz: -1, erst,
+            saetze: (erst ? r.saetze : BM_WIEDER).map((s) => s.replace('{n}', this.name)) };
+          break;
+        }
+      }
+      if (!b) return;
+    }
+    const { r, mesh } = b;
+    b.t += dt;
+    // Ziel: draußen einen Schritt vor der Spielfigur (höchstens 7 m von der Tür), zum Schluss wieder hinter die Tür
+    let tx = r.door[0], tz = r.door[1];
+    if (b.phase !== 'rein') {
+      const dx = px - r.door[0], dz = pz - r.door[1], d = Math.hypot(dx, dz) || 1, s = Math.min(d - 1.1, 7) / d;
+      tx = r.door[0] + dx * Math.max(s, 0.3); tz = r.door[1] + dz * Math.max(s, 0.3);
+    }
+    const gx = tx - b.x, gz = tz - b.z, gd = Math.hypot(gx, gz), step = Math.min(gd, 1.5 * dt);
+    const walking = gd > 0.15;
+    if (walking) { b.x += gx / gd * step; b.z += gz / gd * step; }
+    // Höhe: auf der Treppe von der Schwelle zum Gelände vor den Stufen, sonst Gelände
+    const dd = Math.hypot(b.x - r.door[0], b.z - r.door[1]);
+    const ground = world.heightAt(b.x, b.z);
+    mesh.position.set(b.x, dd < r.steps ? Math.max(ground, r.y + (world.heightAt(...r.out) - r.y) * dd / r.steps) : ground, b.z);
+    mesh.rotation.y = walking && b.phase !== 'reden' ? Math.atan2(gx, gz) : Math.atan2(px - b.x, pz - b.z);
+    animateWalk(mesh, b.t * 9, walking ? 0.5 : 0);
+
+    const weg = Math.hypot(px - b.x, pz - b.z) > 15 || player.car;
+    if (b.phase === 'raus' && (!walking || b.t > 8)) { b.phase = 'reden'; b.t = 0; }
+    if (b.phase === 'reden') {
+      const i = Math.floor(b.t / BM_SATZ);
+      if (i !== b.satz && i < b.saetze.length) {
+        b.satz = i;
+        this.say(b, b.saetze[i], false, BM_SATZ);
+        if (b.erst && i === b.saetze.length - 2) { (this.st.bmGratuliert ??= []).push(r.key); this.q.save(); } // Stammtisch gehört
+      }
+      // Händeschütteln am Anfang; die Spielfigur dreht sich zum Bürgermeister, wenn sie steht
+      const hand = b.t > 0.4 && b.t < 0.4 + BM_HAND && Math.hypot(px - b.x, pz - b.z) < 2.2;
+      const shake = -1.25 + Math.sin(b.t * 14) * 0.18;
+      mesh.armR.rotation.x = hand ? shake : 0;
+      if (hand && Math.hypot(player.vel.x, player.vel.y) < 0.3) {
+        player.facing = Math.atan2(b.x - px, b.z - pz);
+        player.mesh.rotation.y = player.facing;
+        player.mesh.armR.rotation.x = shake;
+      }
+      if (i >= b.saetze.length || weg) { b.phase = 'rein'; b.t = 0; }
+    }
+    if (b.phase === 'rein' && !walking) {
+      scene.remove(mesh);
+      for (const bb of this.bubbles) if (bb.who === b) bb.left = 0;
+      this.bm = null;
+    }
   }
 
   // ---------- Dorffest vor der Gemeindehalle ----------

@@ -31,6 +31,8 @@ const RIDGE_A = 4.83, RIDGE_Y = -0.25;
 
 const FLOOR_EG = -8.85, FLOOR_OG = -5.85;          // Eingang drei Stufen über der Kirchstraße
 const SILL_EG = -8.0, SILL_OG = -4.95;              // Brüstungen der beiden Fensterreihen
+// Haustür für den Bürgermeister (ansehen.js): Punkt knapp hinter der Tür, Punkt vor den Stufen, Höhe und Länge der Treppe
+export const RATHAUS_TUER = { door: P(0.1, LEN - 15.9), out: P(-2.4, LEN - 15.9), y: FLOOR_EG, steps: 1.7 };
 
 const C = {
   WALL: 0xf4e6c6, PLINTH: 0xd9c7a2, FRAME: 0xf6f6f2, GLASS: 0x46525c, ROLLER: 0xe6e3dc, SLAT: 0xc9c5bc,
