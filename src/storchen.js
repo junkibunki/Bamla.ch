@@ -710,10 +710,10 @@ export function buildStorchen(scene, world) {
       innen.update(dt, input, player);
     },
     wine: true, // Bier oder Weinschorle
-    // vor dem Restauranteingang (Pflaster vor der Freitreppe) zu Fuß, oder am Stammtisch sitzend
+    // an der Theke, am Stammtisch sitzend oder vor dem Restauranteingang (Pflaster vor der Freitreppe), zu Fuß
     canDrink(pl) {
       if (pl.car || pl.sip > 0) return false;
-      if (innen.seated) return true;
+      if (innen.seated || innen.atTheke(pl)) return true;
       const dx = pl.pos.x - O[0], dz = pl.pos.z - O[1];
       const a = dx * U[0] + dz * U[1], b = dx * V[0] + dz * V[1];
       return a > 12.2 && a < 17.4 && b > -2.4 && b < 0.4;

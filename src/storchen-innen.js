@@ -1,27 +1,31 @@
-// Innenraum des Gasthofs „Zum Storchen“ im Hochparterre: Flur im Ostanbau, Gaststube und Nebenzimmer im Hauptbau.
+// Innenraum des Gasthofs „Zum Storchen“ im Hochparterre: hinter der Haustür ein kleiner Windfang im Ostanbau, dann
+// ein einziger großer Saal im Hauptbau (die Trennung in der Mitte ist nicht abgebildet). Gleich vor dem Durchgang die
+// Theke, links daneben in der Ecke hinter dem Doppelfenster der Stammtisch mit runder Eckbank (Angaben des Nutzers).
 // Vorlagen: Bildergalerie „Restaurant“ auf storchen.eu: dunkle, fast schwarze Holzvertäfelung bis unter die
 // Fensterbänke, an der Längswand raumhoch mit Türen und Vitrine; cremeweiße Wände, weiße Sprossenfenster mit langen
 // hellen Vorhängen, dunkler Dielenboden; weiße Kassettendecke mit Stuckrosette, Einbauspots und runden
 // Deckenleuchten, eiserner Kronleuchter. Dunkle Tische und Bugholzstühle mit braunem Sitz, Eckbänke mit rot
 // karierten und weißen Kissen, Platzsets mit gefalteten Servietten; altes Eichenbüffet, Vitrinen mit Störchen,
 // Holzhäuschen auf den Fensterbänken, gerahmte Zeichnungen, Herrgottswinkel und das Hochzeitsbild der Gründer
-// (1888). Am Eingang der runde helle Stammtisch mit Zierdeckchen und Stammtischschild unter einer Pendelleuchte,
-// Garderobenständer mit Zeitung, WC-Tür mit Storch im Milchglas.
-// Am Stammtisch sitzen drei Stammgäste; Platz nehmen dürfen nur Ehrenbürger:innen mit vollem Dorfpass (quests.js).
+// (1888). Der runde helle Stammtisch mit Zierdeckchen und Stammtischschild unter einer Pendelleuchte, Garderobenständer
+// mit Zeitung, WC-Tür mit Storch im Milchglas.
+// Am Stammtisch sitzen drei Stammgäste, hinter der Theke steht die Wirtin; an der Theke gibt es Bier und Weinschorle.
+// Am Stammtisch Platz nehmen dürfen nur Ehrenbürger:innen mit vollem Dorfpass (quests.js).
 import * as THREE from 'three';
 import { buildPerson } from './person.js';
 
 const H = 3.15, WAIN = 0.85, PANEL = 2.3, SILL = 0.9; // Raumhöhe, Vertäfelung, hohe Vertäfelung, Fensterbank
-const G = { a0: 0.35, a1: 12.05, b0: 0.35, b1: 13.8 };   // Gaststube
-const N = { a0: 0.35, a1: 12.05, b0: 14.1, b1: 23.6 };   // Nebenzimmer
-const FL = { a0: 12.45, a1: 15.45, b0: 1.95, b1: 7.5 };  // Flur im Ostanbau
+const S = { a0: 0.35, a1: 12.05, b0: 0.35, b1: 23.6 };   // Saal (ganzer Hauptbau)
+const WF = { a0: 12.45, a1: 14.4, b0: 1.95, b1: 5.3 };   // Windfang im Ostanbau
 const ENTRY = [12.74, 13.74], DOOR_H = 2.15;             // Haustür an der Rathausstraße (wie storchen.js)
-const PASS = [3.0, 4.2];                                 // Durchgang Flur → Gaststube
-const ARCH = [4.6, 7.0];                                 // Durchgang Gaststube → Nebenzimmer
-const ST = { a: 9.8, b: 5.6, r: 0.8, seat: 1.08 };       // Stammtisch
-const SEATS = 6, REGULARS = [0, 3, 5];                   // Stühle am Stammtisch, davon besetzt
+const PASS = [3.7, 4.9];                                 // Durchgang Windfang → Saal
+const TH = { a0: 9.0, a1: 9.6, b0: 4.6, b1: 8.1, back: 7.6, bb0: 4.3, bb1: 8.4 }; // Theke: Tresen, Rückbuffet
+const ST = { a: 10.5, b: 1.95, r: 0.72 };                // Stammtisch in der Südostecke
+// Plätze am Stammtisch: Eckbank (Radius 1,2) hinten zur Ecke, zwei Stühle zur Theke hin; Winkel in Grad (0 = Osten)
+const SEATS = [[-130, 1.2], [-85, 1.2], [-40, 1.2], [5, 1.2], [45, 1.2], [105, 1.08], [150, 1.08]];
+const REGULARS = [1, 2, 3];                              // die drei Stammgäste sitzen auf der Eckbank
 
-// Wandöffnungen für storchen.js (Außenwände): Haustür und Durchgang Flur → Gaststube
+// Wandöffnungen für storchen.js (Außenwände): Haustür und Durchgang Windfang → Saal
 export const STORCHEN_DOORS = [[[ENTRY[0], 1.6], [ENTRY[1], 1.6], DOOR_H], [[12.44, PASS[0]], [12.44, PASS[1]], DOOR_H]];
 
 const FRAKTUR = '"Old English Text MT", "UnifrakturMaguntia", "Blackletter", Georgia, serif';
@@ -135,6 +139,14 @@ const wcTex = () => canvasTex(128, 256, (g, w, h) => {
   g.stroke();
 });
 
+// Brauerei-Schild über dem Rückbuffet (wie das Wirtshausschild draußen)
+const ganterTex = () => canvasTex(256, 128, (g, w, h) => {
+  g.fillStyle = '#efe6c8'; g.strokeStyle = '#b08a3a'; g.lineWidth = 8;
+  g.beginPath(); g.ellipse(w / 2, h / 2, w / 2 - 6, h / 2 - 6, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = '#9c2a22'; g.font = 'bold 54px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('GANTER', w / 2, h / 2 + 3);
+});
+
 function materials() {
   // Wie in der Kirche: drinnen kaum Sonne, Eigenleuchten hellt auf
   const m = (color, glow = 0.42, extra = {}) => new THREE.MeshLambertMaterial({ color, emissive: new THREE.Color(color).multiplyScalar(glow), ...extra });
@@ -161,6 +173,8 @@ function materials() {
     paper: m(0xe8e6e0, 0.5), stone: m(0xd8d2c6, 0.5), lace: m(0xfdfcf8, 0.6),
     pics: [0, 1, 2].map((k) => tex(sketchTex(k), 0.5)),
     portrait: tex(portraitTex(), 0.45), sign: tex(stammtischTex(), 0.5), menu: tex(menuTex(), 0.5), wc: tex(wcTex(), 0.5),
+    ganter: tex(ganterTex(), 0.5), mirror: m(0x8a949a, 0.35),
+    bottles: [0x2f5a2a, 0x5a2d0c, 0xc8d4d4, 0x7a1a1a, 0xd8b048].map((c) => m(c, 0.45)),
   };
 }
 
@@ -389,11 +403,11 @@ export function buildInterior({ scene, world, gi, K }) {
     const uv = o.geometry.attributes.uv;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (a1 - a0) / 2, uv.getY(i) * (b1 - b0) / 2);
   };
-  floorBox(G.a0, G.a1, G.b0, N.b1);
-  floorBox(FL.a0 - 0.45, FL.a1, FL.b0 - 0.4, FL.b1);
-  PB(M.panelTrim, 12.0, 12.5, -0.06, 0.012, PASS[0], PASS[1]);           // Schwelle Flur → Gaststube
-  PB(M.stone, ENTRY[0], ENTRY[1], -0.06, 0.012, 1.55, FL.b0);            // Schwelle Haustür
-  for (const r of [G, N, FL]) PB(M.ceiling, r.a0 - 0.3, r.a1 + 0.3, H, H + 0.06, r.b0 - 0.3, r.b1 + 0.3);
+  floorBox(S.a0, S.a1, S.b0, S.b1);
+  floorBox(WF.a0 - 0.45, WF.a1, WF.b0 - 0.4, WF.b1);
+  PB(M.panelTrim, 12.0, 12.5, -0.06, 0.012, PASS[0], PASS[1]);           // Schwelle Windfang → Saal
+  PB(M.stone, ENTRY[0], ENTRY[1], -0.06, 0.012, 1.55, WF.b0);            // Schwelle Haustür
+  for (const r of [S, WF]) PB(M.ceiling, r.a0 - 0.3, r.a1 + 0.3, H, H + 0.06, r.b0 - 0.3, r.b1 + 0.3);
   // Stuck: Hohlkehle ringsum, Kassetten mit Profil, Rosetten; Einbauspots und runde Deckenleuchten
   const frame = (a0, a1, b0, b1, w, d, m = M.stucco) => {
     PB(m, a0, a1, H - d, H, b0, b0 + w); PB(m, a0, a1, H - d, H, b1 - w, b1);
@@ -404,7 +418,7 @@ export function buildInterior({ scene, world, gi, K }) {
   const rosette = (a, b) => {
     for (const [r, t] of [[0.62, 0.05], [0.42, 0.035]]) { const o = mesh(R, new THREE.TorusGeometry(r, t, 5, 36), M.stucco, a, H - 0.02, -b); o.rotation.x = Math.PI / 2; }
   };
-  for (const r of [G, N]) frame(r.a0, r.a1, r.b0, r.b1, 0.14, 0.14);
+  for (const r of [S]) frame(r.a0, r.a1, r.b0, r.b1, 0.14, 0.14);
   const coffers = [[1.3, 11.1, 1.3, 6.9], [1.3, 11.1, 7.25, 12.85], [1.3, 11.1, 15.0, 22.7]];
   for (const [a0, a1, b0, b1] of coffers) {
     frame(a0, a1, b0, b1, 0.22, 0.12);
@@ -414,12 +428,12 @@ export function buildInterior({ scene, world, gi, K }) {
   }
   flush(6.2, 4.1, 0.3);
   flush(6.2, 18.85, 0.32);
-  for (const r of [G, N]) {
+  for (const r of [S]) {
     for (let a = r.a0 + 0.55; a < r.a1 - 0.3; a += 1.7) { spot(a, r.b0 + 0.5); spot(a, r.b1 - 0.5); }
     for (let b = r.b0 + 2.0; b < r.b1 - 1.5; b += 1.7) { spot(r.a0 + 0.5, b); spot(r.a1 - 0.5, b); }
   }
-  flush(13.95, 4.7, 0.24);
-  // Eiserner Kronleuchter mit Kerzen über der Gaststube
+  flush((WF.a0 + WF.a1) / 2, (WF.b0 + WF.b1) / 2, 0.22);
+  // Eiserner Kronleuchter mit Kerzen über der Saalmitte
   {
     const [a, b, y] = [6.2, 10.05, H - 1.25];
     const ring = mesh(R, new THREE.TorusGeometry(0.55, 0.025, 6, 32), M.iron, a, y, -b); ring.rotation.x = Math.PI / 2;
@@ -436,67 +450,61 @@ export function buildInterior({ scene, world, gi, K }) {
     }
   }
 
-  // ---------- Gaststube ----------
-  const gs = room(G), GL = G.a1 - G.a0, GD = G.b1 - G.b0;
-  wall(gs.S, GL);
-  win(gs.S, G.a1 - 9.45, 2.12, 1.55, 'houses');
-  win(gs.S, G.a1 - 5.23, 1.0, 1.55, 'plant');
-  win(gs.S, G.a1 - 2.72, 1.0, 1.55, 'houses');
-  wall(gs.W, GD);
-  panelling(gs.W, 2.9, 10.6);
-  door(gs.W, 4.25);                                           // Küche
-  door(gs.W, 9.25);
-  pic(gs.W, 0.75, 1.75, 0.42, 0.34, M.portrait);             // Gründerpaar über der Eckbank
+  // ---------- Saal ----------
+  const hs = room(S), SL = S.a1 - S.a0, SD = S.b1 - S.b0;
+  wall(hs.S, SL);
+  win(hs.S, S.a1 - 9.45, 2.12, 1.55, 'houses');               // Doppelfenster hinter dem Stammtisch
+  win(hs.S, S.a1 - 5.23, 1.0, 1.55, 'plant');
+  win(hs.S, S.a1 - 2.72, 1.0, 1.55, 'houses');
+  wall(hs.W, SD);
+  for (const [b, d] of [[16.31, 'stork'], [19.31, 'houses'], [22.31, 'plant']]) win(hs.W, b - S.b0, 1.0, 1.4, d);
+  panelling(hs.W, 2.9, 10.6);
+  door(hs.W, 4.25);                                           // Küche (im Flügel)
+  door(hs.W, 9.25);
+  pic(hs.W, 0.75, 1.75, 0.42, 0.34, M.portrait);             // Gründerpaar über der Eckbank
   { // Herrgottswinkel über der Eckbank
-    const f = gs.W, x = 0.2, y = 2.05;
+    const f = hs.W, x = 0.2, y = 2.05;
     B(f, M.black, x - 0.03, x + 0.03, y - 0.3, y + 0.3, 0.02, 0.06);
     B(f, M.black, x - 0.17, x + 0.17, y + 0.08, y + 0.14, 0.02, 0.06);
     B(f, M.brass, x - 0.02, x + 0.02, y - 0.2, y + 0.08, 0.06, 0.08);
     B(f, M.brass, x - 0.12, x + 0.12, y + 0.09, y + 0.12, 0.06, 0.08);
   }
-  wall(gs.N, GL, [[ARCH[0] - G.a0, ARCH[1] - G.a0, PANEL]]);
-  panelling(gs.N, 0.0, ARCH[0] - G.a0 - 0.1); panelling(gs.N, ARCH[1] - G.a0 + 0.1, GL);
-  for (const [x, k] of [[1.8, 0], [10.0, 1]]) pic(gs.N, x, 2.7, 0.36, 0.44, M.pics[k]);
-  wall(gs.E, GD, [[G.b1 - PASS[1], G.b1 - PASS[0], DOOR_H]]);
-  for (const [b, k] of [[6.3, 2], [7.1, 0], [12.5, 1]]) pic(gs.E, G.b1 - b, 1.75, 0.36, 0.44, M.pics[k]);
-  // Durchgang zum Flur: Laibung durch die Außenwand
+  wall(hs.N, SL);
+  for (const [a, d] of [[2.31, 'houses'], [4.91, 'plant'], [7.51, 'stork'], [10.11, 'houses']]) win(hs.N, a - S.a0, 1.0, 1.4, d);
+  // Ostwand: Durchgang vom Windfang, raumhohe Vertäfelung mit WC-Tür, Seitentür zur Storchengasse, Fenster
+  wall(hs.E, SD, [[S.b1 - PASS[1], S.b1 - PASS[0], DOOR_H]]);
+  panelling(hs.E, S.b1 - 13.6, S.b1 - 5.3);
+  door(hs.E, S.b1 - 10.0, 0.9, 2.05, M.wc);
+  door(hs.E, S.b1 - 15.0, 1.0, 2.1);
+  for (const [b, d] of [[17.41, 'plant'], [20.01, 'houses'], [22.61, 'stork']]) win(hs.E, S.b1 - b, 1.1, 1.35, d);
+  for (const [b, k] of [[6.4, 2], [7.6, 0], [12.9, 1]]) pic(hs.E, S.b1 - b, 2.7, 0.36, 0.44, M.pics[k]);
+  // Durchgang zum Windfang: Laibung durch die Außenwand
   PB(M.plaster, 12.05, 12.45, 0, H, PASS[0] - 0.05, PASS[0]); PB(M.plaster, 12.05, 12.45, 0, H, PASS[1], PASS[1] + 0.05);
   PB(M.plaster, 12.05, 12.45, DOOR_H, H, PASS[0], PASS[1]);
-  // Durchgang zum Nebenzimmer: dunkle Pfosten (Pfeiler) und Sturz
-  for (const a of [ARCH[0] - 0.16, ARCH[1] - 0.01]) PB(M.panel, a, a + 0.17, 0, PANEL, G.b1 - 0.05, N.b0 + 0.05); // 1 cm vor dem Putz
-  PB(M.panelTrim, ARCH[0] - 0.15, ARCH[1] + 0.15, PANEL, PANEL + 0.15, G.b1 - 0.05, N.b0 + 0.05);
 
   const solids = []; // Hindernisse im Raumsystem [a0, a1, b0, b1]
   // Eckbank Südwest mit Tisch
-  bench(G.a0, 4.0, G.b0, G.b0 + 0.5, 'S', 4); bench(G.a0, G.a0 + 0.5, G.b0 + 0.5, 3.2, 'W', 2);
+  bench(S.a0, 4.0, S.b0, S.b0 + 0.5, 'S', 4); bench(S.a0, S.a0 + 0.5, S.b0 + 0.5, 3.2, 'W', 2);
   table(1.05, 2.85, 0.95, 1.75, [[1.5, 2.15], [2.4, 2.15], [3.25, 1.35]]);
-  solids.push([G.a0, 4.0, G.b0, 1.0], [G.a0, 0.9, G.b0, 3.2], [1.0, 3.5, 0.9, 2.45]);
-  // Büffet zwischen den Fenstern, darauf Orchidee und Krug
-  buffet(7.05, G.b0 + 0.3, 0, 1);
-  orchid(R, 6.6, 0.92, -(G.b0 + 0.45));
-  solids.push([6.2, 7.9, G.b0, 0.95]);
-  // Eckbank Südost unter dem Doppelfenster
-  bench(8.25, G.a1, G.b0, G.b0 + 0.5, 'S', 4); bench(G.a1 - 0.5, G.a1, G.b0 + 0.5, 2.6, 'E', 2);
-  table(8.95, 10.95, 0.95, 1.75, [[9.45, 2.15], [10.45, 2.15], [8.55, 1.35]]);
-  solids.push([8.25, G.a1, G.b0, 1.0], [11.5, G.a1, G.b0, 2.6], [8.3, 11.1, 0.9, 2.45]);
-  // Tische in der Mitte
-  for (const a of [3.6, 6.4]) for (const b of [5.2, 8.0, 10.6]) {
+  solids.push([S.a0, 4.0, S.b0, 1.0], [S.a0, 0.9, S.b0, 3.2], [1.0, 3.5, 0.9, 2.45]);
+  // Büffets an Süd- und Westwand, darauf Orchideen und Krüge
+  buffet(7.05, S.b0 + 0.3, 0, 1);
+  orchid(R, 6.6, 0.92, -(S.b0 + 0.45));
+  solids.push([6.2, 7.9, S.b0, 0.95]);
+  buffet(S.a0 + 0.3, 13.8, 1, 0);
+  orchid(R, S.a0 + 0.45, 0.92, -14.3);
+  solids.push([S.a0, 0.95, 12.95, 14.65]);
+  // Tische im Saal
+  for (const [a, rows] of [[3.2, [5.2, 8.0, 10.8, 13.6]], [5.9, [5.2, 8.0, 10.8, 13.6]], [9.4, [10.8, 13.6]]]) for (const b of rows) {
     table(a - 0.6, a + 0.6, b - 0.4, b + 0.4, [[a - 0.3, b - 0.75], [a + 0.3, b - 0.75], [a - 0.3, b + 0.75], [a + 0.3, b + 0.75]]);
     candle(R, a + 0.25, 0.76, -b);
     solids.push([a - 0.65, a + 0.65, b - 1.0, b + 1.0]);
   }
-  // Eckbänke Nordwest und Nordost an der Trennwand
-  bench(G.a0, G.a0 + 0.5, 11.0, G.b1, 'W', 2); bench(G.a0 + 0.5, 3.6, G.b1 - 0.5, G.b1, 'N', 3);
-  table(1.0, 1.8, 11.4, 13.2, [[2.15, 11.9], [2.15, 12.7]]);
-  solids.push([G.a0, 0.9, 11.0, G.b1], [G.a0, 3.6, 13.3, G.b1], [0.95, 2.45, 11.35, 13.3]);
-  bench(G.a1 - 0.5, G.a1, 11.0, G.b1, 'E', 2); bench(8.4, G.a1 - 0.5, G.b1 - 0.5, G.b1, 'N', 3);
-  table(10.6, 11.4, 11.4, 13.2, [[10.25, 11.9], [10.25, 12.7]]);
-  solids.push([11.5, G.a1, 11.0, G.b1], [8.4, G.a1, 13.3, G.b1], [9.95, 11.45, 11.35, 13.3]);
   // Einbauvitrine an der Westwand, Storchenvitrine und Garderobe an der Ostwand
-  vitrine(G.a0 + 0.25, 6.9, 1, 0, 1.1, 2.1); solids.push([G.a0, 0.85, 6.3, 7.5]);
-  vitrine(G.a1 - 0.25, 9.6, -1, 0); solids.push([11.55, G.a1, 9.05, 10.15]);
+  vitrine(S.a0 + 0.25, 6.9, 1, 0, 1.1, 2.1); solids.push([S.a0, 0.85, 6.3, 7.5]);
+  vitrine(S.a1 - 0.25, 12.4, -1, 0); solids.push([11.55, S.a1, 11.85, 12.95]);
   {
-    const [a, b] = [11.6, 7.7];
+    const [a, b] = [11.6, 9.0];
     mesh(R, new THREE.CylinderGeometry(0.02, 0.025, 1.85, 6), M.iron, a, 0.925, -b);
     for (let k = 0; k < 3; k++) { const l = mesh(R, new THREE.BoxGeometry(0.03, 0.03, 0.4), M.iron, a, 0.06, -b); l.rotation.y = k * 2.1; }
     for (let k = 0; k < 6; k++) { const h = mesh(R, new THREE.TorusGeometry(0.1, 0.01, 4, 10, Math.PI), M.iron, a, 1.7, -b); h.rotation.y = k * Math.PI / 3; }
@@ -504,91 +512,121 @@ export function buildInterior({ scene, world, gi, K }) {
     paper.rotation.set(0, Math.PI / 2, 0.12);
     solids.push([a - 0.3, a + 0.3, b - 0.3, b + 0.3]);
   }
-
-  // Stammtisch: runde helle Eiche, Mittelsäule, Zierdeckchen, Schild, Pendelleuchte
-  mesh(R, new THREE.CylinderGeometry(ST.r, ST.r, 0.05, 32), M.oakLight, ST.a, 0.735, -ST.b);
-  mesh(R, new THREE.CylinderGeometry(0.09, 0.11, 0.7, 12), M.oakLight, ST.a, 0.36, -ST.b);
-  for (let k = 0; k < 2; k++) { const f = mesh(R, new THREE.BoxGeometry(1.0, 0.06, 0.1), M.oakLight, ST.a, 0.03, -ST.b); f.rotation.y = k * Math.PI / 2; }
-  mesh(R, new THREE.CylinderGeometry(0.2, 0.2, 0.004, 20), M.lace, ST.a, 0.762, -ST.b);
-  cruet(R, ST.a + 0.06, 0.764, -ST.b);
-  {
-    const sg = piece(ST.a - 0.08, ST.b, -1, -0.3);
-    B(sg, M.iron, -0.012, 0.012, 0.76, 0.98, -0.012, 0.012);
-    B(sg, M.iron, -0.09, 0.09, 0.76, 0.775, -0.05, 0.05);
-    for (const s of [1, -1]) { const p = mesh(sg, new THREE.PlaneGeometry(0.3, 0.19), M.sign, 0, 1.05, s * 0.008); if (s < 0) p.rotation.y = Math.PI; }
-    B(sg, M.black, -0.155, 0.155, 0.95, 1.15, -0.006, 0.006);
-  }
-  mesh(R, new THREE.CylinderGeometry(0.006, 0.006, H - 2.15, 4), M.black, ST.a, (H + 2.15) / 2, -ST.b);
-  mesh(R, new THREE.ConeGeometry(0.38, 0.32, 24, 1, true), new THREE.MeshLambertMaterial({ color: 0xf8f4ea, emissive: 0xc8c0b0, side: THREE.DoubleSide }), ST.a, 2.0, -ST.b);
-  mesh(R, new THREE.SphereGeometry(0.07, 8, 6), M.light, ST.a, 1.88, -ST.b);
-  const seats = [];
-  for (let i = 0; i < SEATS; i++) {
-    const ang = (i / SEATS) * Math.PI * 2 + 0.3, a = ST.a + Math.cos(ang) * ST.seat, b = ST.b + Math.sin(ang) * ST.seat;
-    chair(a, b, ST.a, ST.b);
-    seats.push({ a, b, ang, taken: REGULARS.includes(i) });
-    if (REGULARS.includes(i)) { // Bierglas vor den Stammgästen
-      const ga = ST.a + Math.cos(ang) * 0.5, gb = ST.b + Math.sin(ang) * 0.5;
-      mesh(R, new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer, ga, 0.84, -gb);
-      mesh(R, new THREE.CylinderGeometry(0.041, 0.041, 0.03, 10), M.white, ga, 0.935, -gb);
-    }
-  }
-
-  // ---------- Nebenzimmer ----------
-  const nz = room(N), NL = N.a1 - N.a0, ND = N.b1 - N.b0;
-  wall(nz.S, NL, [[N.a1 - ARCH[1], N.a1 - ARCH[0], PANEL]]);
-  pic(nz.S, N.a1 - 3.0, 1.8, 0.36, 0.44, M.pics[2]); pic(nz.S, N.a1 - 9.5, 1.8, 0.36, 0.44, M.pics[0]);
-  wall(nz.W, ND);
-  for (const [b, d] of [[16.31, 'stork'], [19.31, 'houses'], [22.31, 'plant']]) win(nz.W, b - N.b0, 1.0, 1.4, d);
-  wall(nz.N, NL);
-  for (const [a, d] of [[2.31, 'houses'], [4.91, 'plant'], [7.51, 'stork'], [10.11, 'houses']]) win(nz.N, a - N.a0, 1.0, 1.4, d);
-  wall(nz.E, ND);
-  for (const [b, d] of [[17.41, 'plant'], [20.01, 'houses'], [22.61, 'stork']]) win(nz.E, N.b1 - b, 1.1, 1.35, d);
-  door(nz.E, N.b1 - 15.0, 1.0, 2.1);                        // Seitentür zur Storchengasse
-  pic(nz.W, 0.8, 1.8, 0.36, 0.44, M.pics[1]);
-  // Eckbänke an den Fenstern, gedeckte Tische mit Platzsets und Servietten
-  bench(N.a0, N.a0 + 0.5, 18.0, N.b1, 'W', 4); bench(N.a0 + 0.5, 5.6, N.b1 - 0.5, N.b1, 'N', 4);
+  // Eckbänke an den Fenstern im hinteren Teil, gedeckte Tische mit Platzsets und Servietten
+  bench(S.a0, S.a0 + 0.5, 18.0, S.b1, 'W', 4); bench(S.a0 + 0.5, 5.6, S.b1 - 0.5, S.b1, 'N', 4);
   const t1 = [[2.15, 19.6], [2.15, 20.8]]; t1.benchSeats = [[0.9, 19.6], [0.9, 20.8]];
   table(1.0, 1.8, 19.0, 21.4, t1, { set: true });
   const t2 = [[3.0, 22.1], [4.2, 22.1]]; t2.benchSeats = [[3.0, 23.2], [4.2, 23.2]];
   table(2.4, 4.8, 22.45, 23.25, t2, { set: true });
-  solids.push([N.a0, 0.9, 18.0, N.b1], [N.a0, 5.6, 23.05, N.b1], [0.95, 2.45, 18.95, 21.45], [2.35, 4.85, 21.75, 23.3]);
-  bench(N.a1 - 0.5, N.a1, 18.0, N.b1, 'E', 4); bench(6.8, N.a1 - 0.5, N.b1 - 0.5, N.b1, 'N', 4);
+  solids.push([S.a0, 0.9, 18.0, S.b1], [S.a0, 5.6, 23.05, S.b1], [0.95, 2.45, 18.95, 21.45], [2.35, 4.85, 21.75, 23.3]);
+  bench(S.a1 - 0.5, S.a1, 18.0, S.b1, 'E', 4); bench(6.8, S.a1 - 0.5, S.b1 - 0.5, S.b1, 'N', 4);
   const t3 = [[10.3, 19.6], [10.3, 20.8]]; t3.benchSeats = [[11.5, 19.6], [11.5, 20.8]];
   table(10.65, 11.45, 19.0, 21.4, t3, { set: true });
   const t4 = [[8.2, 22.1], [9.4, 22.1]]; t4.benchSeats = [[8.2, 23.2], [9.4, 23.2]];
   table(7.6, 10.0, 22.45, 23.25, t4, { set: true });
-  solids.push([11.5, N.a1, 18.0, N.b1], [6.8, N.a1, 23.05, N.b1], [9.95, 11.5, 18.95, 21.45], [7.55, 10.05, 21.75, 23.3]);
-  // lange Festtafel in der Mitte
+  solids.push([11.5, S.a1, 18.0, S.b1], [6.8, S.a1, 23.05, S.b1], [9.95, 11.5, 18.95, 21.45], [7.55, 10.05, 21.75, 23.3]);
+  // lange Festtafel
   const banquet = [];
   for (const b of [16.85, 17.95, 19.05, 20.15]) banquet.push([5.25, b], [6.95, b]);
   table(5.6, 6.6, 16.3, 20.7, banquet, { set: true });
   for (const b of [17.4, 19.6]) candle(R, 6.1, 0.76, -b);
   solids.push([4.95, 7.25, 16.25, 20.75]);
-  buffet(1.85, N.b0 + 0.3, 0, 1);
-  orchid(R, 1.4, 0.92, -(N.b0 + 0.45));
-  solids.push([1.0, 2.7, N.b0, 14.7]);
 
-  // ---------- Flur im Ostanbau ----------
-  const fl = room(FL), FLL = FL.a1 - FL.a0, FLD = FL.b1 - FL.b0;
-  wall(fl.S, FLL, [[FL.a1 - ENTRY[1], FL.a1 - ENTRY[0], DOOR_H]]);
-  wall(fl.W, FLD, [[PASS[0] - FL.b0, PASS[1] - FL.b0, DOOR_H]]);
-  pic(fl.W, 3.75, 1.55, 0.6, 0.75, M.menu);
-  wall(fl.N, FLL);
-  door(fl.N, 1.55, 0.9, 2.05, M.wc);
-  wall(fl.E, FLD);
-  for (const b of [2.84, 5.44]) win(fl.E, FL.b1 - b, 1.0, 1.35, b < 3 ? 'stork' : 'plant');
+  // ---------- Theke gleich vor dem Durchgang ----------
+  // Tresen mit vertäfelter Front, Abdeckung mit Überstand, Messing-Fußstange, Zapfhähne, Gläser;
+  // dahinter Gang und Rückbuffet mit Unterschrank, Flaschenregal, Spiegel und Ganter-Schild
+  PB(M.panel, TH.a0, TH.a1, 0, 1.08, TH.b0, TH.b1);
+  for (let b = TH.b0 + 0.45; b < TH.b1 - 0.3; b += 0.7) PB(M.panelTrim, TH.a1, TH.a1 + 0.015, 0.22, 0.92, b - 0.28, b + 0.28);
+  PB(M.table, TH.a0 - 0.05, TH.a1 + 0.12, 1.08, 1.13, TH.b0 - 0.05, TH.b1 + 0.05);
+  { const rail = mesh(R, new THREE.CylinderGeometry(0.02, 0.02, TH.b1 - TH.b0, 8), M.brass, TH.a1 + 0.2, 0.18, -(TH.b0 + TH.b1) / 2); rail.rotation.x = Math.PI / 2; }
+  for (const b of [5.6, 6.0]) {
+    mesh(R, new THREE.CylinderGeometry(0.035, 0.045, 0.38, 10), M.brass, TH.a0 + 0.25, 1.32, -b);
+    const h = mesh(R, new THREE.CylinderGeometry(0.018, 0.022, 0.18, 8), M.black, TH.a0 + 0.3, 1.58, -b); h.rotation.z = -0.25;
+    PB(M.iron, TH.a0 + 0.15, TH.a0 + 0.45, 1.13, 1.15, b - 0.12, b + 0.12);  // Tropfblech
+  }
+  for (const b of [6.7, 6.85, 7.3]) { mesh(R, new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer, TH.a0 + 0.3, 1.21, -b); mesh(R, new THREE.CylinderGeometry(0.041, 0.041, 0.03, 10), M.white, TH.a0 + 0.3, 1.3, -b); }
+  const back = TH.back;
+  PB(M.panel, back, back + 0.5, 0, 0.92, TH.bb0, TH.bb1);
+  PB(M.table, back, back + 0.55, 0.92, 0.96, TH.bb0, TH.bb1);
+  PB(M.panel, back, back + 0.06, 0.96, PANEL, TH.bb0, TH.bb1);
+  PB(M.mirror, back + 0.06, back + 0.07, 1.05, 1.9, TH.bb0 + 1.0, TH.bb1 - 1.0);
+  for (const y of [1.25, 1.6, 1.95]) {
+    PB(M.panelTrim, back + 0.06, back + 0.3, y - 0.03, y, TH.bb0 + 0.1, TH.bb1 - 0.1);
+    for (let b = TH.bb0 + 0.2; b < TH.bb1 - 0.15; b += 0.13) if (rand() < 0.8) {
+      const tall = rand() < 0.6, m = M.bottles[Math.floor(rand() * M.bottles.length)];
+      mesh(R, new THREE.CylinderGeometry(0.035, 0.035, tall ? 0.26 : 0.14, 8), tall ? m : M.glassBeer, back + 0.18, y + (tall ? 0.13 : 0.07), -b);
+      if (tall) mesh(R, new THREE.CylinderGeometry(0.012, 0.03, 0.08, 8), m, back + 0.18, y + 0.3, -b);
+    }
+  }
+  PB(M.panelTrim, back - 0.02, back + 0.36, PANEL, PANEL + 0.1, TH.bb0 - 0.02, TH.bb1 + 0.02);
+  { const p = mesh(R, new THREE.PlaneGeometry(0.9, 0.45), M.ganter, back + 0.07, PANEL + 0.4, -(TH.bb0 + TH.bb1) / 2); p.rotation.y = Math.PI / 2; }
+  for (const b of [5.3, 7.4]) { // Pendelleuchten über dem Tresen
+    mesh(R, new THREE.CylinderGeometry(0.006, 0.006, H - 2.25, 4), M.black, TH.a0 + 0.3, (H + 2.25) / 2, -b);
+    mesh(R, new THREE.ConeGeometry(0.2, 0.2, 16, 1, true), M.white, TH.a0 + 0.3, 2.15, -b);
+    mesh(R, new THREE.SphereGeometry(0.05, 8, 6), M.light, TH.a0 + 0.3, 2.07, -b);
+  }
+  solids.push([TH.a0 - 0.05, TH.a1 + 0.1, TH.b0 - 0.05, TH.b1 + 0.05], [back, back + 0.55, TH.bb0, TH.bb1]);
+
+  // ---------- Stammtisch links neben der Theke ----------
+  // Runder Tisch aus heller Eiche, dahinter zur Ecke eine eingebaute runde Eckbank, zur Theke hin zwei Stühle
+  mesh(R, new THREE.CylinderGeometry(ST.r, ST.r, 0.05, 32), M.oakLight, ST.a, 0.735, -ST.b);
+  mesh(R, new THREE.CylinderGeometry(0.09, 0.11, 0.7, 12), M.oakLight, ST.a, 0.36, -ST.b);
+  for (let k = 0; k < 2; k++) { const f = mesh(R, new THREE.BoxGeometry(0.9, 0.06, 0.1), M.oakLight, ST.a, 0.03, -ST.b); f.rotation.y = k * Math.PI / 2; }
+  mesh(R, new THREE.CylinderGeometry(0.2, 0.2, 0.004, 20), M.lace, ST.a, 0.762, -ST.b);
+  cruet(R, ST.a + 0.06, 0.764, -ST.b);
+  {
+    const sg = piece(ST.a - 0.1, ST.b + 0.1, -0.7, 0.7);       // Schild schaut zur Theke
+    B(sg, M.iron, -0.012, 0.012, 0.76, 0.98, -0.012, 0.012);
+    B(sg, M.iron, -0.09, 0.09, 0.76, 0.775, -0.05, 0.05);
+    for (const s of [1, -1]) { const p = mesh(sg, new THREE.PlaneGeometry(0.3, 0.19), M.sign, 0, 1.05, s * 0.008); if (s < 0) p.rotation.y = Math.PI; }
+    B(sg, M.black, -0.155, 0.155, 0.95, 1.15, -0.006, 0.006);
+  }
+  {
+    const r0 = 0.95, r1 = 1.45, t0 = -160, t1 = 70, n = 14, step = ((t1 - t0) / n) * Math.PI / 180;
+    for (let k = 0; k < n; k++) {
+      const t = (t0 + (k + 0.5) * (t1 - t0) / n) * Math.PI / 180, rm = (r0 + r1) / 2, d = r1 - r0;
+      const p = piece(ST.a + Math.cos(t) * rm, ST.b + Math.sin(t) * rm, -Math.cos(t), -Math.sin(t)); // +z zum Tisch
+      const w = r1 * step + 0.03;
+      B(p, M.panel, -w / 2, w / 2, 0, 0.42, -d / 2, d / 2);
+      B(p, M.bench, -w / 2, w / 2, 0.42, 0.48, -d / 2, d / 2);
+      B(p, M.panel, -(w + 0.03) / 2, (w + 0.03) / 2, 0, 0.84, -d / 2 - 0.08, -d / 2);
+      if (k % 3 === 1) B(p, k % 2 ? M.plaid : M.cushion, -0.2, 0.2, 0.48, 0.8, -d / 2, -d / 2 + 0.12);
+    }
+  }
+  mesh(R, new THREE.CylinderGeometry(0.006, 0.006, H - 2.15, 4), M.black, ST.a, (H + 2.15) / 2, -ST.b);
+  mesh(R, new THREE.ConeGeometry(0.38, 0.32, 24, 1, true), new THREE.MeshLambertMaterial({ color: 0xf8f4ea, emissive: 0xc8c0b0, side: THREE.DoubleSide }), ST.a, 2.0, -ST.b);
+  mesh(R, new THREE.SphereGeometry(0.07, 8, 6), M.light, ST.a, 1.88, -ST.b);
+  const seats = SEATS.map(([deg, r], i) => {
+    const ang = deg * Math.PI / 180, a = ST.a + Math.cos(ang) * r, b = ST.b + Math.sin(ang) * r;
+    if (r < 1.1) chair(a, b, ST.a, ST.b);
+    if (REGULARS.includes(i)) { // Bierglas vor den Stammgästen
+      const ga = ST.a + Math.cos(ang) * 0.5, gb = ST.b + Math.sin(ang) * 0.5;
+      mesh(R, new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer, ga, 0.84, -gb);
+      mesh(R, new THREE.CylinderGeometry(0.041, 0.041, 0.03, 10), M.white, ga, 0.935, -gb);
+    }
+    return { a, b, ang, taken: REGULARS.includes(i) };
+  });
+
+  // ---------- Windfang im Ostanbau ----------
+  const wf = room(WF), WFL = WF.a1 - WF.a0, WFD = WF.b1 - WF.b0;
+  wall(wf.S, WFL, [[WF.a1 - ENTRY[1], WF.a1 - ENTRY[0], DOOR_H]]);
+  wall(wf.W, WFD, [[PASS[0] - WF.b0, PASS[1] - WF.b0, DOOR_H]]);
+  wall(wf.N, WFL);
+  wall(wf.E, WFD);
+  pic(wf.E, WFD / 2, 1.55, 0.6, 0.75, M.menu);               // Kreidetafel mit den Spezialitäten
+  PB(M.panelTrim, ENTRY[0], ENTRY[1], 0, 0.015, WF.b0 + 0.1, WF.b0 + 0.8); // Fußmatte
   // Laibung der Haustür durch die Außenwand
-  PB(M.plaster, ENTRY[0] - 0.1, ENTRY[0], 0, H, 1.55, FL.b0); PB(M.plaster, ENTRY[1], ENTRY[1] + 0.1, 0, H, 1.55, FL.b0);
-  PB(M.plaster, ENTRY[0], ENTRY[1], DOOR_H, H, 1.55, FL.b0);
-  stork(R, FL.a1 - 0.35, 0, -(FL.b1 - 0.4), 0.9, -2.4); // großer Storch in der Ecke
-  solids.push([FL.a1 - 0.65, FL.a1, FL.b1 - 0.7, FL.b1]);
+  PB(M.plaster, ENTRY[0] - 0.1, ENTRY[0], 0, H, 1.55, WF.b0); PB(M.plaster, ENTRY[1], ENTRY[1] + 0.1, 0, H, 1.55, WF.b0);
+  PB(M.plaster, ENTRY[0], ENTRY[1], DOOR_H, H, 1.55, WF.b0);
+  stork(R, WF.a1 - 0.3, 0, -(WF.b1 - 0.35), 0.8, -2.4);      // großer Storch in der Ecke
+  solids.push([WF.a1 - 0.55, WF.a1, WF.b1 - 0.6, WF.b1]);
 
-  // ---------- Stammgäste ----------
+  // ---------- Stammgäste und Wirtin ----------
   const regulars = [];
   const r = () => rand();
-  for (const [i, shirt] of [[0, 0x4f5e3e], [3, 0x6a2e2a], [5, 0x3a4a66]]) {
+  for (const [i, shirt, hair] of [[1, 0x4f5e3e, 0xc8c8c8], [2, 0x6a2e2a, 0x8a8a8a], [3, 0x3a4a66, 0xd8d8d8]]) {
     const s = seats[i], m = buildPerson(r, shirt);
-    m.hair.material = new THREE.MeshLambertMaterial({ color: i === 3 ? 0x8a8a8a : 0xc8c8c8 });
+    m.hair.material = new THREE.MeshLambertMaterial({ color: hair });
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer);
     glass.position.set(0, -0.62, 0.13);
     m.armR.add(glass);
@@ -600,6 +638,18 @@ export function buildInterior({ scene, world, gi, K }) {
     scene.add(m);
     regulars.push({ m, t: rand() * 8 });
   }
+  const host = buildPerson(r, 0x2a2a2a); // Wirtin hinter dem Tresen mit weißer Schürze, poliert ein Glas
+  host.hair.material = new THREE.MeshLambertMaterial({ color: 0x6b3a1a });
+  B(host, M.white, -0.28, 0.28, 0.55, 1.45, 0.176, 0.19);
+  const hostGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.sky);
+  hostGlass.position.set(0, -0.62, 0.13);
+  host.armL.add(hostGlass);
+  {
+    const [x, z] = P((back + 0.55 + TH.a0) / 2, 6.3), [tx, tz] = P(TH.a1 + 1, 6.3);
+    host.position.set(x, F, z);
+    host.rotation.y = Math.atan2(tx - x, tz - z);
+    scene.add(host);
+  }
 
   // ---------- Kollision und begehbarer Boden ----------
   const W = (a0, a1, b0, b1) => [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)];
@@ -607,21 +657,19 @@ export function buildInterior({ scene, world, gi, K }) {
   // Wände bis übers Dach; Möbel tischhoch (die Kamera schaut drüber), walkTop so hoch, dass niemand hinaufspringt
   const TOP = H + 3, LOW = 0.9, NO_TOP = F + 50;
   for (const [a0, a1, b0, b1] of [
-    [-0.3, 12.7, -0.6, G.b0], [-0.3, G.a0, -0.6, 24.6], [-0.3, 12.7, N.b1, 24.6],          // Süd-, West-, Nordwand
-    [G.a1, FL.a0, -0.6, PASS[0]], [G.a1, FL.a0, PASS[1], FL.b1], [G.a1, 12.75, FL.b1, 24.6], // Ostwand
-    [G.a0, ARCH[0], G.b1, N.b0], [ARCH[1], G.a1, G.b1, N.b0],                                // Trennwand
-    [FL.a0, ENTRY[0] - 0.05, 1.3, FL.b0], [ENTRY[1] + 0.05, 16.2, 1.3, FL.b0],               // Flur: Haustürwand
-    [FL.a1, 16.2, 1.3, FL.b1], [FL.a0, 16.2, FL.b1, 14.2],                                   // Flur: Ostwand, Küche dahinter
+    [-0.3, 12.7, -0.6, S.b0], [-0.3, S.a0, -0.6, 24.6], [-0.3, 12.7, S.b1, 24.6],            // Süd-, West-, Nordwand
+    [S.a1, WF.a0, -0.6, PASS[0]], [S.a1, WF.a0, PASS[1], WF.b1], [S.a1, 12.75, WF.b1, 24.6], // Ostwand
+    [WF.a0, ENTRY[0] - 0.05, 1.3, WF.b0], [ENTRY[1] + 0.05, 16.2, 1.3, WF.b0],               // Windfang: Haustürwand
+    [WF.a1, 16.2, 1.3, 14.2], [WF.a0, WF.a1, WF.b1, 14.2],                                   // Küche und WC dahinter
   ]) solid(W(a0, a1, b0, b1), TOP);
   for (const s of solids) solid(W(...s), LOW, NO_TOP);
-  solid(Array.from({ length: 8 }, (_, k) => P(ST.a + Math.cos(k * Math.PI / 4) * 1.32, ST.b + Math.sin(k * Math.PI / 4) * 1.32)), LOW, NO_TOP);
-  world.addDeck(W(G.a0 - 0.1, G.a1 + 0.1, G.b0 - 0.1, N.b1 + 0.1), () => F);
-  world.addDeck(W(G.a1, FL.a1 + 0.1, 1.5, FL.b1 + 0.1), () => F);
+  solid(Array.from({ length: 8 }, (_, k) => P(ST.a + Math.cos(k * Math.PI / 4) * 1.45, ST.b + Math.sin(k * Math.PI / 4) * 1.45)), LOW, NO_TOP);
+  world.addDeck(W(S.a0 - 0.1, S.a1 + 0.1, S.b0 - 0.1, S.b1 + 0.1), () => F);
+  world.addDeck(W(S.a1, WF.a1 + 0.1, 1.5, WF.b1 + 0.1), () => F);
 
   // ---------- Abfragen und Stammtisch ----------
   const inRect = (r, a, b) => a > r.a0 - 0.05 && a < r.a1 + 0.05 && b > r.b0 - 0.05 && b < r.b1 + 0.05;
-  const inAt = (a, b) => inRect(G, a, b) || inRect(N, a, b) || inRect(FL, a, b) || (a >= G.a1 && a <= FL.a0 && b > PASS[0] && b < PASS[1])
-    || (b >= G.b1 && b <= N.b0 && a > ARCH[0] && a < ARCH[1]);
+  const inAt = (a, b) => inRect(S, a, b) || inRect(WF, a, b) || (a >= S.a1 && a <= WF.a0 && b > PASS[0] && b < PASS[1]);
   const isEhren = (quests) => !!quests?.unlocked('dorfpass-voll'); // Ehrenbürger:in = Dorfpass voll (alle Aufgaben)
   const SIP = 2.4; // wie player.js
   let seated = null, standAt = null;
@@ -630,6 +678,13 @@ export function buildInterior({ scene, world, gi, K }) {
     floor: F,
     get seated() { return !!seated; },
     inside(x, z) { return inAt(...toLocal(x, z)); },
+    // Vor dem Tresen (zu Fuß): dort gibt es Bier und Weinschorle
+    atTheke(player) {
+      if (player.car || player.pos.y > 0.3) return false;
+      const [a, b] = toLocal(player.pos.x, player.pos.z);
+      return a > TH.a1 && a < TH.a1 + 1.3 && b > TH.b0 && b < TH.b1;
+    },
+    theke: P(TH.a1 + 0.6, (TH.b0 + TH.b1) / 2),
     ceilingAt(x, z) { return inAt(...toLocal(x, z)) ? F + H - 0.25 : null; },
     // Am Stammtisch, noch nicht sitzend
     canSit(player) {
@@ -649,7 +704,7 @@ export function buildInterior({ scene, world, gi, K }) {
       const [pa, pb] = toLocal(player.pos.x, player.pos.z);
       const free = seats.filter((s) => !s.taken).sort((p, q) => Math.hypot(p.a - pa, p.b - pb) - Math.hypot(q.a - pa, q.b - pb))[0];
       seated = free;
-      standAt = P(ST.a + Math.cos(free.ang) * 1.75, ST.b + Math.sin(free.ang) * 1.75);
+      standAt = P(ST.a + Math.cos(Math.PI * 0.75) * 1.95, ST.b + Math.sin(Math.PI * 0.75) * 1.95); // vor dem Tisch zur Theke hin
       const [x, z] = P(free.a, free.b), [tx, tz] = P(ST.a, ST.b);
       player.pos.set(x, 0, z);
       player.vel?.set(0, 0);

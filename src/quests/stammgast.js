@@ -4,7 +4,7 @@ import { P as BP } from '../baracke-site.js';
 const O = [-83.29, -46.87], V = [0.1886, -0.9821], U = [-V[1], V[0]]; // Storchen-Achsen wie in storchen.js
 const P = (a, b) => [O[0] + U[0] * a + V[0] * b, O[1] + U[1] * a + V[1] * b];
 const [bx, bz] = P(8.4, -1.3); // vor der Hauptfassade, westlich vom Restauranteingang
-const THEKE = { storchen: P(14.8, -1), baracke: BP(4, 2.4) };
+const THEKE = { storchen: P(10.2, 6.35), baracke: BP(4, 2.4) }; // Storchen: vor dem Tresen im Saal (storchen-innen.js)
 
 export default {
   id: 'stammgast', nr: 26, title: 'Stammgast',
