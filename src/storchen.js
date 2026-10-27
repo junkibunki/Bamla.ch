@@ -465,10 +465,10 @@ export function buildStorchen(scene, world) {
   const base = Math.min(...[...MAIN, ...WING, ...ANNEX].map(([a, b]) => ground(a, b))) - 0.3;
   const wall = mat(C.WALL);
 
-  // Baukörper, mit Öffnungen für Haustür und Durchgang zur Gaststube (storchen-innen.js)
+  // Baukörper, mit Öffnungen für Haustür, Durchgang zum Saal und Küchenöffnung (storchen-innen.js)
   const holes = STORCHEN_DOORS.map(([p, q, h]) => [p, q, FLOOR1, FLOOR1 + h]);
   g.add(new THREE.Mesh(wallGeometry(MAIN, [MW, ME, MS], base, holes), wall));
-  g.add(new THREE.Mesh(wallGeometry(WING, [WS, WN], base), wall));
+  g.add(new THREE.Mesh(wallGeometry(WING, [WS, WN], base, holes), wall));
   g.add(new THREE.Mesh(wallGeometry(ANNEX, [AS, AN], base, holes), wall));
   for (const poly of [MAIN, WING, ANNEX]) g.add(new THREE.Mesh(plinthGeometry(poly, ground, base, 1.15), mat(C.PLINTH)));
   // Pflasterstreifen vor der Südfassade und vor der Freitreppe (Gehweg zur Rathausstraße)
