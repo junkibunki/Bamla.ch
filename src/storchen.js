@@ -166,8 +166,8 @@ function roofSlab(g, poly, pl, roofMat, t = 0.16) {
   }
 }
 
-// Ockergelber Sockel als Band vor allen Wänden, Oberkante folgt dem Gelände
-function plinthGeometry(poly, ground, base, h) {
+// Ockergelber Sockel als Band vor allen Wänden, Oberkante folgt dem Gelände; inner(a, b): Stück liegt innen (weglassen)
+function plinthGeometry(poly, ground, base, h, inner = () => false) {
   const pos = [], uv = [];
   poly = ccw(poly);
   for (let i = 0; i < poly.length; i++) {
@@ -177,6 +177,7 @@ function plinthGeometry(poly, ground, base, h) {
     for (let s = 0; s < n; s++) {
       const a0 = p[0] + (q[0] - p[0]) * s / n + ox, b0 = p[1] + (q[1] - p[1]) * s / n + ob;
       const a1 = p[0] + (q[0] - p[0]) * (s + 1) / n + ox, b1 = p[1] + (q[1] - p[1]) * (s + 1) / n + ob;
+      if (inner((a0 + a1) / 2, (b0 + b1) / 2)) continue;
       const y0 = ground(a0, b0) + h, y1 = ground(a1, b1) + h;
       pos.push(a0, base, -b0, a1, base, -b1, a1, y1, -b1, a0, base, -b0, a1, y1, -b1, a0, y0, -b0);
       uv.push(0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1);
@@ -470,7 +471,9 @@ export function buildStorchen(scene, world) {
   g.add(new THREE.Mesh(wallGeometry(MAIN, [MW, ME, MS], base, holes), wall));
   g.add(new THREE.Mesh(wallGeometry(WING, [WS, WN], base, holes), wall));
   g.add(new THREE.Mesh(wallGeometry(ANNEX, [AS, AN], base, holes), wall));
-  for (const poly of [MAIN, WING, ANNEX]) g.add(new THREE.Mesh(plinthGeometry(poly, ground, base, 1.15), mat(C.PLINTH)));
+  // kein Sockel an den Mauern, die innen liegen (Hauptbau/Anbau, Hauptbau/Flügel)
+  const inner = (a, b) => (Math.abs(a - 12.45) < 0.3 && b > 1.7 && b < 14) || (Math.abs(a) < 0.3 && b > 0.2 && b < 12.4);
+  for (const poly of [MAIN, WING, ANNEX]) g.add(new THREE.Mesh(plinthGeometry(poly, ground, base, 1.15, inner), mat(C.PLINTH)));
   // Pflasterstreifen vor der Südfassade und vor der Freitreppe (Gehweg zur Rathausstraße)
   g.add(new THREE.Mesh(paving(-6.2, 12.44, -2.2, -0.02, ground), mat(0x9a958c)));
   g.add(new THREE.Mesh(paving(12.44, 17.4, -2.2, 1.52, ground), mat(0x9a958c)));
@@ -670,9 +673,9 @@ export function buildStorchen(scene, world) {
   }
 
   mergeByMaterial(g);
-  // Innenraum (Gaststube, Nebenzimmer, Flur): eigene Gruppe, ebenfalls je Material zusammengefasst
+  // Innenraum (Windfang, Saal, Theke, Küche): eigene Gruppe, ebenfalls je Material zusammengefasst
   const gi = new THREE.Group();
-  const innen = buildInterior({ scene, world, gi, K: { O, U, V, P, FLOOR1 } });
+  const innen = buildInterior({ world, gi, K: { O, U, V, P, FLOOR1 } });
   mergeByMaterial(gi);
   // Türflügel der Haustür, Angel an der Westseite, öffnet nach innen
   const leaf = new THREE.Group();
@@ -689,13 +692,12 @@ export function buildStorchen(scene, world) {
     scene.add(o);
   }
 
-  // Kollision: der Hauptbau ist innen begehbar (Wände in storchen-innen.js); vom OSM-Umriss bleibt ein Stück
-  // Mauer zwischen Gaststube und Flügel. Flügel (Küche) als Hindernis, der Anbau hat Flur und Küche innen.
-  const ring = [P(-0.3, 1), P(0.3, 1), P(0.3, 2), P(-0.3, 2)];
+  // Kollision: Hauptbau, Flügel und Anbau sind innen begehbar oder zu (Wände in storchen-innen.js); vom OSM-Umriss
+  // bleibt ein Stück im geschlossenen Nordteil des Hauptbaus
+  const ring = [P(3, 15), P(4, 15), P(4, 16), P(3, 16)];
   const bi = world.buildings.findIndex((r) => Math.hypot(r.reduce((s, p) => s + p[0], 0) / r.length - STORCHEN_OVERRIDES[0].c[0],
     r.reduce((s, p) => s + p[1], 0) / r.length - STORCHEN_OVERRIDES[0].c[1]) < 3);
   if (bi >= 0) { world.buildings[bi] = ring; world.addToGrid(ring, bi); }
-  world.addObstacle(WING.map(([a, b]) => P(a, b)), 12);
 
   const doorAt = P(13.24, 1.6);
   let open = 0;

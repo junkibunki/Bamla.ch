@@ -1,37 +1,31 @@
-// Innenraum des Gasthofs „Zum Storchen“ im Hochparterre: hinter der Haustür ein kleiner Windfang im Ostanbau, dann
-// ein einziger großer Saal im Hauptbau (die Trennung in der Mitte ist nicht abgebildet). Vom Windfang läuft man
-// geradeaus durch den Saal auf die gut 2 m breite Theke an der Westwand zu, dahinter sieht man in die Küche im Flügel;
-// links von der Theke in der Südwestecke der Stammtisch mit runder Eckbank (Angaben des Nutzers).
-// Vorlagen: Bildergalerie „Restaurant“ auf storchen.eu: dunkle, fast schwarze Holzvertäfelung bis unter die
-// Fensterbänke, an der Längswand raumhoch mit Türen und Vitrine; cremeweiße Wände, weiße Sprossenfenster mit langen
-// hellen Vorhängen, dunkler Dielenboden; weiße Kassettendecke mit Stuckrosette, Einbauspots und runden
-// Deckenleuchten, eiserner Kronleuchter. Dunkle Tische und Bugholzstühle mit braunem Sitz, Eckbänke mit rot
-// karierten und weißen Kissen, Platzsets mit gefalteten Servietten; altes Eichenbüffet, Vitrinen mit Störchen,
-// Holzhäuschen auf den Fensterbänken, gerahmte Zeichnungen, Herrgottswinkel und das Hochzeitsbild der Gründer
-// (1888). Der runde helle Stammtisch mit Zierdeckchen und Stammtischschild unter einer Pendelleuchte, Garderobenständer
-// mit Zeitung, WC-Tür mit Storch im Milchglas.
-// Am Stammtisch sitzen drei Stammgäste, hinter der Theke steht die Wirtin, in der Küche der Koch; an der Theke gibt es
-// Bier und Weinschorle.
-// Am Stammtisch Platz nehmen dürfen nur Ehrenbürger:innen mit vollem Dorfpass (quests.js).
+// Innenraum des Gasthofs „Zum Storchen“ im Hochparterre, Grundriss vom Nutzer im Raum-Editor gezeichnet (Okt. 2026):
+// hinter der Haustür der Windfang im Ostanbau, geradeaus der Bereich vor der Theke und die Theke, dahinter die Küche
+// (Nordende des Anbaus und ein Stück Hauptbau); links durch eine 4,3 m breite Öffnung der Saal, eine Halle quer über
+// Flügel und Südteil des Hauptbaus (die Mauer dazwischen ist bis auf einen Unterzug weg). Der Nordteil des Hauptbaus
+// (Hotel, Nebenräume) und die Nordspitze des Flügels sind zu.
+// Erster Schritt: nur der Rohbau mit Wänden, Öffnungen, Fenstern, Böden, Decken und Licht; die Räume sind leer.
+// Ausstattung nach der Bildergalerie „Restaurant“ auf storchen.eu (dunkle Vertäfelung, Dielen, Eckbänke, Stammtisch)
+// folgt im nächsten Schritt; die Bauteile dafür stehen unten schon bereit.
 import * as THREE from 'three';
-import { buildPerson } from './person.js';
 
 const H = 3.15, WAIN = 0.85, PANEL = 2.3, SILL = 0.9; // Raumhöhe, Vertäfelung, hohe Vertäfelung, Fensterbank
-const S = { a0: 0.35, a1: 12.05, b0: 0.35, b1: 23.6 };   // Saal (ganzer Hauptbau)
-const WF = { a0: 12.45, a1: 14.4, b0: 1.95, b1: 5.3 };   // Windfang im Ostanbau
-const ENTRY = [12.74, 13.74], DOOR_H = 2.15;             // Haustür an der Rathausstraße (wie storchen.js)
-const PASS = [3.7, 4.9];                                 // Durchgang Windfang → Saal
-const TH = { a0: 1.4, a1: 2.0, b0: 3.3, b1: 5.3 };      // Tresen an der Westwand, gegenüber dem Durchgang
-const KITCHEN = [3.6, 5.0], KH = 2.2;                    // Öffnung hinter der Theke in die Küche (Flügel)
-const K = { a0: -5.2, a1: -0.3, b0: 0.5, b1: 10.0 };     // Küche
-const ST = { a: 1.9, b: 1.9, r: 0.72 };                  // Stammtisch in der Südwestecke
-// Plätze am Stammtisch: Eckbank (Radius 1,2) hinten zur Ecke, zwei Stühle zum Saal hin; Winkel in Grad (0 = Osten)
-const SEATS = [[120, 1.2], [165, 1.2], [210, 1.2], [255, 1.2], [300, 1.2], [15, 1.08], [60, 1.08]];
-const REGULARS = [1, 2, 3];                              // die drei Stammgäste sitzen auf der Eckbank
+const SAAL = { a0: -5.15, a1: 12.05, b0: 0.45, b1: 10.15 }; // Saal: Flügel und Südteil des Hauptbaus
+const WF = { a0: 12.45, a1: 15.45, b0: 1.95, b1: 4.95 };    // Windfang
+const VT = { a0: 12.45, a1: 15.45, b0: 5.25, b1: 9.98 };    // vor der Theke und Theke (ein Raum, der Tresen folgt)
+const KITCHEN = [
+  { a0: 12.45, a1: 15.45, b0: 10.3, b1: 11.9 },             // Küche im Anbau
+  { a0: 12.45, a1: 13.6, b0: 11.9, b1: 13.6 },              // Nordspitze des Anbaus
+  { a0: 8.35, a1: 12.05, b0: 10.45, b1: 13.85 },            // Küche im Hauptbau
+];
+const ENTRY = [12.74, 13.74], DOOR_H = 2.15;                // Haustür an der Rathausstraße (wie storchen.js)
+const WF_DOOR = [12.45, 14.1];                              // Windfang → vor der Theke, geradeaus von der Haustür
+const SAAL_OPEN = [5.35, 9.65], OPEN_H = 2.3;               // vor der Theke → Saal
+const KITCHEN_DOOR = [13.25, 15.05];                        // Theke → Küche
+const KITCHEN_LINK = [10.45, 11.9];                         // Küche: Anbau ↔ Hauptbau
 
-// Wandöffnungen für storchen.js (Außenwände): Haustür, Durchgang Windfang → Saal, Küchenöffnung hinter der Theke
-export const STORCHEN_DOORS = [[[ENTRY[0], 1.6], [ENTRY[1], 1.6], DOOR_H], [[12.44, PASS[0]], [12.44, PASS[1]], DOOR_H],
-  [[0, KITCHEN[0]], [0, KITCHEN[1]], KH]];
+// Wandöffnungen für storchen.js (Außenwände): Haustür, Saal ↔ Anbau, Küche Anbau ↔ Hauptbau, Saal Flügel ↔ Hauptbau
+export const STORCHEN_DOORS = [[[ENTRY[0], 1.6], [ENTRY[1], 1.6], DOOR_H], [[12.44, SAAL_OPEN[0]], [12.44, SAAL_OPEN[1]], OPEN_H],
+  [[12.44, KITCHEN_LINK[0]], [12.44, KITCHEN_LINK[1]], H], [[0, SAAL.b0], [0, SAAL.b1], H]];
 
 const FRAKTUR = '"Old English Text MT", "UnifrakturMaguntia", "Blackletter", Georgia, serif';
 
@@ -193,7 +187,7 @@ function B(g, m, x0, x1, y0, y1, z0, z1) {
 }
 function mesh(g, geo, m, x, y, z) { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; }
 
-export function buildInterior({ scene, world, gi, K }) {
+export function buildInterior({ world, gi, K }) {
   const { O, U, V, P, FLOOR1: F } = K;
   const M = materials();
   const R = new THREE.Group(); // Raumgruppe: (a, y über Fußboden, −b)
@@ -403,386 +397,117 @@ export function buildInterior({ scene, world, gi, K }) {
     return p;
   }
 
-  // ---------- Böden, Decken ----------
-  const floorBox = (a0, a1, b0, b1) => {
-    const o = PB(M.floor, a0, a1, -0.06, 0, b0, b1);
+  // ---------- Böden und Decken ----------
+  const floorBox = (a0, a1, b0, b1, m = M.floor) => {
+    const o = PB(m, a0, a1, -0.06, 0, b0, b1);
     const uv = o.geometry.attributes.uv;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (a1 - a0) / 2, uv.getY(i) * (b1 - b0) / 2);
   };
-  floorBox(S.a0, S.a1, S.b0, S.b1);
-  floorBox(WF.a0 - 0.45, WF.a1, WF.b0 - 0.4, WF.b1);
-  PB(M.panelTrim, 12.0, 12.5, -0.06, 0.012, PASS[0], PASS[1]);           // Schwelle Windfang → Saal
-  PB(M.stone, ENTRY[0], ENTRY[1], -0.06, 0.012, 1.55, WF.b0);            // Schwelle Haustür
-  for (const r of [S, WF]) PB(M.ceiling, r.a0 - 0.3, r.a1 + 0.3, H, H + 0.06, r.b0 - 0.3, r.b1 + 0.3);
-  // Stuck: Hohlkehle ringsum, Kassetten mit Profil, Rosetten; Einbauspots und runde Deckenleuchten
-  const frame = (a0, a1, b0, b1, w, d, m = M.stucco) => {
-    PB(m, a0, a1, H - d, H, b0, b0 + w); PB(m, a0, a1, H - d, H, b1 - w, b1);
-    PB(m, a0, a0 + w, H - d, H, b0, b1); PB(m, a1 - w, a1, H - d, H, b0, b1);
-  };
-  const spot = (a, b) => mesh(R, new THREE.CylinderGeometry(0.05, 0.05, 0.012, 10), M.light, a, H - 0.006, -b);
+  floorBox(SAAL.a0, SAAL.a1, SAAL.b0, SAAL.b1);
+  floorBox(VT.a0 - 0.45, VT.a1, WF.b0 - 0.4, VT.b1 + 0.15);                 // Windfang, vor der Theke, Theke
+  floorBox(SAAL.a1 - 0.05, VT.a0 + 0.05, SAAL_OPEN[0], SAAL_OPEN[1]);       // Boden in der Öffnung zum Saal
+  for (const k of KITCHEN) PB(M.kFloor, k.a0, k.a1, -0.06, 0, k.b0, k.b1);
+  PB(M.kFloor, KITCHEN[2].a1 - 0.05, KITCHEN[0].a0 + 0.05, -0.06, 0, KITCHEN_LINK[0], KITCHEN_LINK[1]); // Boden im Durchgang Anbau ↔ Hauptbau
+  PB(M.kFloor, KITCHEN_DOOR[0], KITCHEN_DOOR[1], -0.06, 0, VT.b1 - 0.05, KITCHEN[0].b0 + 0.05);
+  PB(M.stone, ENTRY[0], ENTRY[1], -0.06, 0.012, 1.55, WF.b0);               // Schwelle Haustür
+  for (const r of [SAAL, WF, VT, ...KITCHEN]) PB(M.ceiling, r.a0 - 0.3, r.a1 + 0.3, H, H + 0.06, r.b0 - 0.3, r.b1 + 0.3);
   const flush = (a, b, r = 0.26) => { const o = mesh(R, new THREE.SphereGeometry(r, 16, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.light, a, H, -b); o.scale.y = 0.3; };
-  const rosette = (a, b) => {
-    for (const [r, t] of [[0.62, 0.05], [0.42, 0.035]]) { const o = mesh(R, new THREE.TorusGeometry(r, t, 5, 36), M.stucco, a, H - 0.02, -b); o.rotation.x = Math.PI / 2; }
-  };
-  for (const r of [S]) frame(r.a0, r.a1, r.b0, r.b1, 0.14, 0.14);
-  const coffers = [[1.3, 11.1, 1.3, 6.9], [1.3, 11.1, 7.25, 12.85], [1.3, 11.1, 15.0, 22.7]];
-  for (const [a0, a1, b0, b1] of coffers) {
-    frame(a0, a1, b0, b1, 0.22, 0.12);
-    frame(a0 + 0.3, a1 - 0.3, b0 + 0.3, b1 - 0.3, 0.06, 0.07);
-    rosette((a0 + a1) / 2, (b0 + b1) / 2);
-    for (const s of [-1, 1]) flush((a0 + a1) / 2 + s * 2.8, (b0 + b1) / 2);
-  }
-  flush(6.2, 4.1, 0.3);
-  flush(6.2, 18.85, 0.32);
-  for (const r of [S]) {
-    for (let a = r.a0 + 0.55; a < r.a1 - 0.3; a += 1.7) { spot(a, r.b0 + 0.5); spot(a, r.b1 - 0.5); }
-    for (let b = r.b0 + 2.0; b < r.b1 - 1.5; b += 1.7) { spot(r.a0 + 0.5, b); spot(r.a1 - 0.5, b); }
-  }
-  flush((WF.a0 + WF.a1) / 2, (WF.b0 + WF.b1) / 2, 0.22);
-  // Eiserner Kronleuchter mit Kerzen über der Saalmitte
-  {
-    const [a, b, y] = [6.2, 10.05, H - 1.25];
-    const ring = mesh(R, new THREE.TorusGeometry(0.55, 0.025, 6, 32), M.iron, a, y, -b); ring.rotation.x = Math.PI / 2;
-    for (let k = 0; k < 4; k++) {
-      const ang = k * Math.PI / 2, x = Math.cos(ang) * 0.55, z = Math.sin(ang) * 0.55;
-      const len = Math.hypot(0.55, 0.9), ch = mesh(R, new THREE.CylinderGeometry(0.008, 0.008, len, 4), M.iron, a + x / 2, y + 0.45, -b + z / 2);
-      ch.lookAt(R.localToWorld(new THREE.Vector3(a, y + 0.9, -b))); ch.rotateX(Math.PI / 2);
-    }
-    mesh(R, new THREE.CylinderGeometry(0.01, 0.01, H - y - 0.9, 4), M.iron, a, (H + y + 0.9) / 2, -b);
-    for (let k = 0; k < 8; k++) {
-      const ang = (k + 0.5) * Math.PI / 4, x = a + Math.cos(ang) * 0.55, z = -b + Math.sin(ang) * 0.55;
-      mesh(R, new THREE.CylinderGeometry(0.02, 0.02, 0.14, 8), M.candle, x, y + 0.09, z);
-      mesh(R, new THREE.SphereGeometry(0.03, 6, 5), M.flame, x, y + 0.19, z);
-    }
-  }
+  for (const a of [-2.8, 2.2, 7.1]) for (const b of [3.0, 7.6]) flush(a, b, 0.3);
+  for (const b of [3.4, 7.5]) flush((VT.a0 + VT.a1) / 2, b, 0.22);
+  for (const k of KITCHEN) flush((k.a0 + k.a1) / 2, (k.b0 + k.b1) / 2, 0.22);
+  // Unterzug dort, wo die Mauer zwischen Flügel und Hauptbau stand
+  PB(M.stucco, -0.2, 0.35, H - 0.3, H, SAAL.b0, SAAL.b1);
+  for (const b of [SAAL.b0, SAAL.b1]) PB(M.plaster, -0.2, 0.35, 0, H, b - 0.05, b + 0.05);
 
-  // ---------- Saal ----------
-  const hs = room(S), SL = S.a1 - S.a0, SD = S.b1 - S.b0;
+  // ---------- Saal (Flügel und Südteil des Hauptbaus) ----------
+  const hs = room(SAAL), SL = SAAL.a1 - SAAL.a0, SD = SAAL.b1 - SAAL.b0;
   wall(hs.S, SL);
-  win(hs.S, S.a1 - 9.45, 2.12, 1.55, 'houses');               // Doppelfenster hinter dem Stammtisch
-  win(hs.S, S.a1 - 5.23, 1.0, 1.55, 'plant');
-  win(hs.S, S.a1 - 2.72, 1.0, 1.55, 'houses');
-  wall(hs.W, SD, [[KITCHEN[0] - S.b0, KITCHEN[1] - S.b0, KH]]);
-  for (const [b, d] of [[16.31, 'stork'], [19.31, 'houses'], [22.31, 'plant']]) win(hs.W, b - S.b0, 1.0, 1.4, d);
-  panelling(hs.W, TH.b1 - S.b0 + 0.05, 10.6);
-  door(hs.W, 9.25);                                           // Küche (im Flügel)
-  pic(hs.W, 0.75, 1.75, 0.42, 0.34, M.portrait);             // Gründerpaar über der Eckbank
-  { // Herrgottswinkel über der Eckbank
-    const f = hs.W, x = 0.2, y = 2.05;
-    B(f, M.black, x - 0.03, x + 0.03, y - 0.3, y + 0.3, 0.02, 0.06);
-    B(f, M.black, x - 0.17, x + 0.17, y + 0.08, y + 0.14, 0.02, 0.06);
-    B(f, M.brass, x - 0.02, x + 0.02, y - 0.2, y + 0.08, 0.06, 0.08);
-    B(f, M.brass, x - 0.12, x + 0.12, y + 0.09, y + 0.12, 0.06, 0.08);
-  }
+  for (const [a, w] of [[9.45, 2.12], [5.23, 1.0], [2.72, 1.0], [-3.33, 1.0]]) win(hs.S, SAAL.a1 - a, w, 1.55, 'plain');
+  wall(hs.W, SD);
+  for (const b of [3.59, 9.29]) win(hs.W, b - SAAL.b0, 0.95, 1.5, 'plain');
   wall(hs.N, SL);
-  for (const [a, d] of [[2.31, 'houses'], [4.91, 'plant'], [7.51, 'stork'], [10.11, 'houses']]) win(hs.N, a - S.a0, 1.0, 1.4, d);
-  // Ostwand: Durchgang vom Windfang, raumhohe Vertäfelung mit WC-Tür, Seitentür zur Storchengasse, Fenster
-  wall(hs.E, SD, [[S.b1 - PASS[1], S.b1 - PASS[0], DOOR_H]]);
-  panelling(hs.E, S.b1 - 13.6, S.b1 - 5.3);
-  door(hs.E, S.b1 - 10.0, 0.9, 2.05, M.wc);
-  door(hs.E, S.b1 - 15.0, 1.0, 2.1);
-  for (const [b, d] of [[17.41, 'plant'], [20.01, 'houses'], [22.61, 'stork']]) win(hs.E, S.b1 - b, 1.1, 1.35, d);
-  for (const [b, k] of [[6.4, 2], [7.6, 0], [12.9, 1]]) pic(hs.E, S.b1 - b, 2.7, 0.36, 0.44, M.pics[k]);
-  // Durchgang zum Windfang: Laibung durch die Außenwand
-  PB(M.plaster, 12.05, 12.45, 0, H, PASS[0] - 0.05, PASS[0]); PB(M.plaster, 12.05, 12.45, 0, H, PASS[1], PASS[1] + 0.05);
-  PB(M.plaster, 12.05, 12.45, DOOR_H, H, PASS[0], PASS[1]);
+  wall(hs.E, SD, [[SAAL.b1 - SAAL_OPEN[1], SAAL.b1 - SAAL_OPEN[0], OPEN_H]]);
+  // Öffnung zum Bereich vor der Theke: Laibung durch die Außenwand des Hauptbaus
+  PB(M.plaster, SAAL.a1, VT.a0, 0, H, SAAL_OPEN[0] - 0.05, SAAL_OPEN[0]); PB(M.plaster, SAAL.a1, VT.a0, 0, H, SAAL_OPEN[1], SAAL_OPEN[1] + 0.05);
+  PB(M.plaster, SAAL.a1, VT.a0, OPEN_H, H, SAAL_OPEN[0], SAAL_OPEN[1]);
 
-  const solids = []; // Hindernisse im Raumsystem [a0, a1, b0, b1]
-  // Eckbank Südost unter dem Doppelfenster
-  bench(8.25, S.a1, S.b0, S.b0 + 0.5, 'S', 4); bench(S.a1 - 0.5, S.a1, S.b0 + 0.5, 2.6, 'E', 2);
-  table(8.95, 10.95, 0.95, 1.75, [[9.45, 2.15], [10.45, 2.15], [8.55, 1.35]]);
-  solids.push([8.25, S.a1, S.b0, 1.0], [11.5, S.a1, S.b0, 2.6], [8.3, 11.1, 0.9, 2.45]);
-  // Büffets an Süd- und Westwand, darauf Orchideen und Krüge
-  buffet(7.05, S.b0 + 0.3, 0, 1);
-  orchid(R, 6.6, 0.92, -(S.b0 + 0.45));
-  solids.push([6.2, 7.9, S.b0, 0.95]);
-  buffet(S.a0 + 0.3, 13.8, 1, 0);
-  orchid(R, S.a0 + 0.45, 0.92, -14.3);
-  solids.push([S.a0, 0.95, 12.95, 14.65]);
-  // Tische im Saal; vom Durchgang geradeaus zur Theke bleibt ein Gang frei
-  for (const [a, b] of [[5.0, 2.2], ...[3.4, 6.2, 9.0].flatMap((a) => [6.6, 9.2, 11.8].map((b) => [a, b]))]) {
-    table(a - 0.6, a + 0.6, b - 0.4, b + 0.4, [[a - 0.3, b - 0.75], [a + 0.3, b - 0.75], [a - 0.3, b + 0.75], [a + 0.3, b + 0.75]]);
-    candle(R, a + 0.25, 0.76, -b);
-    solids.push([a - 0.65, a + 0.65, b - 1.0, b + 1.0]);
-  }
-  // Einbauvitrine an der Westwand, Storchenvitrine und Garderobe an der Ostwand
-  vitrine(S.a0 + 0.25, 6.9, 1, 0, 1.1, 2.1); solids.push([S.a0, 0.85, 6.3, 7.5]);
-  vitrine(S.a1 - 0.25, 12.4, -1, 0); solids.push([11.55, S.a1, 11.85, 12.95]);
-  {
-    const [a, b] = [11.6, 9.0];
-    mesh(R, new THREE.CylinderGeometry(0.02, 0.025, 1.85, 6), M.iron, a, 0.925, -b);
-    for (let k = 0; k < 3; k++) { const l = mesh(R, new THREE.BoxGeometry(0.03, 0.03, 0.4), M.iron, a, 0.06, -b); l.rotation.y = k * 2.1; }
-    for (let k = 0; k < 6; k++) { const h = mesh(R, new THREE.TorusGeometry(0.1, 0.01, 4, 10, Math.PI), M.iron, a, 1.7, -b); h.rotation.y = k * Math.PI / 3; }
-    const paper = mesh(R, new THREE.BoxGeometry(0.32, 0.44, 0.04), M.paper, a - 0.15, 1.38, -b);
-    paper.rotation.set(0, Math.PI / 2, 0.12);
-    solids.push([a - 0.3, a + 0.3, b - 0.3, b + 0.3]);
-  }
-  // Eckbänke an den Fenstern im hinteren Teil, gedeckte Tische mit Platzsets und Servietten
-  bench(S.a0, S.a0 + 0.5, 18.0, S.b1, 'W', 4); bench(S.a0 + 0.5, 5.6, S.b1 - 0.5, S.b1, 'N', 4);
-  const t1 = [[2.15, 19.6], [2.15, 20.8]]; t1.benchSeats = [[0.9, 19.6], [0.9, 20.8]];
-  table(1.0, 1.8, 19.0, 21.4, t1, { set: true });
-  const t2 = [[3.0, 22.1], [4.2, 22.1]]; t2.benchSeats = [[3.0, 23.2], [4.2, 23.2]];
-  table(2.4, 4.8, 22.45, 23.25, t2, { set: true });
-  solids.push([S.a0, 0.9, 18.0, S.b1], [S.a0, 5.6, 23.05, S.b1], [0.95, 2.45, 18.95, 21.45], [2.35, 4.85, 21.75, 23.3]);
-  bench(S.a1 - 0.5, S.a1, 18.0, S.b1, 'E', 4); bench(6.8, S.a1 - 0.5, S.b1 - 0.5, S.b1, 'N', 4);
-  const t3 = [[10.3, 19.6], [10.3, 20.8]]; t3.benchSeats = [[11.5, 19.6], [11.5, 20.8]];
-  table(10.65, 11.45, 19.0, 21.4, t3, { set: true });
-  const t4 = [[8.2, 22.1], [9.4, 22.1]]; t4.benchSeats = [[8.2, 23.2], [9.4, 23.2]];
-  table(7.6, 10.0, 22.45, 23.25, t4, { set: true });
-  solids.push([11.5, S.a1, 18.0, S.b1], [6.8, S.a1, 23.05, S.b1], [9.95, 11.5, 18.95, 21.45], [7.55, 10.05, 21.75, 23.3]);
-  // lange Festtafel
-  const banquet = [];
-  for (const b of [16.85, 17.95, 19.05, 20.15]) banquet.push([5.25, b], [6.95, b]);
-  table(5.6, 6.6, 16.3, 20.7, banquet, { set: true });
-  for (const b of [17.4, 19.6]) candle(R, 6.1, 0.76, -b);
-  solids.push([4.95, 7.25, 16.25, 20.75]);
-
-  // ---------- Theke an der Westwand, dahinter der Blick in die Küche ----------
-  // Gut 2 m breiter Tresen mit vertäfelter Front, Abdeckung, Messing-Fußstange und Zapfhähnen, seitlich bis zur Wand
-  // geschlossen; dahinter die Wirtin vor der Küchenöffnung, darüber Flaschenbord und Ganter-Schild
-  PB(M.panel, TH.a0, TH.a1, 0, 1.08, TH.b0, TH.b1);
-  for (const b of [TH.b0, TH.b1 - 0.06]) PB(M.panel, S.a0, TH.a0, 0, 1.08, b, b + 0.06);
-  for (const b of [TH.b0 + 0.4, TH.b1 - 0.4]) PB(M.panelTrim, TH.a1, TH.a1 + 0.015, 0.22, 0.92, b - 0.24, b + 0.24);
-  PB(M.table, TH.a0 - 0.05, TH.a1 + 0.12, 1.08, 1.13, TH.b0 - 0.05, TH.b1 + 0.05);
-  PB(M.table, S.a0, TH.a0, 1.08, 1.13, TH.b0 - 0.05, TH.b0 + 0.12); PB(M.table, S.a0, TH.a0, 1.08, 1.13, TH.b1 - 0.12, TH.b1 + 0.05);
-  { const rail = mesh(R, new THREE.CylinderGeometry(0.02, 0.02, TH.b1 - TH.b0, 8), M.brass, TH.a1 + 0.2, 0.18, -(TH.b0 + TH.b1) / 2); rail.rotation.x = Math.PI / 2; }
-  for (const b of [3.95, 4.35]) {
-    mesh(R, new THREE.CylinderGeometry(0.035, 0.045, 0.38, 10), M.brass, TH.a0 + 0.25, 1.32, -b);
-    const h = mesh(R, new THREE.CylinderGeometry(0.018, 0.022, 0.18, 8), M.black, TH.a0 + 0.3, 1.58, -b); h.rotation.z = -0.25;
-    PB(M.iron, TH.a0 + 0.15, TH.a0 + 0.45, 1.13, 1.15, b - 0.12, b + 0.12);  // Tropfblech
-  }
-  for (const b of [4.85, 5.0]) { mesh(R, new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer, TH.a0 + 0.35, 1.21, -b); mesh(R, new THREE.CylinderGeometry(0.041, 0.041, 0.03, 10), M.white, TH.a0 + 0.35, 1.3, -b); }
-  PB(M.panelTrim, S.a0, S.a0 + 0.25, KH + 0.12, KH + 0.15, TH.b0, TH.b1);        // Flaschenbord über der Küchenöffnung
-  for (let b = TH.b0 + 0.12; b < TH.b1 - 0.1; b += 0.13) {
-    const m = M.bottles[Math.floor(rand() * M.bottles.length)];
-    mesh(R, new THREE.CylinderGeometry(0.035, 0.035, 0.26, 8), m, S.a0 + 0.13, KH + 0.28, -b);
-    mesh(R, new THREE.CylinderGeometry(0.012, 0.03, 0.08, 8), m, S.a0 + 0.13, KH + 0.45, -b);
-  }
-  { const p = mesh(R, new THREE.PlaneGeometry(0.7, 0.35), M.ganter, TH.a1 + 0.02, 0.62, -(TH.b0 + TH.b1) / 2); p.rotation.y = Math.PI / 2; } // Schild an der Tresenfront
-  for (const b of [3.8, 4.8]) { // Pendelleuchten über dem Tresen
-    mesh(R, new THREE.CylinderGeometry(0.006, 0.006, H - 2.25, 4), M.black, TH.a0 + 0.3, (H + 2.25) / 2, -b);
-    mesh(R, new THREE.ConeGeometry(0.2, 0.2, 16, 1, true), M.white, TH.a0 + 0.3, 2.15, -b);
-    mesh(R, new THREE.SphereGeometry(0.05, 8, 6), M.light, TH.a0 + 0.3, 2.07, -b);
-  }
-  solids.push([S.a0, TH.a1 + 0.1, TH.b0 - 0.05, TH.b1 + 0.05]); // Tresen samt Gang dahinter: nur für die Wirtin
-  // Küchenöffnung: gekachelte Laibung durch die Mauer zum Flügel
-  PB(M.tile, -0.3, S.a0, 0, H, KITCHEN[0] - 0.05, KITCHEN[0]); PB(M.tile, -0.3, S.a0, 0, H, KITCHEN[1], KITCHEN[1] + 0.05);
-  PB(M.tile, -0.3, S.a0, KH, H, KITCHEN[0], KITCHEN[1]);
-  PB(M.kFloor, -0.35, S.a0, -0.06, 0, KITCHEN[0], KITCHEN[1]);
-
-  // ---------- Küche im Flügel (nur durch die Öffnung zu sehen) ----------
-  // Weiße Fliesen, graue Bodenfliesen, Herd mit Abzugshaube gegenüber der Öffnung, Arbeitsflächen und Bord aus Edelstahl,
-  // Arbeitsinsel; der Koch steht am Herd
-  const kr = room(K), KL = K.a1 - K.a0, KD = K.b1 - K.b0;
-  const kwall = (f, L, holes = []) => {
-    let x = 0;
-    for (const [h0, h1, top] of holes) { B(f, M.tile, x, h0, 0, H, -0.3, 0); B(f, M.tile, h0, h1, top, H, -0.3, 0); x = h1; }
-    B(f, M.tile, x, L, 0, H, -0.3, 0);
-  };
-  kwall(kr.S, KL); kwall(kr.W, KD); kwall(kr.N, KL);
-  kwall(kr.E, KD, [[K.b1 - KITCHEN[1], K.b1 - KITCHEN[0], KH]]);
-  win(kr.S, K.a1 + 3.33, 1.0, 1.55, 'plain');
-  for (const b of [3.6, 9.3]) win(kr.W, b - K.b0, 0.95, 1.5, 'plain');
-  PB(M.kFloor, K.a0, K.a1, -0.06, 0, K.b0, K.b1);
-  PB(M.ceiling, K.a0, K.a1, H, H + 0.06, K.b0, K.b1);
-  flush((K.a0 + K.a1) / 2, 4.3, 0.3); flush((K.a0 + K.a1) / 2, 7.8, 0.3);
-  PB(M.range, K.a0, K.a0 + 0.8, 0, 0.9, 3.3, 5.3);                                 // Herd
-  PB(M.steel, K.a0, K.a0 + 0.8, 0.9, 0.93, 3.3, 5.3);
-  for (const [b, r] of [[3.75, 0.16], [4.35, 0.13], [4.9, 0.18]]) mesh(R, new THREE.CylinderGeometry(r, r, 0.22, 14), M.steel, K.a0 + 0.42, 1.04, -b);
-  PB(M.steel, K.a0, K.a0 + 0.95, 1.9, 2.45, 3.2, 5.4);                             // Abzugshaube
-  for (const [b0, b1] of [[0.55, 3.2], [5.4, 8.0]]) {                            // Arbeitsflächen und Bord
-    PB(M.steel, K.a0, K.a0 + 0.7, 0, 0.9, b0, b1);
-    PB(M.steel, K.a0, K.a0 + 0.35, 1.6, 1.63, b0, b1);
-    for (let b = b0 + 0.2; b < b1 - 0.1; b += 0.18) mesh(R, new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12), M.white, K.a0 + 0.2, 1.64 + 0.01, -b);
-  }
-  PB(M.steel, -3.0, -2.0, 0, 0.9, 3.4, 5.2);                                       // Arbeitsinsel
-  for (const b of [3.8, 4.6]) mesh(R, new THREE.CylinderGeometry(0.15, 0.12, 0.06, 12), M.steel, -2.5, 0.93, -b);
-
-  // ---------- Stammtisch links neben der Theke ----------
-  // Runder Tisch aus heller Eiche, dahinter zur Ecke eine eingebaute runde Eckbank, zum Saal hin zwei Stühle
-  mesh(R, new THREE.CylinderGeometry(ST.r, ST.r, 0.05, 32), M.oakLight, ST.a, 0.735, -ST.b);
-  mesh(R, new THREE.CylinderGeometry(0.09, 0.11, 0.7, 12), M.oakLight, ST.a, 0.36, -ST.b);
-  for (let k = 0; k < 2; k++) { const f = mesh(R, new THREE.BoxGeometry(0.9, 0.06, 0.1), M.oakLight, ST.a, 0.03, -ST.b); f.rotation.y = k * Math.PI / 2; }
-  mesh(R, new THREE.CylinderGeometry(0.2, 0.2, 0.004, 20), M.lace, ST.a, 0.762, -ST.b);
-  cruet(R, ST.a + 0.06, 0.764, -ST.b);
-  {
-    const sg = piece(ST.a + 0.1, ST.b + 0.1, 0.7, 0.7);        // Schild schaut in den Saal
-    B(sg, M.iron, -0.012, 0.012, 0.76, 0.98, -0.012, 0.012);
-    B(sg, M.iron, -0.09, 0.09, 0.76, 0.775, -0.05, 0.05);
-    for (const s of [1, -1]) { const p = mesh(sg, new THREE.PlaneGeometry(0.3, 0.19), M.sign, 0, 1.05, s * 0.008); if (s < 0) p.rotation.y = Math.PI; }
-    B(sg, M.black, -0.155, 0.155, 0.95, 1.15, -0.006, 0.006);
-  }
-  {
-    const r0 = 0.95, r1 = 1.45, t0 = 110, t1 = 340, n = 14, step = ((t1 - t0) / n) * Math.PI / 180;
-    for (let k = 0; k < n; k++) {
-      const t = (t0 + (k + 0.5) * (t1 - t0) / n) * Math.PI / 180, rm = (r0 + r1) / 2, d = r1 - r0;
-      const p = piece(ST.a + Math.cos(t) * rm, ST.b + Math.sin(t) * rm, -Math.cos(t), -Math.sin(t)); // +z zum Tisch
-      const w = r1 * step + 0.03;
-      B(p, M.panel, -w / 2, w / 2, 0, 0.42, -d / 2, d / 2);
-      B(p, M.bench, -w / 2, w / 2, 0.42, 0.48, -d / 2, d / 2);
-      B(p, M.panel, -(w + 0.03) / 2, (w + 0.03) / 2, 0, 0.84, -d / 2 - 0.08, -d / 2);
-      if (k % 3 === 1) B(p, k % 2 ? M.plaid : M.cushion, -0.2, 0.2, 0.48, 0.8, -d / 2, -d / 2 + 0.12);
-    }
-  }
-  mesh(R, new THREE.CylinderGeometry(0.006, 0.006, H - 2.15, 4), M.black, ST.a, (H + 2.15) / 2, -ST.b);
-  mesh(R, new THREE.ConeGeometry(0.38, 0.32, 24, 1, true), new THREE.MeshLambertMaterial({ color: 0xf8f4ea, emissive: 0xc8c0b0, side: THREE.DoubleSide }), ST.a, 2.0, -ST.b);
-  mesh(R, new THREE.SphereGeometry(0.07, 8, 6), M.light, ST.a, 1.88, -ST.b);
-  const seats = SEATS.map(([deg, r], i) => {
-    const ang = deg * Math.PI / 180, a = ST.a + Math.cos(ang) * r, b = ST.b + Math.sin(ang) * r;
-    if (r < 1.1) chair(a, b, ST.a, ST.b);
-    if (REGULARS.includes(i)) { // Bierglas vor den Stammgästen
-      const ga = ST.a + Math.cos(ang) * 0.5, gb = ST.b + Math.sin(ang) * 0.5;
-      mesh(R, new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer, ga, 0.84, -gb);
-      mesh(R, new THREE.CylinderGeometry(0.041, 0.041, 0.03, 10), M.white, ga, 0.935, -gb);
-    }
-    return { a, b, ang, taken: REGULARS.includes(i) };
-  });
-
-  // ---------- Windfang im Ostanbau ----------
+  // ---------- Windfang, vor der Theke, Theke (Ostanbau) ----------
   const wf = room(WF), WFL = WF.a1 - WF.a0, WFD = WF.b1 - WF.b0;
   wall(wf.S, WFL, [[WF.a1 - ENTRY[1], WF.a1 - ENTRY[0], DOOR_H]]);
-  wall(wf.W, WFD, [[PASS[0] - WF.b0, PASS[1] - WF.b0, DOOR_H]]);
-  wall(wf.N, WFL);
+  wall(wf.W, WFD);
+  wall(wf.N, WFL, [[0, WF_DOOR[1] - WF.a0, DOOR_H]]);
   wall(wf.E, WFD);
-  pic(wf.E, WFD / 2, 1.55, 0.6, 0.75, M.menu);               // Kreidetafel mit den Spezialitäten
-  PB(M.panelTrim, ENTRY[0], ENTRY[1], 0, 0.015, WF.b0 + 0.1, WF.b0 + 0.8); // Fußmatte
-  // Laibung der Haustür durch die Außenwand
-  PB(M.plaster, ENTRY[0] - 0.1, ENTRY[0], 0, H, 1.55, WF.b0); PB(M.plaster, ENTRY[1], ENTRY[1] + 0.1, 0, H, 1.55, WF.b0);
+  win(wf.E, WF.b1 - 2.84, 1.0, 1.35, 'plain');
+  PB(M.plaster, ENTRY[0] - 0.1, ENTRY[0], 0, H, 1.55, WF.b0); PB(M.plaster, ENTRY[1], ENTRY[1] + 0.1, 0, H, 1.55, WF.b0); // Laibung der Haustür
   PB(M.plaster, ENTRY[0], ENTRY[1], DOOR_H, H, 1.55, WF.b0);
-  stork(R, WF.a1 - 0.3, 0, -(WF.b1 - 0.35), 0.8, -2.4);      // großer Storch in der Ecke
-  solids.push([WF.a1 - 0.55, WF.a1, WF.b1 - 0.6, WF.b1]);
+  const vt = room(VT), VTL = VT.a1 - VT.a0, VTD = VT.b1 - VT.b0;
+  wall(vt.S, VTL, [[VT.a1 - WF_DOOR[1], VTL, DOOR_H]]);
+  wall(vt.W, VTD, [[SAAL_OPEN[0] - VT.b0, SAAL_OPEN[1] - VT.b0, OPEN_H]]);
+  wall(vt.N, VTL, [[KITCHEN_DOOR[0] - VT.a0, KITCHEN_DOOR[1] - VT.a0, DOOR_H]]);
+  wall(vt.E, VTD);
+  for (const b of [5.44, 8.04]) win(vt.E, VT.b1 - b, 1.0, 1.35, 'plain');
 
-  // ---------- Stammgäste und Wirtin ----------
-  const regulars = [];
-  const r = () => rand();
-  for (const [i, shirt, hair] of [[1, 0x4f5e3e, 0xc8c8c8], [2, 0x6a2e2a, 0x8a8a8a], [3, 0x3a4a66, 0xd8d8d8]]) {
-    const s = seats[i], m = buildPerson(r, shirt);
-    m.hair.material = new THREE.MeshLambertMaterial({ color: hair });
-    const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.glassBeer);
-    glass.position.set(0, -0.62, 0.13);
-    m.armR.add(glass);
-    const [x, z] = P(s.a, s.b), [tx, tz] = P(ST.a, ST.b);
-    m.position.set(x, F - 0.42, z);
-    m.rotation.y = Math.atan2(tx - x, tz - z);
-    m.legL.rotation.x = m.legR.rotation.x = -1.45;
-    m.armL.rotation.x = -0.9;
-    scene.add(m);
-    regulars.push({ m, t: rand() * 8 });
-  }
-  const host = buildPerson(r, 0x2a2a2a); // Wirtin hinter dem Tresen mit weißer Schürze, poliert ein Glas
-  host.hair.material = new THREE.MeshLambertMaterial({ color: 0x6b3a1a });
-  B(host, M.white, -0.28, 0.28, 0.55, 1.45, 0.176, 0.19);
-  const hostGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.16, 10), M.sky);
-  hostGlass.position.set(0, -0.62, 0.13);
-  host.armL.add(hostGlass);
-  {
-    const [x, z] = P((S.a0 + TH.a0) / 2, 4.3), [tx, tz] = P(TH.a1 + 1, 4.3);
-    host.position.set(x, F, z);
-    host.rotation.y = Math.atan2(tx - x, tz - z);
-    scene.add(host);
-  }
-  { // Koch in Weiß mit Kochmütze am Herd
-    const cook = buildPerson(r, 0xf4f4f2);
-    mesh(cook, new THREE.CylinderGeometry(0.17, 0.15, 0.3, 12), M.white, 0, 2.2, 0);
-    const [x, z] = P(K.a0 + 1.2, 4.3), [tx, tz] = P(K.a0, 4.3);
-    cook.position.set(x, F, z);
-    cook.rotation.y = Math.atan2(tx - x, tz - z);
-    cook.armL.rotation.x = cook.armR.rotation.x = -0.8;
-    scene.add(cook);
-  }
+  // ---------- Küche (Nordende des Anbaus und ein Stück Hauptbau) ----------
+  // weiß gefliest; die drei Teile hängen zusammen: Anbau ↔ Hauptbau durch die Außenwand, Anbau ↔ Spitze offen
+  const kwall = (p, q, holes = []) => {
+    const f = faceIn(p, q), L = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    let x = 0;
+    for (const [h0, h1, top] of holes) { if (h0 > x) B(f, M.tile, x, h0, 0, H, -0.3, 0); B(f, M.tile, h0, h1, top, H, -0.3, 0); x = h1; }
+    if (x < L) B(f, M.tile, x, L, 0, H, -0.3, 0);
+    return f;
+  };
+  const [KA, KS, KM] = KITCHEN; // Anbau, Spitze des Anbaus, Hauptbau
+  kwall([KA.a1, KA.b0], [KA.a0, KA.b0], [[KA.a1 - KITCHEN_DOOR[1], KA.a1 - KITCHEN_DOOR[0], DOOR_H]]);
+  kwall([KA.a1, KA.b1], [KA.a1, KA.b0]);
+  const kn = kwall([KS.a1, KA.b1], [KA.a1, KA.b1]);
+  win(kn, 14.9 - KS.a1, 0.9, 1.3, 'plain');
+  kwall([KA.a0, KA.b0], [KA.a0, KA.b1], [[KITCHEN_LINK[0] - KA.b0, KITCHEN_LINK[1] - KA.b0, H]]);
+  for (const b of KITCHEN_LINK) PB(M.tile, KM.a1, KA.a0, 0, H, b - 0.03, b + 0.03); // Laibung des Durchgangs
+  kwall([KS.a1, KS.b1], [KS.a1, KS.b0]);
+  kwall([KS.a0, KS.b1], [KS.a1, KS.b1]);
+  kwall([KS.a0, KS.b0], [KS.a0, KS.b1]);
+  kwall([KM.a1, KM.b0], [KM.a0, KM.b0]);
+  kwall([KM.a0, KM.b0], [KM.a0, KM.b1]);
+  kwall([KM.a0, KM.b1], [KM.a1, KM.b1]);
+  kwall([KM.a1, KM.b1], [KM.a1, KM.b0], [[KM.b1 - KITCHEN_LINK[1], KM.b1 - KITCHEN_LINK[0], H]]);
 
   // ---------- Kollision und begehbarer Boden ----------
   const W = (a0, a1, b0, b1) => [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)];
   const solid = (ring, top, walkTop) => world.addObstacle(ring, F + top - Math.max(...ring.map(([x, z]) => world.heightAt(x, z))), walkTop);
-  // Wände bis übers Dach; Möbel tischhoch (die Kamera schaut drüber), walkTop so hoch, dass niemand hinaufspringt
-  const TOP = H + 3, LOW = 0.9, NO_TOP = F + 50;
+  const TOP = H + 3; // Wände bis übers Dach
   for (const [a0, a1, b0, b1] of [
-    [-0.3, 12.7, -0.6, S.b0], [-0.3, S.a0, -0.6, 24.6], [-0.3, 12.7, S.b1, 24.6],            // Süd-, West-, Nordwand
-    [S.a1, WF.a0, -0.6, PASS[0]], [S.a1, WF.a0, PASS[1], WF.b1], [S.a1, 12.75, WF.b1, 24.6], // Ostwand
-    [WF.a0, ENTRY[0] - 0.05, 1.3, WF.b0], [ENTRY[1] + 0.05, 16.2, 1.3, WF.b0],               // Windfang: Haustürwand
-    [WF.a1, 16.2, 1.3, 14.2], [WF.a0, WF.a1, WF.b1, 14.2],                                   // Küche und WC dahinter
+    [-6.0, 12.7, -0.6, SAAL.b0], [-6.9, SAAL.a0, -0.6, SAAL.b1 + 0.3], [-6.9, KM.a0, SAAL.b1, 24.6],   // Saal: Süd, West, Nord (dahinter zu)
+    [KM.a0, 12.75, KM.b1, 24.6], [KM.a0, SAAL.a1, SAAL.b1, KM.b0],                                     // Küche im Hauptbau
+    [SAAL.a1, VT.a0, -0.6, SAAL_OPEN[0]], [SAAL.a1, VT.a0, SAAL_OPEN[1], KITCHEN_LINK[0]],             // Mauer Hauptbau/Anbau
+    [SAAL.a1, KS.a0, KITCHEN_LINK[1], KM.b1],
+    [VT.a0, ENTRY[0] - 0.05, 1.3, WF.b0], [ENTRY[1] + 0.05, 16.2, 1.3, WF.b0],                           // Haustürwand
+    [WF.a1, 16.2, 1.3, KA.b1 + 0.4],                                                                    // Ostwand des Anbaus
+    [WF_DOOR[1], WF.a1, WF.b1, VT.b0],                                                                  // Windfang | vor der Theke
+    [VT.a0, KITCHEN_DOOR[0], VT.b1, KA.b0], [KITCHEN_DOOR[1], VT.a1, VT.b1, KA.b0],                     // Theke | Küche
+    [KS.a1, 16.2, KA.b1, 14.2], [KS.a0, 16.2, KS.b1, 14.2],                                             // Nordende des Anbaus
   ]) solid(W(a0, a1, b0, b1), TOP);
-  for (const s of solids) solid(W(...s), LOW, NO_TOP);
-  solid(Array.from({ length: 8 }, (_, k) => P(ST.a + Math.cos(k * Math.PI / 4) * 1.45, ST.b + Math.sin(k * Math.PI / 4) * 1.45)), LOW, NO_TOP);
-  world.addDeck(W(S.a0 - 0.1, S.a1 + 0.1, S.b0 - 0.1, S.b1 + 0.1), () => F);
-  world.addDeck(W(S.a1, WF.a1 + 0.1, 1.5, WF.b1 + 0.1), () => F);
+  const deck = (a0, a1, b0, b1) => world.addDeck(W(a0, a1, b0, b1), () => F);
+  deck(SAAL.a0 - 0.1, SAAL.a1 + 0.1, SAAL.b0 - 0.1, SAAL.b1 + 0.1);
+  deck(SAAL.a1, VT.a1 + 0.1, 1.5, VT.b1 + 0.1);
+  for (const k of KITCHEN) deck(k.a0 - 0.45, k.a1 + 0.1, k.b0 - 0.35, k.b1 + 0.1);
 
-  // ---------- Abfragen und Stammtisch ----------
-  const inRect = (r, a, b) => a > r.a0 - 0.05 && a < r.a1 + 0.05 && b > r.b0 - 0.05 && b < r.b1 + 0.05;
-  const inAt = (a, b) => inRect(S, a, b) || inRect(WF, a, b) || (a >= S.a1 && a <= WF.a0 && b > PASS[0] && b < PASS[1]);
-  const isEhren = (quests) => !!quests?.unlocked('dorfpass-voll'); // Ehrenbürger:in = Dorfpass voll (alle Aufgaben)
-  const SIP = 2.4; // wie player.js
-  let seated = null, standAt = null;
+  // ---------- Abfragen ----------
+  const RECTS = [SAAL, WF, VT, ...KITCHEN,
+    { a0: SAAL.a1, a1: VT.a0, b0: SAAL_OPEN[0], b1: SAAL_OPEN[1] }, { a0: KM.a1, a1: KA.a0, b0: KITCHEN_LINK[0], b1: KITCHEN_LINK[1] },
+    { a0: KITCHEN_DOOR[0], a1: KITCHEN_DOOR[1], b0: VT.b1, b1: KA.b0 }, { a0: VT.a0, a1: WF_DOOR[1], b0: WF.b1, b1: VT.b0 }];
+  const inAt = (a, b) => RECTS.some((r) => a > r.a0 - 0.05 && a < r.a1 + 0.05 && b > r.b0 - 0.05 && b < r.b1 + 0.05);
 
+  // Möbel, Theke und Stammtisch folgen im nächsten Schritt; bis dahin sitzt und trinkt man hier drin nicht
   return {
     floor: F,
-    get seated() { return !!seated; },
+    seated: false,
     inside(x, z) { return inAt(...toLocal(x, z)); },
-    // Vor dem Tresen (zu Fuß): dort gibt es Bier und Weinschorle
-    atTheke(player) {
-      if (player.car || player.pos.y > 0.3) return false;
-      const [a, b] = toLocal(player.pos.x, player.pos.z);
-      return a > TH.a1 && a < TH.a1 + 1.3 && b > TH.b0 && b < TH.b1;
-    },
-    theke: P(TH.a1 + 0.6, (TH.b0 + TH.b1) / 2),
     ceilingAt(x, z) { return inAt(...toLocal(x, z)) ? F + H - 0.25 : null; },
-    // Am Stammtisch, noch nicht sitzend
-    canSit(player) {
-      if (player.car || seated || player.pos.y > 0.3) return false;
-      const [a, b] = toLocal(player.pos.x, player.pos.z);
-      return Math.hypot(a - ST.a, b - ST.b) < 2.1 && !this.atTheke(player);
-    },
-    hint(player, quests) {
-      if (!this.canSit(player)) return '';
-      return isEhren(quests) ? 'E: Am Stammtisch Platz nehmen' : 'Stammtisch – reserviert für Ehrenbürger:innen';
-    },
-    sit(player, quests) {
-      if (!isEhren(quests)) {
-        quests?.toast('„Der Stammtisch isch nur für Ehrenbürger:innen!“ – erst mit vollem Dorfpass (J) darfst du dich dazusetzen', 6);
-        return;
-      }
-      const [pa, pb] = toLocal(player.pos.x, player.pos.z);
-      const free = seats.filter((s) => !s.taken).sort((p, q) => Math.hypot(p.a - pa, p.b - pb) - Math.hypot(q.a - pa, q.b - pb))[0];
-      seated = free;
-      standAt = P(ST.a + Math.cos(Math.PI / 4) * 1.95, ST.b + Math.sin(Math.PI / 4) * 1.95); // vor dem Tisch zum Saal hin
-      const [x, z] = P(free.a, free.b), [tx, tz] = P(ST.a, ST.b);
-      player.pos.set(x, 0, z);
-      player.vel?.set(0, 0);
-      player.groundY = F;
-      player.facing = Math.atan2(tx - x, tz - z);
-      const m = player.mesh;
-      m.position.set(x, F - 0.42, z);
-      m.rotation.set(0, player.facing, 0);
-      m.legL.rotation.set(-1.45, 0, 0); m.legR.rotation.set(-1.45, 0, 0);
-      m.armL.rotation.set(-0.9, 0, 0); m.armR.rotation.set(-0.9, 0, 0);
-      quests?.toast('Die Stammtischrunde rückt zusammen: „Prost, Ehrenbürger:in!“', 5);
-    },
-    stand(player) {
-      const m = player.mesh;
-      player.pos.set(standAt[0], 0, standAt[1]);
-      player.groundY = F;
-      m.position.set(standAt[0], F, standAt[1]);
-      for (const l of [m.legL, m.legR, m.armL, m.armR]) l.rotation.set(0, 0, 0);
-      seated = null;
-    },
-    update(dt, input, player) {
-      for (const g of regulars) { // ab und zu ein Schluck
-        g.t += dt;
-        const c = g.t % 9, lift = c < 1.6 ? Math.sin((c / 1.6) * Math.PI) : 0;
-        g.m.armR.rotation.x = -0.9 - 1.2 * lift;
-        g.m.armR.rotation.z = -0.3 * lift;
-      }
-      if (!seated) return;
-      if (input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']) || input.axis(['KeyA', 'ArrowLeft'], ['KeyD', 'ArrowRight'])) { this.stand(player); return; }
-      const m = player.mesh;
-      m.armR.rotation.set(-0.9, 0, 0);
-      if (player.sip > 0) { // trinken im Sitzen (Bewegung von player.update ruht)
-        player.sip -= dt;
-        const t = 1 - Math.max(0, player.sip) / SIP, lift = Math.min(1, t / 0.2, (1 - t) / 0.2), e = lift * lift * (3 - 2 * lift);
-        m.armR.rotation.x = -0.9 - 1.35 * e;
-        m.armR.rotation.z = -0.4 * e;
-        if (player.sip <= 0) { player.bottle.visible = player.glass.visible = false; player.onDrink?.(); }
-      }
-    },
+    atTheke() { return false; },
+    canSit() { return false; },
+    hint() { return ''; },
+    sit() {},
+    stand() {},
+    update() {},
   };
 }
