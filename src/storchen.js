@@ -8,6 +8,7 @@
 // und Ziegelvordach im zurückgesetzten Ostanbau, Storchenfigur auf dessen Giebel.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildInterior, STORCHEN_DOORS } from './storchen-innen.js';
 
 // skip: Gebäude wird hier statt in buildings.js gebaut (Wert = Höhe für Kollision/Kamera)
 export const STORCHEN_OVERRIDES = [{ c: [-73.5, -57], skip: 14 }];
@@ -91,8 +92,9 @@ const ccw = (poly) => {
   return s >= 0 ? poly : [...poly].reverse();
 };
 
-// Senkrechte Wände von base bis unter die Dachflächen (Minimum der Ebenen, Knicke am First exakt eingefügt)
-function wallGeometry(poly, planes, base) {
+// Senkrechte Wände von base bis unter die Dachflächen (Minimum der Ebenen, Knicke am First exakt eingefügt).
+// holes: Türöffnungen [p, q, y0, y1] (Punkte p, q auf einer Wand), dort bleibt die Wand nur unter y0 und über y1
+function wallGeometry(poly, planes, base, holes = []) {
   const pos = [], uv = [];
   const top = (a, b) => Math.min(...planes.map((p) => p.y(a, b))) - 0.02;
   poly = ccw(poly);
@@ -104,15 +106,28 @@ function wallGeometry(poly, planes, base) {
         const d0 = planes[j].y(...p) - planes[k].y(...p), d1 = planes[j].y(...q) - planes[k].y(...q);
         if (d0 * d1 < 0) ts.push(d0 / (d0 - d1));
       }
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]), da = (q[0] - p[0]) / len, db = (q[1] - p[1]) / len;
+    const cuts = [];
+    for (const [h0, h1, y0, y1] of holes) {
+      const t = (h) => ((h[0] - p[0]) * da + (h[1] - p[1]) * db) / len, off = (h) => Math.abs((h[0] - p[0]) * db - (h[1] - p[1]) * da);
+      const u0 = Math.min(t(h0), t(h1)), u1 = Math.max(t(h0), t(h1));
+      if (off(h0) > 0.15 || off(h1) > 0.15 || u0 < 0 || u1 > 1) continue;
+      ts.push(u0, u1);
+      cuts.push([u0, u1, y0, y1]);
+    }
     ts.sort((x, y) => x - y);
-    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
     for (let s = 0; s < ts.length - 1; s++) {
       const [t0, t1] = [ts[s], ts[s + 1]];
+      if (t1 - t0 < 1e-6) continue;
       const a0 = p[0] + (q[0] - p[0]) * t0, b0 = p[1] + (q[1] - p[1]) * t0;
       const a1 = p[0] + (q[0] - p[0]) * t1, b1 = p[1] + (q[1] - p[1]) * t1;
-      const y0 = top(a0, b0), y1 = top(a1, b1);
-      pos.push(a0, base, -b0, a1, base, -b1, a1, y1, -b1, a0, base, -b0, a1, y1, -b1, a0, y0, -b0);
-      uv.push(t0 * len, base, t1 * len, base, t1 * len, y1, t0 * len, base, t1 * len, y1, t0 * len, y0);
+      const quad = (lo0, lo1, hi0, hi1) => {
+        pos.push(a0, lo0, -b0, a1, lo1, -b1, a1, hi1, -b1, a0, lo0, -b0, a1, hi1, -b1, a0, hi0, -b0);
+        uv.push(t0 * len, lo0, t1 * len, lo1, t1 * len, hi1, t0 * len, lo0, t1 * len, hi1, t0 * len, hi0);
+      };
+      const y0 = top(a0, b0), y1 = top(a1, b1), hole = cuts.find(([u0, u1]) => (t0 + t1) / 2 > u0 && (t0 + t1) / 2 < u1);
+      if (!hole) quad(base, base, y0, y1);
+      else { quad(base, base, hole[2], hole[2]); quad(hole[3], hole[3], y0, y1); }
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -450,10 +465,11 @@ export function buildStorchen(scene, world) {
   const base = Math.min(...[...MAIN, ...WING, ...ANNEX].map(([a, b]) => ground(a, b))) - 0.3;
   const wall = mat(C.WALL);
 
-  // Baukörper
-  g.add(new THREE.Mesh(wallGeometry(MAIN, [MW, ME, MS], base), wall));
+  // Baukörper, mit Öffnungen für Haustür und Durchgang zur Gaststube (storchen-innen.js)
+  const holes = STORCHEN_DOORS.map(([p, q, h]) => [p, q, FLOOR1, FLOOR1 + h]);
+  g.add(new THREE.Mesh(wallGeometry(MAIN, [MW, ME, MS], base, holes), wall));
   g.add(new THREE.Mesh(wallGeometry(WING, [WS, WN], base), wall));
-  g.add(new THREE.Mesh(wallGeometry(ANNEX, [AS, AN], base), wall));
+  g.add(new THREE.Mesh(wallGeometry(ANNEX, [AS, AN], base, holes), wall));
   for (const poly of [MAIN, WING, ANNEX]) g.add(new THREE.Mesh(plinthGeometry(poly, ground, base, 1.15), mat(C.PLINTH)));
   // Pflasterstreifen vor der Südfassade und vor der Freitreppe (Gehweg zur Rathausstraße)
   g.add(new THREE.Mesh(paving(-6.2, 12.44, -2.2, -0.02, ground), mat(0x9a958c)));
@@ -555,7 +571,9 @@ export function buildStorchen(scene, world) {
   // ---------- Ostanbau: Restauranteingang, Freitreppe mit Schmiedeeisengeländer, Ziegelvordach ----------
   const annexS = face(g, [12.44, 1.6], [15.8, 1.54]);
   const gA = (x) => ground(12.44 + x, 1.0);
-  door(annexS, 0.8, FLOOR1, 1.0, 2.15, { color: 0x5a3626, glass: true });
+  // Haustür: Gewände um die Öffnung, der Türflügel selbst geht auf (unten, nicht verschmolzen)
+  for (const x of [0.3 - 0.12, 1.3]) box(annexS, 0.12, 2.15, 0.05, mat(C.SURROUND), x + 0.06, FLOOR1 + 1.075, 0.025);
+  box(annexS, 1.24, 0.12, 0.05, mat(C.SURROUND), 0.8, FLOOR1 + 2.21, 0.025);
   windowAt(annexS, 1.65, SILL2, 1.45, 1.2, { shutters: false, roller: 1 });
   decal(annexS, restaurantTex(), 1.3, 0.41, 2.6, -6.75);
   box(annexS, 4.4, 0.2, 1.9, mat(0x6a3628), 2.2, -5.68, 0.95, 0, 0, 0.24);
@@ -584,7 +602,13 @@ export function buildStorchen(scene, world) {
     ring.position.set(x, railY(x) - 0.5, D - 0.05);
     annexS.add(ring);
   }
-  world.addObstacle([P(12.44 + x0, 1.6), P(12.44 + xEnd, 1.6), P(12.44 + xEnd, 1.6 - D), P(12.44 + x0, 1.6 - D)], 1.8);
+  // Podest und Stufen begehbar (von Osten her), das Geländer an der Außenkante hält von der Straße fern
+  world.addDeck([P(12.44 + x0, 1.6), P(12.44 + xEnd, 1.6), P(12.44 + xEnd, 1.6 - D), P(12.44 + x0, 1.6 - D)], (x, z) => {
+    const dx = x - O[0], dz = z - O[1], s = dx * U[0] + dz * U[1] - 12.44;
+    return s <= x1 ? FLOOR1 : FLOOR1 - rise * Math.min(steps, Math.floor((s - x1) / tread) + 1);
+  });
+  const rail = [P(12.44 + x0, 1.6 - D + 0.06), P(12.44 + xEnd - 0.3, 1.6 - D + 0.06), P(12.44 + xEnd - 0.3, 1.6 - D - 0.06), P(12.44 + x0, 1.6 - D - 0.06)];
+  world.addObstacle(rail, FLOOR1 + 1 - Math.max(...rail.map(([x, z]) => world.heightAt(x, z))), FLOOR1 + 50); // nicht begehbar
 
   // Ostgiebel des Anbaus (zur Storchengasse): Fenster mit Rollläden und Blumenkästen, Storch auf dem First
   const annexE = face(g, [15.8, 1.54], [16.01, 9.65]);
@@ -646,23 +670,50 @@ export function buildStorchen(scene, world) {
   }
 
   mergeByMaterial(g);
-  g.position.set(O[0], 0, O[1]);
-  g.rotation.y = Math.atan2(-U[1], U[0]); // lokales +x = U, lokales +z = -V (Süden)
-  scene.add(g);
+  // Innenraum (Gaststube, Nebenzimmer, Flur): eigene Gruppe, ebenfalls je Material zusammengefasst
+  const gi = new THREE.Group();
+  const innen = buildInterior({ scene, world, gi, K: { O, U, V, P, FLOOR1 } });
+  mergeByMaterial(gi);
+  // Türflügel der Haustür, Angel an der Westseite, öffnet nach innen
+  const leaf = new THREE.Group();
+  leaf.position.set(12.74, FLOOR1, -1.6);
+  box(leaf, 1.0, 2.15, 0.06, mat(0x5a3626), 0.5, 1.075, -0.03);
+  for (let k = 1; k < 5; k++) box(leaf, 0.02, 2.05, 0.07, mat(0x3e2818), k * 0.2, 1.075, -0.03);
+  for (const sx of [-1, 1]) for (const sy of [0, 1]) box(leaf, 0.3, 0.32, 0.075, mat(C.GLASS), 0.5 + sx * 0.2, 1.8 - sy * 0.42, -0.03);
+  box(leaf, 0.12, 0.03, 0.12, mat(0xc9a24a), 0.86, 1.02, -0.03);
+  leaf.traverse((o) => { o.castShadow = o.receiveShadow = true; });
+  g.add(leaf);
+  for (const o of [g, gi]) {
+    o.position.set(O[0], 0, O[1]);
+    o.rotation.y = Math.atan2(-U[1], U[0]); // lokales +x = U, lokales +z = -V (Süden)
+    scene.add(o);
+  }
 
-  // Kollision: Hauptbau statt des (versetzten) OSM-Umrisses, Flügel und Anbau als zusätzliche Hindernisse
-  const ring = MAIN.map(([a, b]) => P(a, b));
+  // Kollision: der Hauptbau ist innen begehbar (Wände in storchen-innen.js); vom OSM-Umriss bleibt ein Stück
+  // Mauer zwischen Gaststube und Flügel. Flügel (Küche) als Hindernis, der Anbau hat Flur und Küche innen.
+  const ring = [P(-0.3, 1), P(0.3, 1), P(0.3, 2), P(-0.3, 2)];
   const bi = world.buildings.findIndex((r) => Math.hypot(r.reduce((s, p) => s + p[0], 0) / r.length - STORCHEN_OVERRIDES[0].c[0],
     r.reduce((s, p) => s + p[1], 0) / r.length - STORCHEN_OVERRIDES[0].c[1]) < 3);
   if (bi >= 0) { world.buildings[bi] = ring; world.addToGrid(ring, bi); }
   world.addObstacle(WING.map(([a, b]) => P(a, b)), 12);
-  world.addObstacle(ANNEX.map(([a, b]) => P(a, b)), 11);
+
+  const doorAt = P(13.24, 1.6);
+  let open = 0;
 
   return {
+    innen,
+    // Haustür geht auf, wenn jemand davor oder dahinter steht; Stammtisch
+    update(dt, input, player) {
+      const near = !player.car && Math.hypot(player.pos.x - doorAt[0], player.pos.z - doorAt[1]) < 2.4;
+      open += ((near ? 1 : 0) - open) * Math.min(1, dt * 4);
+      leaf.rotation.y = open * 1.45;
+      innen.update(dt, input, player);
+    },
     wine: true, // Bier oder Weinschorle
-    // vor dem Restauranteingang (Pflaster vor der Freitreppe), zu Fuß
+    // vor dem Restauranteingang (Pflaster vor der Freitreppe) zu Fuß, oder am Stammtisch sitzend
     canDrink(pl) {
       if (pl.car || pl.sip > 0) return false;
+      if (innen.seated) return true;
       const dx = pl.pos.x - O[0], dz = pl.pos.z - O[1];
       const a = dx * U[0] + dz * U[1], b = dx * V[0] + dz * V[1];
       return a > 12.2 && a < 17.4 && b > -2.4 && b < 0.4;

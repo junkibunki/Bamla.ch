@@ -177,7 +177,7 @@ buildStAlban(scene, world); // Hofgut im St. Alban: Wohnhaus mit Tordurchfahrt, 
 const fusstunnel = buildFusstunnel(scene, world); // Fußgängertunnel unter der Rheintalbahn, Stufenweg mit Bärlauch hinauf ins Dorf
 const feuerwehr = buildFeuerwehr(scene, world); // Feuerwehrhaus, Übungsturm, HLF 20 auf dem Hof
 const museum = buildMuseum(scene, world); // Bäder- und Heimatmuseum (Staffelgiebelhaus), Eingangsbereich begehbar
-const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang)
+const storchen = buildStorchen(scene, world); // Gasthof-Pension „Zum Storchen“, Rathausstraße 3 (Bier/Weinschorle am Eingang), Gaststube mit Stammtisch
 buildRathaus(scene, world); // ehemaliges Rathaus gegenüber, Brunnen davor
 buildBusStop(scene, world); // Haltestelle „Bamlach“ gegenüber
 buildOrtseingaenge(scene, world); // Ortstafeln, Verkehrszeichen, Wegkreuze, Stelen und Findlinge an den Ortseingängen
@@ -434,7 +434,7 @@ function updateCamera(dt) {
   const px = camTarget.x + (cx - camTarget.x) * k, pz = camTarget.z + (cz - camTarget.z) * k;
   // nicht unter das Gelände (z. B. wenn hinter der Figur der Hang ansteigt), in der Kirche nicht durch die Decke
   camPos.set(px, Math.max(world.heightAt(px, pz) + 0.8, (world.rhein.levelAt(px, pz) ?? -Infinity) + 0.4, camTarget.y + (cy - camTarget.y) * k), pz);
-  const ceil = kirche.innen.ceilingAt(px, pz) ?? leodegar.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
+  const ceil = kirche.innen.ceilingAt(px, pz) ?? storchen.innen.ceilingAt(px, pz) ?? leodegar.ceilingAt(px, pz) ?? museum.ceilingAt(px, pz) ?? backofen.ceilingAt(px, pz) ?? backofen.ceilingAt(camTarget.x, camTarget.z);
   if (ceil !== null) camPos.y = Math.min(camPos.y, ceil);
   const tc = !riding() && tunnelCamera(camTarget, cam.yaw); // Fußgängertunnel: auf der Achse hinter der Figur
   if (tc) camPos.copy(tc);
@@ -551,6 +551,8 @@ function updateHud(dt) {
   else if (carry.hint(player)) hud.hint.textContent = carry.hint(player) + (nearBar() && !carry.takesE(player) ? ' · ' + barHint(nearBar()) : ''); // Läden, Abgabeorte
   else if (sport.hint(player)) hud.hint.textContent = sport.hint(player); // Golfschläger, Tennisschläger, Schlagen
   else if (andacht.hint(player)) hud.hint.textContent = andacht.hint(player); // Kirche und Kapellen: beten, singen, Turm
+  else if (storchen.innen.seated) hud.hint.textContent = (player.sip > 0 ? 'Prost!' : barHint(storchen)) + ' · W/S: Aufstehen'; // am Stammtisch
+  else if (storchen.innen.hint(player, quests)) hud.hint.textContent = storchen.innen.hint(player, quests); // Stammtisch: nur Ehrenbürger:innen
   else if (stationenweg.hint(player)) hud.hint.textContent = stationenweg.hint(player); // Bildstock am Stationenweg
   else if (ridingSwing() || nearestSwing(player)) hud.hint.textContent = swingHint(); // Schaukeln (Grillplatz, Kindergarten, Campingplatz)
   else if (musikpavillon.hint(player)) hud.hint.textContent = musikpavillon.hint(player); // Kurkonzert: Applaus nach jedem Stück
@@ -650,6 +652,7 @@ function frame() {
     else if (ridingSwing()) ridingSwing().dismount(player); // Schaukel
     else if (nearestSwing(player)) nearestSwing(player).mount(player);
     else if (musikpavillon.clap(player, quests)) { /* Kurkonzert: mitklatschen */ }
+    else if (storchen.innen.canSit(player)) storchen.innen.sit(player, quests); // Stammtisch im Storchen
     else if (nearBar()) { const b = nearBar(); player.drink('beer'); b.serve?.(); } // Theke: Bier
     else if (andacht.spot(player)) andacht.pray(player, andacht.spot(player));       // Kirche, Kapelle: beten
     else toggleVehicle();
@@ -691,17 +694,19 @@ function frame() {
     const q = c.pushOut(v.x, v.z, v.k.halfW, v.y);
     if (q) { v.x += q[0]; v.z += q[1]; v.speed *= 0.3; }
   }
-  if (player.car || (!riding() && !ridingSwing() && !andacht.active && !sport.busy)) multiplayer.push(player, dt); // andere schubsen
+  const resting = ridingSwing() || andacht.active || sport.busy || storchen.innen.seated; // Figur sitzt, kniet, schlägt
+  if (player.car || (!riding() && !resting)) multiplayer.push(player, dt); // andere schubsen
   for (const v of vehicles) v.sync(dt, world);
   const movers = [...vehicles, ...railway.cars, ...bus.cars, ...multiplayer.cars];
   for (const p of pedestrians) p.update(dt, world, movers);
 
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
   else if (riding()) player.pos.set(riding().car.x, 0, riding().car.z);
-  else if (!ridingSwing() && !andacht.active && !sport.busy) player.update(dt, editing ? IDLE : sport.noJump ? NOJUMP : input, cam.yaw, world, movers);
+  else if (!resting) player.update(dt, editing ? IDLE : sport.noJump ? NOJUMP : input, cam.yaw, world, movers);
   andacht.update(dt, editing ? IDLE : input, player);
   sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
+  storchen.update(dt, editing ? IDLE : input, player); // Haustür, Stammtisch
   leodegar.update(dt, player); // St. Leodegar: Portaltüren, Turmuhr, Kerzen
   carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
   museum.update(dt, player); // Museumstür
