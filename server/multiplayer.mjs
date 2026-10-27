@@ -34,8 +34,9 @@ const dauer = (ms) => { // Aufenthaltsdauer als h:mm:ss
 
 // joinLog: Datei, in die jede Anmeldung als Zeile „Zeitpunkt (UTC) <Tab> Name <Tab> an“ und jede Abmeldung als
 //   „Zeitpunkt (UTC) <Tab> Name <Tab> ab <Tab> Dauer (h:mm:ss) <Tab> aktiv Dauer“ angehängt wird (nur auf dem Server, nicht im Spiel)
+// chatLog: Datei, in die jeder Chat-Satz als Zeile „Zeitpunkt (UTC) <Tab> Name <Tab> Satz“ angehängt wird
 // stateFile: kleine JSON-Datei für Bestenliste und Lieferzähler; ohne sie gehen beide beim Neustart verloren
-export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
+export function attachMultiplayer(httpServer, { joinLog, chatLog, stateFile } = {}) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
   const players = new Map(); // ws -> { id, name, s }
   let nextId = 1;
@@ -70,13 +71,14 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
   });
 
   const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
-  const protokoll = (zeile, sync) => {
-    if (!joinLog) return;
+  const anhaengen = (datei, was, zeile, sync) => {
+    if (!datei) return;
     const z = `${new Date().toISOString()}\t${zeile}\n`;
-    const fehler = (e) => console.error('Anmeldeprotokoll:', e.message);
-    if (!sync) return appendFile(joinLog, z).catch(fehler);
-    try { appendFileSync(joinLog, z); } catch (e) { fehler(e); }
+    const fehler = (e) => console.error(was + ':', e.message);
+    if (!sync) return appendFile(datei, z).catch(fehler);
+    try { appendFileSync(datei, z); } catch (e) { fehler(e); }
   };
+  const protokoll = (zeile, sync) => anhaengen(joinLog, 'Anmeldeprotokoll', zeile, sync);
   const abmelden = (p, sync) => protokoll(`${p.name}\tab\t${dauer(Date.now() - p.seit)}\taktiv ${dauer(p.aktiv)}`, sync);
   // Beim Beenden des Servers (Deploy, Neustart) alle noch Angemeldeten mit ihrer Dauer abmelden
   wss.alleAbmelden = () => { for (const p of players.values()) abmelden(p, true); players.clear(); };
@@ -146,6 +148,7 @@ export function attachMultiplayer(httpServer, { joinLog, stateFile } = {}) {
         const now = Date.now(), x = cleanText(m.x);
         if (now - (p.lastChat || 0) < 1000 || !x) return;
         p.lastChat = now;
+        anhaengen(chatLog, 'Chatprotokoll', `${p.name}\t${x}`);
         for (const [ws2, o] of players) if (o !== p) send(ws2, { t: 'chat', id: p.id, x });
       } else if (m.t === 'tennis' && p) {
         // Tennisschlag (src/tennisspiel.js): Ball in Platzkoordinaten [x, y, z, vx, vy, vz]
@@ -195,8 +198,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = createServer((req, res) => { res.writeHead(426).end('WebSocket unter ' + PATH); });
   // außerhalb von ~/bamla-mp, das beim Deploy per rsync --delete ersetzt wird
   const joinLog = process.env.JOIN_LOG || join(homedir(), 'bamla-joins.log');
+  const chatLog = process.env.CHAT_LOG || join(homedir(), 'bamla-chat.log');
   const stateFile = process.env.DORF_STATE || join(homedir(), 'bamla-dorf.json');
-  const wss = attachMultiplayer(server, { joinLog, stateFile });
+  const wss = attachMultiplayer(server, { joinLog, chatLog, stateFile });
   for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { wss.alleAbmelden(); process.exit(0); });
-  server.listen(port, '127.0.0.1', () => console.log(`Bamla.ch Multiplayer auf ws://127.0.0.1:${port}${PATH}, Anmeldungen in ${joinLog}, Dorfstand in ${stateFile}`));
+  server.listen(port, '127.0.0.1', () => console.log(`Bamla.ch Multiplayer auf ws://127.0.0.1:${port}${PATH}, Anmeldungen in ${joinLog}, Chat in ${chatLog}, Dorfstand in ${stateFile}`));
 }

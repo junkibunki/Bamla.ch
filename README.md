@@ -74,6 +74,9 @@ Aktiv ist die Zeit, in der der Tab sichtbar war (nur dann schickt das Spiel sein
 30 s bewegt, gesungen oder gebetet hat. Ein geschlossener Tab wird erst nach bis zu 30 s abgemeldet; bei einem Neustart des
 Servers (Deploy) werden alle Angemeldeten noch abgemeldet.
 
+Jeden Chat-Satz schreibt der Server als Zeile `Zeitpunkt (UTC) <Tab> Name <Tab> Satz` nach `~deploy/bamla-chat.log`
+(anderer Pfad über `CHAT_LOG`); im Dev-Server wird nichts gespeichert. Ansehen: `cat ~/bamla-chat.log`.
+
 ## Rohdaten
 
 Die Quelldaten (DGM1, LoD2, DOP20, zusammen mehrere hundert MB) liegen nicht im Repo (`data/` ist ignoriert).
