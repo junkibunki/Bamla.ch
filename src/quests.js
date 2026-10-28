@@ -66,7 +66,7 @@ function loadState() {
     return s;
   } catch { return { quests: {}, nebenbei: {}, auftraege: {}, unlocks: [], ansehen: 0, title: '' }; }
 }
-const titleExists = (t) => t === 'Ehrenbürger:in' || t === 'Urgestein' || defs.some((d) => d.reward?.title === t);
+const titleExists = (t) => ['Ehrenbürger:in', 'Urgestein', 'Heimatkundler', 'echter Bohnesack'].includes(t) || defs.some((d) => d.reward?.title === t);
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -318,11 +318,11 @@ export class Quests {
   unlocked(id) { return this.state.unlocks.includes(id); }
 
   // Mehr als 100 € ercheatet (main.js): alle Aufgaben, ihre Freischaltungen, Titel und Ansehen sind weg, der
-  // Cheat-Zähler beginnt bei 0, das Spiel lädt neu. Geld, Gutscheine und der Geldschein-Anzug bleiben.
+  // Cheat-Zähler beginnt bei 0, das Spiel lädt neu. Geld, Gutscheine, Geldschein-Anzug und Bohnesack bleiben.
   cheatStrafe() {
     const s = this.state;
     Object.assign(s, { quests: {}, nebenbei: {}, auftraege: {}, ansehen: 0, title: '', cheat: 0, strafen: (s.strafen || 0) + 1, strafeHinweis: true });
-    s.unlocks = s.unlocks.filter((u) => u === 'cheater');
+    s.unlocks = s.unlocks.filter((u) => u === 'cheater' || u === 'bohnesack');
     this.save();
     this.toast('🚨 Mehr als 100 € ercheatet! Alle Aufgaben sind weg – du fängst von vorne an', 6);
     setTimeout(() => location.reload(), 4000);
@@ -340,6 +340,7 @@ export class Quests {
     if (this.unlocked('dorfpass-voll')) t.push('Ehrenbürger:in');
     if (this.state.ansehen >= URGESTEIN) t.push('Urgestein');
     if (this.postkarten?.complete) t.push('Heimatkundler');
+    if (this.unlocked('bohnesack')) t.push('echter Bohnesack'); // versteckt: in echt in Bamlach (bohnesack.js)
     return [...new Set(t)];
   }
   get title() { return this.titles().includes(this.state.title) ? this.state.title : ''; }

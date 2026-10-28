@@ -146,6 +146,17 @@ body.touch #melden span { display: none; }
 #meldenBox div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 #meldenBox button { padding: 6px 14px; border: 0; border-radius: 6px; background: #fff3; color: #fff; font: inherit; cursor: pointer; }
 #meldenBox button[type=submit] { background: #ffd400; color: #1d2633; font-weight: 600; }
+/* Frage der Wirtin im Storchen (src/bohnesack.js) */
+#bohneBox {
+  display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9;
+  width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+  background: #000c; box-shadow: 0 4px 16px #0006; font-size: 14px;
+}
+#bohneBox.open { display: block; }
+#bohneBox small { display: block; opacity: .7; margin: 4px 0 8px; }
+#bohneBox div { display: flex; justify-content: flex-end; gap: 8px; }
+#bohneBox button { padding: 6px 14px; border: 0; border-radius: 6px; background: #fff3; color: #fff; font: inherit; cursor: pointer; }
+#bohneBox button.ja { background: #ffd400; color: #1d2633; font-weight: 600; }
 body.helpHidden #help { opacity: 0; pointer-events: none; }
 body.helpHidden #helpTag { opacity: 1; }
 

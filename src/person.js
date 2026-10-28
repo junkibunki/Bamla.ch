@@ -91,6 +91,30 @@ function banknote(v) {
 }
 const noteMat = (v) => new THREE.MeshLambertMaterial({ map: banknote(v) });
 
+// Jutesack (Sack-Skin): grobes Gewebe, vorne mit Stempel „BAMLACH“ und einer Bohne; einmal erzeugt
+const sackTex = {};
+function jute(print) {
+  if (sackTex[print]) return sackTex[print];
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 256;
+  const g = c.getContext('2d'), r = rng(31);
+  g.fillStyle = '#b48a56'; g.fillRect(0, 0, 128, 256);
+  for (let i = 0; i < 128; i += 3) { g.fillStyle = `rgba(70,45,20,${0.1 + r() * 0.15})`; g.fillRect(i, 0, 1, 256); }
+  for (let i = 0; i < 256; i += 3) { g.fillStyle = `rgba(255,235,190,${0.06 + r() * 0.1})`; g.fillRect(0, i, 128, 1); }
+  if (print) {
+    g.fillStyle = 'rgba(150,25,20,0.85)'; g.strokeStyle = 'rgba(150,25,20,0.85)'; g.lineWidth = 3;
+    g.textAlign = 'center'; g.font = 'bold 17px Georgia, serif';
+    g.fillText('BAMLACH', 64, 66);
+    g.beginPath(); g.ellipse(64, 112, 22, 32, 0.5, 0, Math.PI * 2); g.fill();                   // Bohne mit Kerbe
+    g.strokeStyle = '#b48a56'; g.beginPath(); g.arc(50, 106, 12, -0.6, 0.9); g.stroke();
+    g.fillStyle = 'rgba(150,25,20,0.85)'; g.font = 'bold 15px Georgia, serif'; g.fillText('50 kg', 64, 172);
+    g.strokeStyle = 'rgba(150,25,20,0.85)'; g.strokeRect(14, 40, 100, 144);
+  }
+  const t = sackTex[print] = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // Fester Zufall, damit der Anzug bei allen gleich aussieht
 function rng(seed) {
   return () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -223,13 +247,23 @@ export const OUTFITS = {
       g.add(s);
     }
   } },
+  // Versteckt: nur wer in echt in Bamlach ist (bohnesack.js)
+  sack: { name: 'Bohnesack', noLegs: true, build(g) {
+    // Jutesack vom Boden bis unter die Brust, oben umgeschlagen und mit einer Kordel gebunden; die Beine stecken drin
+    const plain = new THREE.MeshLambertMaterial({ map: jute(false) }), front = new THREE.MeshLambertMaterial({ map: jute(true) });
+    piece(g, BOX(0.62, 1.3, 0.44), [plain, plain, plain, plain, front, plain], 0, 0.67, 0);
+    piece(g, BOX(0.66, 0.1, 0.48), 0x9c7646, 0, 1.33, 0);                          // umgeschlagener Rand
+    piece(g, BOX(0.64, 0.025, 0.46), 0xd8c49a, 0, 1.24, 0);                        // Kordel
+    piece(g, BOX(0.03, 0.14, 0.02), 0xd8c49a, 0.12, 1.17, 0.235).rotation.z = 0.2; // Kordelenden
+    piece(g, BOX(0.03, 0.12, 0.02), 0xd8c49a, 0.15, 1.18, 0.235).rotation.z = -0.3;
+  } },
 };
 
 // Kleidung anziehen (id aus OUTFITS oder ''), alte ablegen
 export function dressPerson(g, id) {
   if (g.outfitId === (id || '')) return;
   g.outfitId = id || '';
-  if (g.outfit) { g.remove(g.outfit); g.outfit.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); }
+  if (g.outfit) { g.remove(g.outfit); g.outfit.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); [].concat(o.material).forEach((m) => m.dispose()); } }); }
   g.outfit = null;
   const shirtMats = [g.torso.material, g.armL.children[0].material, g.armR.children[0].material];
   const pantsMats = [g.legL.children[0].material, g.legR.children[0].material];
@@ -241,6 +275,7 @@ export function dressPerson(g, id) {
   for (const m of bodyMats) if (m.map) { m.map = null; m.needsUpdate = true; }
   g.hair.visible = true;
   const o = OUTFITS[id];
+  g.legL.visible = g.legR.visible = !o?.noLegs; // im Sack würden die Beine beim Laufen herausschauen
   if (!o) return;
   if (o.shirt != null) for (const m of shirtMats) m.color.setHex(o.shirt);
   if (o.pants != null) for (const m of pantsMats) m.color.setHex(o.pants);

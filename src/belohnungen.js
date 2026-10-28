@@ -11,7 +11,8 @@ const OUTFIT_FROM = { helm: { quest: 'ehrenamt' }, schuerze: { quest: 'essen-auf
   motorradjacke: { quest: 'easy-rider' }, schaerpe: { unlock: 'dorfpass-voll' },
   bademantel: { quest: 'kurgast' }, kappe: { quest: 'einkaufswagen' }, sonnenbrille: { quest: 'sonnenschutz' },
   saunatuch: { quest: 'saunagang' }, schiebermuetze: { quest: 'abenteuer-golf' }, uniform: { quest: 'kurkonzert' },
-  geldscheine: { unlock: 'cheater', hidden: true } }; // hidden: erst nach der Freischaltung im Dorfpass (Cheatcode im Chat)
+  geldscheine: { unlock: 'cheater', hidden: true }, // hidden: erst nach der Freischaltung im Dorfpass (Cheatcode im Chat)
+  sack: { unlock: 'bohnesack', hidden: true } };     // in echt in Bamlach (bohnesack.js)
 const HORN_FROM = { hupe: {}, glocke: { quest: 'andacht' }, storch: { quest: 'stammgast' }, martinshorn: { quest: 'ehrenamt' },
   piepser: { quest: 'kuehlkette' }, aufguss: { quest: 'saunagang' }, quak: { quest: 'entenfuetterung' } };
 const LACKE = {

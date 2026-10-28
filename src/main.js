@@ -50,6 +50,7 @@ import { Editor } from './editor.js';
 import { askName, Multiplayer } from './multiplayer.js';
 import { Chat } from './chat.js';
 import { Melden } from './melden.js';
+import { Bohnesack } from './bohnesack.js';
 import { buildBaracke, ROOF_LAYER } from './baracke.js';
 import { Drunk } from './drunk.js';
 import { tileInstances, pruneSmallShadows, StaticBatcher } from './tiles.js';
@@ -623,6 +624,7 @@ const melden = new Melden(multiplayer, input, quests, () => {
   const v = player.car, r = riding()?.car, p = v || r || player.pos;
   return { px: p.x, py: v || r ? p.y ?? world.heightAt(p.x, p.z) : player.mesh.position.y, pz: p.z, s: hud.street.textContent, v: v?.kind };
 });
+const bohnesack = new Bohnesack(quests, input, storchen.innen); // Wirtin im Storchen: „Bisch vo do?“ (versteckter Titel)
 // Spitze der eigenen Sprechblase: wo die anderen das Namensschild sehen (multiplayer.js), etwas darüber
 function headTop() {
   const v = player.car, r = riding();
@@ -640,7 +642,7 @@ const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  const editing = editor.update(dt) || quests.busy || mapKeys() || schnellreise.keys(input, player); // Editor, Aushang/Dorfpass, Vollbildkarte oder Schnellreise offen: Spielsteuerung ruht
+  const editing = editor.update(dt) || quests.busy || bohnesack.open || mapKeys() || schnellreise.keys(input, player); // Editor, Aushang/Dorfpass, Frage der Wirtin, Vollbildkarte oder Schnellreise offen: Spielsteuerung ruht
   if (!editing && (input.hit('KeyE') || input.hit('KeyF'))) {
     if (bus.rider) bus.riderAction();                                     // im Bus: Haltewunsch / aussteigen
     else if (railway.rider) railway.riderAction();                         // im Zug: an offener Tür aussteigen
@@ -711,6 +713,7 @@ function frame() {
   sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren
   storchen.update(dt, editing ? IDLE : input, player); // Haustür, Stammtisch
+  if (!editing) bohnesack.update(dt, player);
   leodegar.update(dt, player); // St. Leodegar: Portaltüren, Turmuhr, Kerzen
   carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
   museum.update(dt, player); // Museumstür
