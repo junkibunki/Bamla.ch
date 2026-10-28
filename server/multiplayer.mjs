@@ -16,7 +16,7 @@ import { WebSocketServer } from 'ws';
 const PATH = '/mp';
 const TICK = 100; // ms zwischen zwei Rundsendungen
 const MAX_PLAYERS = 64;
-const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck', 'horse', 'trike'];
+const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck', 'horse', 'trike', 'sportwagen', 'fendt', 'maehdrescher', 'bagger', 'roller'];
 const OUTFITS = ['helm', 'schuerze', 'golfmuetze', 'motorradjacke', 'schaerpe', 'bademantel', 'kappe', 'sonnenbrille', 'saunatuch', 'schiebermuetze', 'uniform', 'geldscheine', 'sack']; // Kleidung (src/person.js)
 const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn', 'piepser', 'aufguss', 'quak']; // Hupen (src/belohnungen.js)
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein
@@ -119,6 +119,7 @@ export function attachMultiplayer(httpServer, { joinLog, chatLog, meldungLog, st
           ri: Number.isInteger(m.ri) && m.ri >= 0 ? m.ri : undefined, // fährt mit: Id des Fahrers, 0 = im Zug
           o: OUTFITS.includes(m.o) ? m.o : undefined,                                  // Kleidung
           lk: Number.isInteger(m.lk) && m.lk >= 0 && m.lk <= 0xffffff ? m.lk : undefined, // Lackierung
+          c: Number.isInteger(m.c) && m.c >= 0 && m.c <= 0xffffff ? m.c : undefined,     // Farbe eigener Fahrzeuge (Fuhrpark)
           tr: m.tr === 1 ? 1 : undefined,                                               // Tennisschläger
           sg: typeof m.sg === 'number' && m.sg >= 0 && m.sg <= 40 ? Math.round(m.sg * 10) / 10 : undefined, // singt: Sekunden im Lied
           an: m.an === 'p' ? 'p' : undefined,                                           // betet (kniet)

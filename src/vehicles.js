@@ -375,6 +375,7 @@ export class Vehicle {
     const throttle = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
     const steerIn = input.axis(['KeyD', 'ArrowRight'], ['KeyA', 'ArrowLeft']);
     const handbrake = input.down('Space');
+    this.throttle = throttle; // Cityroller: Bein schiebt an (fuhrpark-modelle.js)
     this.hops = true; // sync() lässt es über Kuppen abheben
 
     if (!this.flying) { // in der Luft greifen weder Gas noch Bremse
@@ -525,6 +526,7 @@ export class Vehicle {
       const r = this.mesh.rider, s = Math.sin(this.mesh.wheels[0].wheel.rotation.x);
       r.legL.rotation.x = -1.4 + s * 0.25; r.legR.rotation.x = -1.4 - s * 0.25;
     }
+    this.k.animate?.(this, dt); // bewegliche Teile (Haspel, Ketten, Ausleger, Rollerbein)
     if (this.trailer) {
       const t = this.trailer;
       this.placeTrailer();

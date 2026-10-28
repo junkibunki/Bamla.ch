@@ -117,7 +117,7 @@ class RemotePlayer {
       if ((s.lk ?? null) !== this.lack) this.repaint(s.lk ?? null);
       return;
     }
-    const paint = s.lk ?? this.color; // Lackierung aus dem Dorfpass
+    const paint = s.lk ?? s.c ?? this.color; // Lackierung aus dem Dorfpass, sonst die eigene Farbe (Fuhrpark: Haflinger, Fendt-Grün …)
     if (this.local || (this.vehicle?.kind ?? null) !== kind || (kind && this.vehicle.color !== paint)) {
       this.disposeVehicle();
       if (kind) {
@@ -401,7 +401,7 @@ export class Multiplayer {
     if (!this.online || this.sendTimer > 0) return;
     this.sendTimer = SEND_EVERY;
     const v = player.car, r = this.riding, vi = v ? this.shared?.indexOf(v) ?? -1 : -1;
-    const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind, vi: vi >= 0 ? vi : undefined }
+    const state = v ? { x: v.x, y: v.y ?? 0, z: v.z, h: v.heading, v: v.kind, vi: vi >= 0 ? vi : undefined, c: vi < 0 ? v.color : undefined }
       : r ? { x: r.x, y: r.y, z: r.z, h: r.h, v: null, ri: r.id }
       : bus.rider ? { x: bus.car.x, y: bus.car.y ?? this.world.heightAt(bus.car.x, bus.car.z), z: bus.car.z, h: bus.car.heading, v: null }
       : { x: player.pos.x, y: player.mesh.position.y, z: player.pos.z, h: player.facing, v: null };

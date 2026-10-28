@@ -12,8 +12,10 @@ export const COATS = {
   rappe:   { coat: 0x221d1a, mane: 0x121010, low: 0x161210 },
   falbe:   { coat: 0xb9955c, mane: 0x2a201a, low: 0x2a201a },
 };
+// Haflinger aus dem Fuhrpark (fuhrpark.js): Fuchs mit heller Mähne; nicht in COATS, damit die Pferde im Reitzentrum bleiben, wie sie sind
+export const HAFLINGER = { coat: 0xb06a2c, mane: 0xf0e0b4, low: 0xb06a2c };
 const COAT_LIST = Object.values(COATS);
-const coatOf = (c) => COAT_LIST.find((k) => k.coat === c) ?? COAT_LIST[Math.abs(c | 0) % COAT_LIST.length]; // Mitspieler: Farbe → Fell
+const coatOf = (c) => [...COAT_LIST, HAFLINGER].find((k) => k.coat === c) ?? COAT_LIST[Math.abs(c | 0) % COAT_LIST.length]; // Mitspieler: Farbe → Fell
 
 const MATS = new Map();
 const mat = (c) => { if (!MATS.has(c)) MATS.set(c, new THREE.MeshLambertMaterial({ color: c })); return MATS.get(c); };

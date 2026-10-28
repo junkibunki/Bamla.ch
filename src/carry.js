@@ -130,7 +130,7 @@ export const VOUCHERS = {
   brezel: { name: 'Brezel gratis bei Armbruster', icon: '🎟' },
 };
 
-const euro = (n) => n.toFixed(2).replace('.', ',').replace(',00', '') + ' €';
+export const euro = (n) => n.toFixed(2).replace('.', ',').replace(',00', '') + ' €';
 
 export class Carry {
   constructor(player) {

@@ -240,6 +240,13 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
 #quest-panel .qdorf { background: #0004; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
 #quest-panel .qdorf ol { margin: 4px 0 0; padding-left: 22px; }
 #quest-panel .qdorf li.me { color: #ffd400; font-weight: 700; }
+#quest-panel .qfz { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #fff2; }
+#quest-panel .qfz div { flex: 1; }
+#quest-panel .qfz span { opacity: .8; }
+#quest-panel .qfz button { background: #ffd400; color: #1d2633; font-weight: 700; padding: 5px 10px; white-space: nowrap; }
+#quest-panel .qfz button.on { background: #2e86de; color: #fff; }
+#quest-panel .qfz button.sure { background: #e8501a; color: #fff; }
+#quest-panel .qfz button:disabled { background: #0005; color: #fff; opacity: .7; cursor: default; }
 #quest-panel .qehren { background: linear-gradient(135deg, #d9b55a, #f3dd8e 50%, #b8902e); color: #3d2a08; border: 2px solid #6b4e12; border-radius: 6px; padding: 6px 8px; margin: 8px 0 10px; }
 #quest-panel .qehren li.me { color: #3d2a08; text-decoration: underline; }
 #quest-panel .qbar { height: 10px; background: #0006; border-radius: 5px; margin: 5px 0 3px; overflow: hidden; }

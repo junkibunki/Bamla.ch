@@ -49,7 +49,8 @@ systemctl --user daemon-reload && systemctl --user enable --now bamla-mp
 Im Caddyfile im Block der Seite `reverse_proxy /mp 127.0.0.1:8787` ergänzen (WebSockets leitet Caddy von selbst weiter).
 
 Belohnungen aus dem Dorfpass (`src/belohnungen.js`): Der Zustand trägt neben Titel (`ti`) auch Kleidung (`o`:
-`helm`, `schuerze`, `golfmuetze`, `motorradjacke`, `schaerpe`, `bademantel`, `kappe`, `sonnenbrille`, `saunatuch`, `schiebermuetze`) und im Fahrzeug die Lackfarbe (`lk`, 0xRRGGBB);
+`helm`, `schuerze`, `golfmuetze`, `motorradjacke`, `schaerpe`, `bademantel`, `kappe`, `sonnenbrille`, `saunatuch`, `schiebermuetze`) und im Fahrzeug die Lackfarbe (`lk`, 0xRRGGBB); in Fahrzeugen außerhalb der gemeinsamen Liste (z. B. gekauften aus dem Fuhrpark)
+auch deren eigene Farbe (`c`, 0xRRGGBB);
 Ehrenbürger haben ein goldenes Namensschild. Weitere Nachrichten:
 
 | Richtung | Nachricht | Bedeutung |
@@ -169,7 +170,7 @@ Ergebnis: `public/paving.png` (0,4 m/px, RGB = Farbe, A = Belag) + `public/pavin
 | E | ein-/aussteigen (auch Verkehrsfahrzeuge übernehmen); Zug in Rheinweiler: an offener Tür ein-/aussteigen; im Bus: Haltewunsch, bei offenen Türen aussteigen; Schaukeln (Grillplatz, Kindergarten, Campingplatz): auf-/absteigen (Leertaste: Schwung holen) |
 | R / Q | Gabel heben / senken (Gabelstapler) |
 | X | hupen (im Fahrzeug; Klang im Dorfpass wählbar, Mitspieler hören mit) |
-| J | Dorfpass: Stempel, Titel, Kleidung, Hupe, Lack, Postkarten, Bestenliste |
+| J | Dorfpass: Stempel, Titel, Kleidung, Hupe, Lack, Postkarten, Bestenliste, Fuhrpark (kaufen, herholen) |
 | Enter | Chat: kurzen Satz schreiben, Enter sendet (Esc bricht ab); steht 15 s als Sprechblase über dem eigenen Kopf, bei allen Mitspieler:innen |
 | Mausrad | Kamera-Zoom |
 | H | Hilfe ein/aus (anfangs aus; oben links steht nur „H: Steuerung“) |
@@ -224,6 +225,7 @@ Auf Smartphone und Tablet (`src/touch.js`, erscheint bei Touch-Geräten oder der
 - `src/bauteile.js` – gemeinsame Bausteine dafür: LoD2-Wände mit Farbzonen nach Höhe, LoD2-Dächer, Bodenbelag über dem Gelände (Canvas-Textur), Bäume, Zypressen, Mastleuchten, Hecken
 - `src/swing.js` – Schaukeln, auf die sich der Spieler setzen kann (Pendel mit Schwungholen): Nestschaukel am Grillplatz, die beiden Kindergarten-Schaukeln (das Kind darauf steigt ab und wartet), Campingplatz-Schaukel
 - `src/vehicles.js` – Auto, Traktor (+ Anhänger), Fahrrad, Motorrad, Quad, Pferd: Fahrphysik und Verkehrs-KI
+- `src/fuhrpark.js`, `src/fuhrpark-modelle.js` – Fuhrpark im Dorfpass: mit dem Lohn aus den Aufträgen Cityroller, Haflinger, Fendt 724 Vario, Sportwagen, Kettenbagger und Mähdrescher kaufen; sie bleiben, wo man sie abstellt (auch nach dem Neuladen), und lassen sich herholen
 - `src/pedestrians.js`, `src/person.js` – Fußgänger und Figuren (mit Kleidung aus dem Dorfpass)
 - `src/belohnungen.js`, `src/ansehen.js`, `src/postkarten.js`, `src/feuerwerk.js`, `src/hupe.js` – Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Ehrentafel, Bestenliste und Dorfziel; Grüßen, Beschimpfen, Dorffest; Postkarten; Feuerwerk und Klänge
 - `src/chat.js` – Chat: Eingabefeld (Enter, Touch: 💬), Sprechblasen über den Köpfen für 15 s

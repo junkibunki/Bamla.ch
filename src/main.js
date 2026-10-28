@@ -87,6 +87,7 @@ import { buildLeodegarUmfeld } from './leodegar-umfeld.js';
 import { prepareLeodegar } from './leodegar-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 import { progress, step } from './ladebalken.js';
+import { Fuhrpark } from './fuhrpark.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
 
@@ -95,7 +96,8 @@ const CAR_COLORS = [0xc0392b, 0x2e86de, 0xbdc3c7, 0x27ae60, 0xecf0f1, 0x2c3e50, 
 const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd35400];
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
-const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto', ruderboot: 'Ruderboot', panzer: 'Panzer' };
+const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto', ruderboot: 'Ruderboot', panzer: 'Panzer',
+  sportwagen: 'Sportwagen', fendt: 'Fendt', maehdrescher: 'Mähdrescher', bagger: 'Bagger', roller: 'Cityroller' }; // Fuhrpark: v.name statt der Art
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -544,6 +546,7 @@ function updateHud(dt) {
   hud.speed.textContent = v ? Math.round(Math.abs(v.speed) * 3.6) + ' km/h' + (v === ecar.car ? ` · 🔋 ${ecar.percent()} %` : v.kind === 'horse' ? ` · ${GAIT_NAMES[gaitOf(Math.abs(v.speed))]}` : '') : riding() ? Math.round(riding().speed * 3.6) + ' km/h' : '';
   if (v?.kind === 'forklift') hud.hint.textContent = 'E: Aussteigen · R/Q: Gabel heben/senken';
   else if (v?.kind === 'excavator') hud.hint.textContent = EXCAVATOR_HINT;
+  else if (v?.k.hint) hud.hint.textContent = v.k.hint; // Kettenbagger aus dem Fuhrpark
   else if (v?.kind === 'firetruck') hud.hint.textContent = (Math.abs(v.speed) > 6 ? '' : 'E: Aussteigen · ') + 'R: Wasser marsch · T/G: Rohr heben/senken'; // Wasserwerfer
   else if (v === ecar.car && ecar.driveHint()) hud.hint.textContent = ecar.driveHint();
   else if (v?.kind === 'ruderboot') hud.hint.textContent = 'E: Aussteigen · W/S: rudern · A/D: drehen';
@@ -563,9 +566,9 @@ function updateHud(dt) {
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
-    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' ? 'nehmen' : n?.mesh.rider && n.kind !== 'panzer' ? 'aufsteigen' : 'einsteigen';
+    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' || n?.kind === 'roller' ? 'nehmen' : n?.mesh.rider && n.kind !== 'panzer' ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
-      : multiplayer.footHint(player) || (n ? `E: ${NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
+      : multiplayer.footHint(player) || (n ? `E: ${n.name ?? NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
   }
   streetTimer -= dt;
@@ -636,6 +639,7 @@ const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && 
 
 window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
 quests.start(window.game);
+const fuhrpark = window.game.fuhrpark = new Fuhrpark({ scene, world, player, vehicles, carry, quests }); // gekaufte Fahrzeuge (Dorfpass, J)
 window.game.statics = statics;
 const clock = new THREE.Clock();
 
@@ -718,6 +722,7 @@ function frame() {
   carry.update(dt, editing || riding() ? IDLE : input, player); // Getragenes in der Hand, G/R/V an Läden
   museum.update(dt, player); // Museumstür
   backofen.update(dt); // Holzfeuer, Temperatur, Backen, Brotschieber
+  fuhrpark.update(dt); // Standorte der eigenen Fahrzeuge merken
 
   drunk.update(dt);
   blitzer.update(dt, player, quests);
