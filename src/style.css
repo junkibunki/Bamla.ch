@@ -354,3 +354,28 @@ body.touch #quest-track { top: 136px; left: auto; right: 8px; transform: none; m
 body.touch #carry { left: 10px; right: auto; bottom: 175px; text-align: left; }
 @media (orientation: portrait) { body.touch #hud { bottom: 220px; } }
 @media (max-height: 450px) { body.touch #help { font-size: 11px; line-height: 1.4; top: 126px; } body.touch #speed { font-size: 30px; } }
+/* Im Fahrzeug: Lenkknöpfe links statt Stick, Gas/Bremse rechts unter den Aktionsknöpfen */
+.tsteer, .tpedal { display: none; position: fixed; bottom: 20px; z-index: 8; gap: 14px; align-items: flex-end; }
+.tsteer { left: 16px; }
+.tpedal { right: 16px; gap: 12px; }
+body.touchDrive .tstick { display: none; }
+body.touch.touchDrive:not(.touchIdle) .tsteer, body.touch.touchDrive:not(.touchIdle) .tpedal { display: flex; }
+body.touchDrive .tpad { bottom: 136px; }
+body.touchDrive .tctx { flex-flow: row wrap-reverse; justify-content: flex-end; max-width: 46vw; } /* Bagger: viele Knöpfe */
+.tsteer button, .tpedal button {
+  touch-action: none; border: 2px solid #fff8; background: #000a; color: #fff; font: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 84px; height: 84px; border-radius: 50%; padding: 0;
+}
+.tsteer button b, .tpedal button b { font-size: 28px; line-height: 1; }
+.tsteer button span, .tpedal button span { font-size: 11px; opacity: .85; }
+.tsteer button.down, .tpedal button.down { background: #ffd400; color: #1d2633; }
+.tpedal .tgas { height: 106px; border-radius: 22px; border-color: #7fdc6a; }
+.tpedal .tbrake { border-radius: 18px; border-color: #ff7a6a; }
+@media (max-width: 440px) {
+  .tsteer, .tpedal { gap: 8px; bottom: 16px; }
+  .tsteer { left: 10px; } .tpedal { right: 10px; }
+  .tsteer button, .tpedal button { width: 72px; height: 72px; }
+  .tpedal .tgas { height: 96px; }
+  body.touchDrive .tpad { bottom: 122px; }
+}

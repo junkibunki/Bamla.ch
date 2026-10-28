@@ -731,7 +731,7 @@ function frame() {
   returnVehicles(dt);
   updateHud(dt);
   const eat = carry.eatHint(player); // Essen/Trinken aus der Hand steht nur im Inventar; Touch braucht trotzdem einen G-Knopf (G schlägt Schnellreise)
-  touch.update(editing, eat ? [...hud.hint.textContent.split(' · ').filter((s) => s && !s.startsWith('G:')), eat].join(' · ') : hud.hint.textContent);
+  touch.update(editing, eat ? [...hud.hint.textContent.split(' · ').filter((s) => s && !s.startsWith('G:')), eat].join(' · ') : hud.hint.textContent, !!player.car);
   quests.update(dt, input, player, camera);
   multiplayer.update(dt, player, riding() || bus, quests.title);
   chat.update(headTop());

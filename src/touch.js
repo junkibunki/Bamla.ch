@@ -47,7 +47,7 @@ export class Touch {
 
     const help = document.getElementById('help');
     const melden = document.getElementById('melden'); // Fehler/Idee melden (melden.js) bleibt unter der Steuerung
-    if (help) help.innerHTML = '<b>Steuerung</b><br />Links ziehen: laufen / fahren · weit ziehen: rennen<br />'
+    if (help) help.innerHTML = '<b>Steuerung</b><br />Links ziehen: laufen · weit ziehen: rennen<br />Im Fahrzeug: ◀ ▶ lenken, ▲ Gas, ▼ Bremse<br />'
       + 'Rechts wischen: Kamera · zwei Finger: Zoom<br />Knöpfe rechts: Aktion, Springen und was gerade geht<br />'
       + 'Karte antippen: Vollbildkarte · ❔: Steuerung aus/an';
     if (help && melden) help.append(melden);
@@ -62,6 +62,16 @@ export class Touch {
     this.ctx = el('div', 'tctx', this.pad);
     this.jump = this.button('tbig tjump', 'Space', '␣', 'Springen', this.pad);
     this.act = this.button('tbig tact', 'KeyE', 'E', 'Aktion', this.pad);
+
+    // Im Fahrzeug statt Stick: links lenken, rechts Gas und Bremse (S bremst und fährt im Stand rückwärts)
+    const steer = el('div', 'tsteer', document.body), pedal = el('div', 'tpedal', document.body);
+    this.driveBtns = [
+      this.button('tsl', 'KeyA', '◀', 'links', steer),
+      this.button('tsr', 'KeyD', '▶', 'rechts', steer),
+      this.button('tbrake', 'KeyS', '▼', 'Bremse', pedal),
+      this.button('tgas', 'KeyW', '▲', 'Gas', pedal),
+    ];
+    this.driving = false;
 
     const bar = el('div', 'tbar', document.body);
     this.button('', 'KeyJ', '📜', 'Dorfpass', bar);
@@ -80,7 +90,7 @@ export class Touch {
     c.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
       try { c.setPointerCapture(e.pointerId); } catch { /* Zeiger schon weg */ }
-      if (stickId === null && e.clientX < innerWidth * 0.45) {
+      if (stickId === null && !this.driving && e.clientX < innerWidth * 0.45) {
         stickId = e.pointerId;
         base = [e.clientX, e.clientY];
         this.stick.style.left = base[0] + 'px';
@@ -113,13 +123,14 @@ export class Touch {
       this.input.lastMouseMove = performance.now();
       p[0] = e.clientX; p[1] = e.clientY;
     });
+    this.dropStick = () => {
+      stickId = null;
+      this.moveStick(0, 0);
+      this.stick.classList.remove('held');
+      this.stick.style.left = this.stick.style.top = '';
+    };
     const up = (e) => {
-      if (e.pointerId === stickId) {
-        stickId = null;
-        this.moveStick(0, 0);
-        this.stick.classList.remove('held');
-        this.stick.style.left = this.stick.style.top = '';
-      }
+      if (e.pointerId === stickId) this.dropStick();
       looks.delete(e.pointerId);
       pinch = null;
     };
@@ -153,16 +164,24 @@ export class Touch {
     return b;
   }
 
-  // Jeden Frame (main.js): Knöpfe passend zum Hinweis, ausblenden solange Karte, Aushang o. Ä. offen ist
-  update(idle, hint) {
+  // Jeden Frame (main.js): Knöpfe passend zum Hinweis, ausblenden solange Karte, Aushang o. Ä. offen ist;
+  // driving: selbst am Steuer → Fahrknöpfe statt Stick
+  update(idle, hint, driving) {
     if (!this.on) return;
     document.body.classList.toggle('touchIdle', idle);
+    if (driving !== this.driving) {
+      this.driving = driving;
+      this.hintText = null; // Leertaste: Springen ↔ Handbremse
+      document.body.classList.toggle('touchDrive', driving);
+      this.dropStick();
+      for (const b of this.driveBtns) { this.input.release(b.dataset.code); b.classList.remove('down'); }
+    }
     if (hint === this.hintText) return;
     this.hintText = hint;
     const keys = hintKeys(hint);
     const of = (code) => keys.find((k) => k.code === code);
     this.act.lastChild.textContent = of('KeyE')?.label || 'Aktion';
-    this.jump.lastChild.textContent = of('Space')?.label || 'Springen';
+    this.jump.lastChild.textContent = of('Space')?.label || (this.driving ? 'Handbremse' : 'Springen');
     const old = new Map([...this.ctx.children].map((b) => [b.dataset.code, b])); // gehaltene Knöpfe bleiben stehen
     for (const k of keys) {
       if (k.code === 'KeyE' || k.code === 'Space') continue;
