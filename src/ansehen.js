@@ -18,6 +18,8 @@ const GRUSS = ['Solli!', 'Solli!', 'Salü!', 'Morge!'];
 const GRUSS_NAME = ['Solli {n}!', 'Salü {n}!', 'Solli {n}, alles guet?'];
 const GRUSS_FREUND = ['{n}! Wie goht\'s?', '{n}! Schön di z\'sehne!', 'Solli {n}, au wieder do?'];
 const MURREN = ['Ah, du schu widder …', 'Hmpf.', 'Mit dir schwätz i nit.', 'Bisch hüt wenigstens nüechter?'];
+// Frühling (jahreszeit.js): alle sind gut gelaunt, grüßen jede:n und hüpfen dabei ein bisschen
+const GRUSS_FRUEHLING = ['Solli! Isch des nit e herrlige Dag?', 'Morge! D\'Sunne schiint!', 'Salü! Bald isch Summer!', 'Solli, solli!', 'Juhu, Frühlig!'];
 const SCHIMPF = ['Bisch bsoffe?! Lass s Auto stoh!', 'Schäm di, bsoffe fahre!', 'Fahr heim un schlof di us!',
   'Du Lump, du!', 'Langsam, do sin Kinder!', 'Hesch e Schuss?!', 'So öbbis, am helllichte Dag!'];
 
@@ -133,7 +135,7 @@ export class Ansehen {
     this.globalCool -= dt;
     if ((this.check -= dt) <= 0) {
       this.check = 0.2;
-      const px = player.pos.x, pz = player.pos.z, a = this.st.ansehen;
+      const px = player.pos.x, pz = player.pos.z, a = this.st.ansehen, spring = this.ctx.jahreszeit?.key === 'fruehling';
       for (const p of this.walkers()) {
         const d = Math.hypot(p.x - px, p.z - pz);
         if (this.react.has(p) || (this.cool.get(p) ?? 0) > now) continue;
@@ -144,16 +146,16 @@ export class Ansehen {
           this.react.set(p, { kind: 'fist', left: 2.4 });
           p.pause = Math.max(p.pause, 2.4);
           this.say(p, pick(SCHIMPF), true);
-        } else if (!drunkDriving && d < 6.5 && speed < 5 && (a >= GREET_FROM || a < 0)) {
+        } else if (!drunkDriving && d < (spring ? 8.5 : 6.5) && speed < 5 && (a >= GREET_FROM || a < 0 || spring)) {
           if (this.globalCool > 0) break;
-          this.globalCool = a < 0 ? 6 : 3.5;
+          this.globalCool = a < 0 ? 6 : spring ? 2.5 : 3.5;
           this.cool.set(p, now + 45);
           p.pause = Math.max(p.pause, 2.2);
           p.facing = Math.atan2(px - p.x, pz - p.z);
           if (a < 0) { this.say(p, pick(MURREN), true); continue; }
-          this.react.set(p, { kind: 'wave', left: 2.2 });
+          this.react.set(p, { kind: 'wave', left: 2.2, hop: spring, y: p.mesh.position.y });
           const title = this.q.title;
-          const lines = a >= FEST_FROM ? GRUSS_FREUND : a >= 80 ? GRUSS_NAME : GRUSS;
+          const lines = a >= FEST_FROM ? GRUSS_FREUND : a >= 80 ? GRUSS_NAME : spring ? GRUSS_FRUEHLING : GRUSS;
           let line = pick(lines).replace('{n}', this.name);
           if (title && Math.random() < 0.3) line = `Solli, ${title}!`;
           this.say(p, line);
@@ -165,7 +167,8 @@ export class Ansehen {
     for (const [p, r] of this.react) {
       r.left -= dt;
       const arm = p.mesh.armR;
-      if (r.left <= 0) { arm.rotation.z = 0; this.react.delete(p); continue; }
+      if (r.left <= 0) { arm.rotation.z = 0; if (r.hop) p.mesh.position.y = r.y; this.react.delete(p); continue; }
+      if (r.hop) p.mesh.position.y = r.y + Math.abs(Math.sin(now * 8)) * 0.2; // Freudenhüpfer
       if (r.kind === 'wave') { arm.rotation.x = 0; arm.rotation.z = 2.7 + Math.sin(now * 13) * 0.35; }
       else { arm.rotation.z = 0.2; arm.rotation.x = -2.6 + Math.sin(now * 16) * 0.35; }
     }

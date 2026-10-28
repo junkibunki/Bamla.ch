@@ -1,7 +1,9 @@
 // Aufgaben (IDEEN.md): Aushänge in der Welt, Lesen und Annehmen, Fortschritt, Belohnungen, Dorfpass (Taste J).
 //
 // Jede Aufgabe ist eine eigene Datei in src/quests/ (wird automatisch gefunden) mit `export default {
-//   id, nr, title, text, goal, board, steps?, reward?, nurAngenommen?, setup?(ctx, q) }`:
+//   id, nr, title, text, goal, board, jahreszeit?, steps?, reward?, nurAngenommen?, setup?(ctx, q) }`:
+// - jahreszeit: 'fruehling' | 'sommer' | 'herbst' | 'winter' (jahreszeit.js), ohne Angabe Sommer. Aufgaben anderer
+//   Jahreszeiten hängen nicht aus, laufen nicht und stehen im Dorfpass ausgegraut.
 // - board: Id eines Aushangs aus BOARDS unten oder ein eigener { id, name, x, z, heading, style: 'brett' | 'zettel' }
 // - Aufgaben lassen sich auch nebenbei erledigen, ohne sie anzunehmen: update(dt) läuft dann still mit (keine
 //   Meldungen, kein Ziel), q.active ist wahr, der Fortschritt steht in state.nebenbei und geht beim Annehmen mit.
@@ -30,6 +32,7 @@ import { Belohnungen } from './belohnungen.js';
 import { Ansehen } from './ansehen.js';
 import { Sprueche } from './sprueche.js';
 import { Postkarten } from './postkarten.js';
+import { JAHRESZEITEN } from './jahreszeit.js';
 
 const STORE = 'bamla.quests';
 const READ_DIST = 2.4;
@@ -189,7 +192,9 @@ export class Quests {
   // Nach dem Aufbau der Welt: Aufgaben einrichten (ctx wie window.game)
   start(ctx) {
     this.ctx = { ...ctx, quests: this };
-    for (const d of defs) {
+    this.season = ctx.jahreszeit?.key ?? 'sommer';
+    for (const b of this.boards) b.quests = b.quests.filter((d) => this.inSeason(d)); // leere Aushänge bleiben stehen
+    for (const d of defs.filter((d) => this.inSeason(d))) {
       const q = this.handle(d);
       const upd = d.setup?.(this.ctx, q);
       if (typeof upd === 'function') this.updates.set(d.id, upd);
@@ -207,6 +212,8 @@ export class Quests {
       this.toast('🚨 Zu viel gecheatet: Dorfpass leer, alle Aufgaben beginnen von vorne', 8);
     }
   }
+
+  inSeason(d) { return (d.jahreszeit ?? 'sommer') === (this.season ?? 'sommer'); }
 
   handle(d) {
     if (this.handles.has(d.id)) return this.handles.get(d.id);
@@ -475,6 +482,7 @@ export class Quests {
     head.append(el('b', null, b.name), el('button', 'qclose', '✕'));
     head.lastChild.dataset.close = '';
     p.append(head);
+    if (!b.quests.length) p.append(el('div', 'qnote', `Gerade hängt hier nichts aus. Die Aufgaben für den ${JAHRESZEITEN[this.season].name} kommen bald.`));
     let n = 0;
     for (const d of b.quests) {
       const s = this.state.quests[d.id];
@@ -510,10 +518,11 @@ export class Quests {
     const grid = el('div', 'qstamps');
     for (const d of defs) {
       const s = this.state.quests[d.id];
-      const c = el('div', 'qstamp ' + (s?.status ?? 'neu'));
+      const c = el('div', 'qstamp ' + (s?.status ?? 'neu') + (this.inSeason(d) ? '' : ' aus'));
       c.append(el('i', null, s?.status === 'done' ? '✔' : String(d.nr)), el('span', null, s ? d.title : '???'));
       const wdh = this.state.auftraege[d.id]?.n;
       c.title = s ? `${d.title}: ${d.goal || d.text}${wdh ? ` (${wdh}× wiederholt)` : ''}` : 'Noch nicht gefunden – halte Ausschau nach Aushängen';
+      if (!this.inSeason(d)) c.title += ` · nur im ${JAHRESZEITEN[d.jahreszeit ?? 'sommer'].name}`;
       grid.append(c);
     }
     p.append(grid);
@@ -535,7 +544,7 @@ export class Quests {
   renderTrack() {
     const t = this.track;
     t.replaceChildren();
-    const active = defs.filter((d) => this.running(d));
+    const active = defs.filter((d) => this.running(d) && this.inSeason(d));
     for (const d of active.slice(0, 4)) { // höchstens vier, der Rest steht im Dorfpass
       const s = this.runde(d) ?? this.state.quests[d.id];
       const row = el('div');

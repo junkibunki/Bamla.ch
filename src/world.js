@@ -475,7 +475,7 @@ export class World {
         next = Math.max(0, t - len);
       }
     }
-    this.meshFromRibbons(out);
+    this.meshFromRibbons(out).material.userData.geraeumt = true; // im Winter geräumt (jahreszeit.js)
   }
 
   buildRails() {

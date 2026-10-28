@@ -84,7 +84,10 @@ function patternTexture() {
 export function paverMaterial() {
   const pattern = patternTexture();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
-  mat.onBeforeCompile = (sh) => {
+  mat.userData.geraeumt = true; // im Winter geräumt (jahreszeit.js)
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, renderer) => {
+    prev.call(mat, sh, renderer);
     sh.uniforms.patternMap = { value: pattern };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec2 vPave;')

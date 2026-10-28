@@ -76,6 +76,7 @@ export function buildVineRows(scene, world, vin) {
     if (!onRoad(mx, mz)) segs.push(s);
   }
   const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0xffffff }), segs.length);
+  mesh.material.userData.keineBlueten = true; // Reben blühen im Frühling nicht weiß (jahreszeit.js)
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(0, 0, 0, 'YXZ');
   const pos = new THREE.Vector3(), scl = new THREE.Vector3(), col = new THREE.Color();
   segs.forEach(([x0, z0, x1, z1], i) => {

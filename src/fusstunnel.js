@@ -308,8 +308,10 @@ function addBore(world, b) {
 function cutTerrain(world) {
   const mat = world.ground?.children[0]?.material;
   if (!mat) return;
-  mat.customProgramCacheKey = () => 'bores' + bores.length;
-  mat.onBeforeCompile = (sh) => {
+  const prev = mat.onBeforeCompile, prevKey = mat.customProgramCacheKey; // Jahreszeit (jahreszeit.js) weiterreichen
+  mat.customProgramCacheKey = () => prevKey.call(mat) + '|bores' + bores.length;
+  mat.onBeforeCompile = (sh, renderer) => {
+    prev.call(mat, sh, renderer);
     const nb = bores.length;
     sh.uniforms.tunA = { value: bores.map((b) => new THREE.Vector4(b.a[0], b.a[1], b.u[0], b.u[1])) };
     sh.uniforms.tunB = { value: bores.map((b) => new THREE.Vector4(b.sA, b.sB, b.hw + 0.02, b.top + 0.05)) };

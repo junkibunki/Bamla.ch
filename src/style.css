@@ -51,6 +51,18 @@ canvas { display: block; }
   border: 1px solid #41526a; background: #0d1219; color: #fff;
 }
 #join input:focus { outline: 2px solid #ffd400; outline-offset: 1px; }
+/* Jahreszeit im Namensdialog (src/jahreszeit.js) */
+#join .label { font-size: 15px; opacity: .85; }
+#join .seasons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+#join .seasons label { opacity: 1; cursor: pointer; }
+#join .seasons input { position: absolute; opacity: 0; pointer-events: none; }
+#join .seasons span {
+  display: grid; justify-items: center; gap: 2px; padding: 7px 2px; font-size: 20px;
+  border: 1px solid #41526a; border-radius: 8px; background: #0d1219;
+}
+#join .seasons b { font-size: 11px; font-weight: 600; }
+#join .seasons input:checked + span { border-color: #ffd400; background: #2a2a12; }
+#join .seasons input:focus-visible + span { outline: 2px solid #ffd400; outline-offset: 1px; }
 #join button {
   font: inherit; font-size: 17px; font-weight: 700; padding: 9px; border: 0; border-radius: 8px;
   background: #ffd400; color: #1d2633; cursor: pointer;
@@ -227,6 +239,7 @@ body.editing #hud, body.editing #help, body.editing #helpTag { display: none; }
 #quest-panel .qstamp.active i { border-style: solid; border-color: #2e86de; color: #2e86de; }
 #quest-panel .qstamp.done i { border: 3px solid #b0301f; color: #b0301f; transform: rotate(-12deg); font-size: 17px; }
 #quest-panel .qstamp.neu span { opacity: .5; }
+#quest-panel .qstamp.aus { opacity: .4; } /* andere Jahreszeit (jahreszeit.js) */
 #quest-panel .qtitles { color: #fff; font-size: 13px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 10px; }
 #quest-panel .qtitles button { background: #0005; color: #fff; padding: 4px 8px; }
 #quest-panel .qtitles button.on { background: #ffd400; color: #1d2633; }

@@ -2,6 +2,7 @@
 // ansehbar im Dorfpass (J). Das Motiv wird aus der Spielwelt fotografiert (fester Blickpunkt je Ort), sobald es
 // gebraucht wird. Alle Karten zusammen bringen den Titel „Heimatkundler“.
 import * as THREE from 'three';
+import { SONNE } from './jahreszeit.js';
 
 // Orte: Mitte (x, z), Fundradius r, Blickpunkt: Richtung a (rad, vom Motiv aus), Abstand d, Höhe h
 export const KARTEN = [
@@ -78,7 +79,7 @@ export class Postkarten {
     this.cam.position.set(ex, ey, ez);
     this.cam.lookAt(k.x, gy + (k.look ?? 4), k.z);
     const sp = sun.position.clone(), st = sun.target.position.clone();
-    sun.position.set(k.x + 80, 150, k.z + 50);
+    sun.position.set(k.x + SONNE[0], SONNE[1], k.z + SONNE[2]);
     sun.target.position.set(k.x, gy, k.z);
     sun.target.updateMatrixWorld();
     renderer.render(scene, this.cam);

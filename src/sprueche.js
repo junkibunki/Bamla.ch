@@ -1,3 +1,4 @@
+// Im Frühling (jahreszeit.js) sagen Fußgänger:innen überall öfter, wie sehr sie sich auf den Sommer freuen.
 // Sprüche uff Alemannisch an besonderen Orten: Wer zu Fuß (oder langsam) vorbeikommt, bekommt von einer Ortsfigur
 // oder von Fußgänger:innen in der Nähe einen Spruch in der Sprechblase (Ansehen.say). Jeder Ort hat eine stehende
 // Figur, damit dort immer jemand ist; die Sprüche kommen gemischt, ohne Wiederholung, bis alle durch sind.
@@ -61,6 +62,17 @@ const ORTE = [
   ] },
 ];
 
+const FRUEHLING = { sprueche: [
+  'Riechsch des? Dr Bärlauch isch do! Jetzt cha dr Summer cho.',
+  'D\'Chriesibäum blüehe – no e paar Wuche, no hocke mr im Storche-Garte.',
+  'Hüt isch so e schöne Dag, i chönnt d\'ganz Welt verdrucke!',
+  'Dr Summer stoht vor dr Dür – i ha mi Badhose scho uusgsuecht.',
+  'Ich ha hüt scho drei Lüt grüeßt, wo ich gar nit kenn. Des macht dr Frühlig!',
+  'D\'Störch sin wieder do! Des heißt: Bald isch Summer.',
+  'Dr Spargel chunnt, dr Summer chunnt – was will mr meh?',
+  'Bald goht\'s wieder an dr Rhi go bade. Ich zähl scho d\'Däg.',
+], queue: [] }, FRUEHLING_ALLE = 35; // im Schnitt alle 35 s ein Versuch
+
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 export class Sprueche {
@@ -111,6 +123,10 @@ export class Sprueche {
     }
     if (v && Math.abs(v.speed) > 5) return;
     if (this.ctx.quests.state.ansehen < 0) return; // mit schlechtem Ruf wird nur gemurrt (ansehen.js)
+    if (this.ctx.jahreszeit?.key === 'fruehling' && Math.random() < dt / FRUEHLING_ALLE) {
+      const who = this.speaker(null, WALKER, 0); // nur Fußgänger:innen
+      if (who) return this.speak(who, this.next(FRUEHLING));
+    }
     if (Math.random() < dt / SIMS_ALLE) {
       const who = this.speaker(null, WALKER, 0); // nur Fußgänger:innen, keine Ortsfigur
       if (who) {

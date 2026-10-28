@@ -87,6 +87,7 @@ import { buildLeodegarUmfeld } from './leodegar-umfeld.js';
 import { prepareLeodegar } from './leodegar-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 import { progress, step } from './ladebalken.js';
+import { chooseSeason, Jahreszeit, SONNE } from './jahreszeit.js';
 import { Fuhrpark } from './fuhrpark.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -121,7 +122,8 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-scene.add(new THREE.HemisphereLight(0xdfefff, 0x6b7a4a, 1.1));
+const hemi = new THREE.HemisphereLight(0xdfefff, 0x6b7a4a, 1.1); // Farben und Stärke je Jahreszeit (jahreszeit.js)
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2dd, 2.0);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -392,7 +394,7 @@ function updateCamera(dt) {
   }
   if (andacht.mode === 'tower') { // Glockenstube: Blick durch die Schallöffnungen
     const look = andacht.towerCamera(camera);
-    sun.position.set(look.x + 80, 150, look.z + 50);
+    sun.position.set(look.x + SONNE[0], SONNE[1], look.z + SONNE[2]);
     sun.target.position.copy(look);
     return;
   }
@@ -447,7 +449,7 @@ function updateCamera(dt) {
   drunk.applyCamera(camera);
 
   // Schattenbereich folgt dem Spieler
-  sun.position.set(camTarget.x + 80, 150, camTarget.z + 50);
+  sun.position.set(camTarget.x + SONNE[0], SONNE[1], camTarget.z + SONNE[2]); // Sonnenstand je Jahreszeit
   sun.target.position.copy(camTarget);
 }
 
@@ -603,6 +605,8 @@ document.getElementById('loading').remove();
 document.getElementById('join-status')?.classList.add('ready');
 progress(1, 'Bamlach ist bereit – los geht\'s!');
 const multiplayer = new Multiplayer(scene, world, await playerName);
+chooseSeason(); // im selben Dialog gewählt, vor dem ersten Bild (Shader)
+const jahreszeit = new Jahreszeit({ scene, hemi, sun, renderer, vehicles }); // Licht, Regen/Schnee, freier Himmel
 sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
 multiplayer.onTakeover = takeOver;
@@ -637,7 +641,7 @@ function headTop() {
 }
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel }; // zum Debuggen in der Konsole
+window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel, jahreszeit }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const fuhrpark = window.game.fuhrpark = new Fuhrpark({ scene, world, player, vehicles, carry, quests }); // gekaufte Fahrzeuge (Dorfpass, J)
 window.game.statics = statics;
@@ -739,6 +743,7 @@ function frame() {
   if (bigmap.open) bigmap.draw(player.pos.x, player.pos.z, player.car ? player.car.heading : riding() ? riding().car.heading : player.facing, multiplayer.others, quests.markers);
 
   statics.update(camera); // Bewegtes aus dem Verbund lösen, ferne Kleinteile für dieses Bild verstecken
+  jahreszeit.update(dt, camera, camTarget, camera.layers.mask | (1 << ROOF_LAYER)); // Wetter, Tiefenkarte von oben
   renderer.render(scene, camera);
   statics.afterRender();
   drunk.afterRender();
