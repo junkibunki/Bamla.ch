@@ -1,6 +1,7 @@
-// Jahreszeiten: Auswahl im Namensdialog (index.html, gemerkt im Browser, ?jahreszeit=winter geht auch).
-// Sommer ist das Dorf wie gebaut. Für die anderen hängt sich ein Shader-Zusatz an alle beleuchteten Materialien
-// (Material.prototype.onBeforeCompile, greift beim ersten Bild nach dem Dialog) und färbt nach Weltlage und Farbe um:
+// Jahreszeiten: Auswahl im Namensdialog (index.html, gemerkt im Browser, ?jahreszeit=winter geht auch), im Spiel
+// ohne Neuladen im Dorfpass (J) wechselbar. Sommer ist das Dorf wie gebaut. Für die anderen hängt sich ein
+// Shader-Zusatz an alle beleuchteten Materialien (Material.prototype.onBeforeCompile, greift beim ersten Bild nach dem
+// Dialog, beim Wechsel werden alle Shader neu gebaut) und färbt nach Weltlage und Farbe um:
 // - Frühling: frisches Grün, blühende Bäume (weiß/rosa), Löwenzahn und Gänseblümchen in den Wiesen
 // - Herbst: Laub gelb, orange, rot und braun, Wiesen strohig mit Blättern, goldenes tiefes Licht, manchmal Regen
 // - Winter: Schnee auf allem, was nach oben schaut und freien Himmel hat, geräumte Straßen, manchmal Schneefall
@@ -15,11 +16,11 @@ const STORE = 'bamla.jahreszeit';
 // sky: Himmel und Nebel, hemi: [Himmel, Boden, Stärke], sun: [Farbe, Stärke], sonne: Versatz der Sonne zur Kamera
 // (Höhe = Sonnenstand), wetter: Niederschlag ('regen' | 'schnee'), trueb: Himmel bei Niederschlag
 export const JAHRESZEITEN = {
-  fruehling: { name: 'Frühling', code: 1, sky: 0xa6d3f4, fogNear: 100, hemi: [0xe8f5ff, 0x7d9a52, 1.15], sun: [0xfff8ea, 2.05], sonne: [80, 150, 50] },
-  sommer: { name: 'Sommer', code: 0, sky: 0x9cc7e8, fogNear: 90, hemi: [0xdfefff, 0x6b7a4a, 1.1], sun: [0xfff2dd, 2.0], sonne: [80, 150, 50] },
-  herbst: { name: 'Herbst', code: 2, sky: 0xc9d3d8, fogNear: 70, hemi: [0xf2e2c6, 0x6e5a36, 1.0], sun: [0xffc47a, 2.15], sonne: [120, 95, 60],
+  fruehling: { name: 'Frühling', icon: '🌸', code: 1, sky: 0xa6d3f4, fogNear: 100, hemi: [0xe8f5ff, 0x7d9a52, 1.15], sun: [0xfff8ea, 2.05], sonne: [80, 150, 50] },
+  sommer: { name: 'Sommer', icon: '☀️', code: 0, sky: 0x9cc7e8, fogNear: 90, hemi: [0xdfefff, 0x6b7a4a, 1.1], sun: [0xfff2dd, 2.0], sonne: [80, 150, 50] },
+  herbst: { name: 'Herbst', icon: '🍂', code: 2, sky: 0xc9d3d8, fogNear: 70, hemi: [0xf2e2c6, 0x6e5a36, 1.0], sun: [0xffc47a, 2.15], sonne: [120, 95, 60],
     wetter: 'regen', trueb: 0x8e98a0 },
-  winter: { name: 'Winter', code: 3, sky: 0xc6d2dd, fogNear: 60, hemi: [0xe6eeff, 0x9aa4ae, 1.05], sun: [0xfff1e2, 1.35], sonne: [130, 80, 70],
+  winter: { name: 'Winter', icon: '❄️', code: 3, sky: 0xc6d2dd, fogNear: 60, hemi: [0xe6eeff, 0x9aa4ae, 1.05], sun: [0xfff1e2, 1.35], sonne: [130, 80, 70],
     wetter: 'schnee', trueb: 0xb4bcc6 },
 };
 
@@ -37,14 +38,17 @@ const radios = [...document.querySelectorAll('#join input[name=jahreszeit]')];
   if (r) r.checked = true;
 }
 
-// Nach dem Absenden des Namensdialogs: gewählte Jahreszeit merken und gelten lassen
-export function chooseSeason() {
-  const key = radios.find((r) => r.checked)?.value;
+// Jahreszeit merken und gelten lassen (Shader, Sonnenstand)
+function setCurrent(key) {
   current = JAHRESZEITEN[key] ? key : 'sommer';
   try { localStorage.setItem(STORE, current); } catch { /* privater Modus */ }
   SONNE.splice(0, 3, ...JAHRESZEITEN[current].sonne);
+  for (const r of radios) r.checked = r.value === current;
   return current;
 }
+
+// Nach dem Absenden des Namensdialogs
+export function chooseSeason() { return setCurrent(radios.find((r) => r.checked)?.value); }
 
 // ---------- Shader-Zusatz ----------
 // gemeinsame Uniforms aller umgefärbten Materialien
@@ -128,20 +132,35 @@ const CODE = /* glsl */ `
 }
 `;
 
+// alle Materialien, die schon einen Shader haben: beim Wechsel neu bauen (auch die gerade nicht in der Szene)
+const compiled = [], seen = new WeakSet();
+function recompile() {
+  for (let i = compiled.length; i--;) {
+    const m = compiled[i].deref();
+    if (m) m.needsUpdate = true; else compiled.splice(i, 1);
+  }
+}
+
+// nur diese Materialien färbt der Zusatz um (sie haben vViewPosition im Fragment-Shader); Schatten-Tiefenmaterialien
+// u. Ä. behalten ihren Shader über einen Wechsel hinweg
+const seasonal = (mat) => !mat.userData.noSeason && (mat.isMeshLambertMaterial || mat.isMeshPhongMaterial || mat.isMeshStandardMaterial);
+
 function patch(shader, mat) {
-  if (!current || !JAHRESZEITEN[current].code || mat.userData.noSeason || mat.isShaderMaterial) return;
+  if (!seasonal(mat)) return;
+  if (!seen.has(mat)) { seen.add(mat); compiled.push(new WeakRef(mat)); }
+  // immer, auch im Sommer: three.js nimmt beim Zurückwechseln den alten Shader, aber die Uniforms des zuletzt gebauten
+  Object.assign(shader.uniforms, U);
+  if (!current || !JAHRESZEITEN[current].code) return;
   if (mat.transparent && mat.opacity < 0.99) return; // Glas, Wasser
   const fs = shader.fragmentShader;
-  // diese Materialien haben vViewPosition im Fragment-Shader
-  if (!(mat.isMeshLambertMaterial || mat.isMeshPhongMaterial || mat.isMeshStandardMaterial) || !fs.includes('#include <normal_fragment_maps>')) return;
-  Object.assign(shader.uniforms, U);
+  if (!fs.includes('#include <normal_fragment_maps>')) return;
   shader.fragmentShader = `#define SEASON ${JAHRESZEITEN[current].code}\n${mat.userData.geraeumt ? '#define SEASON_CLEARED\n' : ''}${mat.userData.keineBlueten ? '#define SEASON_NOBLOOM\n' : ''}`
     + fs.replace('void main() {', DECL + '\nvoid main() {').replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + CODE);
 }
 // Gilt für jedes Material ohne eigenes onBeforeCompile (und für die, die das alte weiterreichen: bahnhof-bb.js, rheintreppe.js)
 THREE.Material.prototype.onBeforeCompile = function (shader) { patch(shader, this); };
 THREE.Material.prototype.customProgramCacheKey = function () {
-  return this.onBeforeCompile.toString() + (current && !this.userData.noSeason ? current + (this.userData.geraeumt ? 'g' : '') + (this.userData.keineBlueten ? 'b' : '') : '');
+  return this.onBeforeCompile.toString() + (current && seasonal(this) ? current + (this.userData.geraeumt ? 'g' : '') + (this.userData.keineBlueten ? 'b' : '') : '');
 };
 
 // ---------- Freier Himmel: Tiefenkarte von oben ----------
@@ -270,23 +289,62 @@ class Niederschlag {
 export class Jahreszeit {
   // nach chooseSeason(): Licht setzen, Wetter und Tiefenkarte anlegen
   constructor({ scene, hemi, sun, renderer, vehicles }) {
-    this.key = current || 'sommer';
-    this.def = JAHRESZEITEN[this.key];
     Object.assign(this, { scene, hemi, sun, renderer });
-    this.sky = new THREE.Color(this.def.sky);
-    this.trueb = new THREE.Color(this.def.trueb ?? this.def.sky);
-    this.hemiSky = new THREE.Color(this.def.hemi[0]);
-    hemi.groundColor.set(this.def.hemi[1]);
+    this.sky = new THREE.Color();
+    this.trueb = new THREE.Color();
+    this.hemiSky = new THREE.Color();
     // Fahrzeuge behalten ihren Lack (ein grüner Traktor wird im Herbst nicht orange); Schnee bekommen sie nicht
     for (const v of vehicles) v.mesh?.traverse((o) => { for (const m of [o.material].flat()) if (m) m.userData.noSeason = true; });
-    this.snowMap = this.def.code >= 2 ? new SnowMap() : null;
-    this.precip = this.def.wetter ? new Niederschlag(scene, this.def.wetter) : null;
+    this.snowMap = null;  // erst angelegt, wenn Herbst oder Winter dran ist
+    this.precips = {};    // Regen und Schnee, je einmal angelegt
+    this.onChange = null; // (key) nach einem Wechsel, main.js: Aufgaben
+    this.use(current || 'sommer');
+  }
+
+  // Licht, Wetter und Tiefenkarte für eine Jahreszeit einrichten
+  use(key) {
+    this.key = key;
+    const d = this.def = JAHRESZEITEN[key];
+    this.sky.set(d.sky);
+    this.trueb.set(d.trueb ?? d.sky);
+    this.hemiSky.set(d.hemi[0]);
+    this.hemi.groundColor.set(d.hemi[1]);
+    this.snowOn = d.code >= 2;
+    if (this.snowOn) (this.snowMap ||= new SnowMap()).center = null; // neu zeichnen
+    else U.seasonSnowBox.value.z = 0;
+    if (this.precip) this.precip.obj.visible = false;
+    this.precip = d.wetter ? (this.precips[d.wetter] ||= new Niederschlag(this.scene, d.wetter)) : null;
     // Wetter: mal ja, mal nein; zu Beginn manchmal schon
     this.level = 0;
     this.on = !!this.precip && Math.random() < 0.35;
     if (this.on) this.level = 1;
     this.left = this.on ? 60 + Math.random() * 120 : 90 + Math.random() * 240;
     this.applyLight();
+  }
+
+  // Wechsel ohne Neuladen (Dorfpass): alle Shader neu bauen, parallel im Hintergrund. Bis sie fertig sind, bleibt das
+  // letzte Bild stehen (main.js zeichnet nicht, solange busy), sonst stünde das Spiel beim ersten Mal einige Sekunden.
+  set(key) {
+    if (!JAHRESZEITEN[key] || key === this.key) return;
+    setCurrent(key);
+    this.use(key);
+    recompile();
+    const job = this.busy = this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).then(() => { if (this.busy === job) this.busy = null; });
+    this.onChange?.(key);
+  }
+
+  // Abschnitt im Dorfpass (J)
+  renderPass(p, el) {
+    const box = el('div', 'qdorf qjz');
+    box.append(el('b', null, 'Jahreszeit'));
+    const row = el('div');
+    for (const [key, d] of Object.entries(JAHRESZEITEN)) {
+      const b = el('button', key === this.key ? 'on' : '', `${d.icon} ${d.name}`);
+      b.addEventListener('click', () => this.set(key));
+      row.append(b);
+    }
+    box.append(row);
+    p.append(box);
   }
 
   // 0 = trocken, 1 = voller Regen/Schneefall; zum Ausprobieren in der Konsole: game.jahreszeit.wetter(1)
@@ -309,6 +367,7 @@ export class Jahreszeit {
 
   // jeden Frame vor renderer.render
   update(dt, camera, pos, layers) {
+    this.camera = camera;
     if (this.precip) {
       if ((this.left -= dt) <= 0) this.wetter(!this.on);
       const target = this.on ? 1 : 0;
@@ -317,6 +376,6 @@ export class Jahreszeit {
       if (this.level !== before) this.applyLight();
       this.precip.update(dt, camera, this.level, this.renderer);
     }
-    this.snowMap?.update(this.renderer, this.scene, pos, layers, !this.snowMap.center);
+    if (this.snowOn) this.snowMap.update(this.renderer, this.scene, pos, layers, !this.snowMap.center);
   }
 }

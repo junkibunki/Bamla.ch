@@ -176,7 +176,7 @@ export class Quests {
     for (const d of defs) if (typeof d.board === 'object') boards.set(d.board.id, d.board);
     this.boards = [...boards.values()].filter((b) => defs.some((d) => (d.board?.id ?? d.board) === b.id));
     for (const b of this.boards) {
-      b.quests = defs.filter((d) => (d.board?.id ?? d.board) === b.id);
+      b.alle = b.quests = defs.filter((d) => (d.board?.id ?? d.board) === b.id); // quests: nur die der Jahreszeit
       b.mesh = buildBoard(scene, world, b);
       b.marker = markerSprite('!', '#ffd400');
       b.y = world.heightAt(b.x, b.z);
@@ -192,13 +192,8 @@ export class Quests {
   // Nach dem Aufbau der Welt: Aufgaben einrichten (ctx wie window.game)
   start(ctx) {
     this.ctx = { ...ctx, quests: this };
-    this.season = ctx.jahreszeit?.key ?? 'sommer';
-    for (const b of this.boards) b.quests = b.quests.filter((d) => this.inSeason(d)); // leere Aushänge bleiben stehen
-    for (const d of defs.filter((d) => this.inSeason(d))) {
-      const q = this.handle(d);
-      const upd = d.setup?.(this.ctx, q);
-      if (typeof upd === 'function') this.updates.set(d.id, upd);
-    }
+    this.eingerichtet = new Set();
+    this.setSeason(ctx.jahreszeit?.key ?? 'sommer');
     for (const id of this.state.unlocks) this.fireUnlock(id);
     // Belohnungen für alle Aufgaben: Kleidung, Hupen, Lack, Multiplayer; Grüßen und Dorffest; Postkarten
     this.belohnungen = new Belohnungen(this.ctx);
@@ -214,6 +209,19 @@ export class Quests {
   }
 
   inSeason(d) { return (d.jahreszeit ?? 'sommer') === (this.season ?? 'sommer'); }
+
+  // beim Start und nach einem Wechsel im Dorfpass (jahreszeit.js): Aushänge bestücken, Aufgaben der Jahreszeit einrichten
+  setSeason(key) {
+    this.season = key;
+    for (const b of this.boards) b.quests = b.alle.filter((d) => this.inSeason(d)); // leere Aushänge bleiben stehen
+    for (const d of defs.filter((d) => this.inSeason(d) && !this.eingerichtet.has(d.id))) {
+      this.eingerichtet.add(d.id);
+      const upd = d.setup?.(this.ctx, this.handle(d));
+      if (typeof upd === 'function') this.updates.set(d.id, upd);
+    }
+    this.renderTrack();
+    if (this.open === 'pass') this.renderPass(); else if (this.open) this.renderBoard(this.open);
+  }
 
   handle(d) {
     if (this.handles.has(d.id)) return this.handles.get(d.id);
@@ -414,7 +422,10 @@ export class Quests {
       }
     } else if (input.hit('KeyJ')) this.show('pass');
 
-    for (const [id, upd] of this.updates) if (this.handles.get(id).active) upd(dt); // angenommen oder nebenbei
+    for (const [id, upd] of this.updates) {
+      const h = this.handles.get(id);
+      if (h.active && this.inSeason(h.def)) upd(dt); // angenommen oder nebenbei, in der Jahreszeit
+    }
     this.belohnungen?.update(dt, input);
     this.ansehen?.update(dt);
     this.sprueche?.update(dt);

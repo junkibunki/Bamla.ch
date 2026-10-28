@@ -87,7 +87,7 @@ import { buildLeodegarUmfeld } from './leodegar-umfeld.js';
 import { prepareLeodegar } from './leodegar-site.js';
 import { GAIT_NAMES, gaitOf } from './pferd.js';
 import { progress, step } from './ladebalken.js';
-import { chooseSeason, Jahreszeit, SONNE } from './jahreszeit.js';
+import { chooseSeason, Jahreszeit, JAHRESZEITEN, SONNE } from './jahreszeit.js';
 import { Fuhrpark } from './fuhrpark.js';
 
 const playerName = askName(); // Namensdialog läuft, während die Welt lädt
@@ -644,6 +644,11 @@ const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && 
 window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel, jahreszeit }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const fuhrpark = window.game.fuhrpark = new Fuhrpark({ scene, world, player, vehicles, carry, quests }); // gekaufte Fahrzeuge (Dorfpass, J)
+quests.passSections.push((p, el) => jahreszeit.renderPass(p, el)); // Jahreszeit ohne Neuladen wechseln
+jahreszeit.onChange = (key) => {
+  quests.setSeason(key);
+  quests.toast(`${JAHRESZEITEN[key].icon} Jetzt ist ${JAHRESZEITEN[key].name} in Bamlach`);
+};
 window.game.statics = statics;
 const clock = new THREE.Clock();
 
@@ -744,7 +749,7 @@ function frame() {
 
   statics.update(camera); // Bewegtes aus dem Verbund lösen, ferne Kleinteile für dieses Bild verstecken
   jahreszeit.update(dt, camera, camTarget, camera.layers.mask | (1 << ROOF_LAYER)); // Wetter, Tiefenkarte von oben
-  renderer.render(scene, camera);
+  if (!jahreszeit.busy) renderer.render(scene, camera); // nach einem Wechsel der Jahreszeit erst, wenn die Shader fertig sind
   statics.afterRender();
   drunk.afterRender();
   input.endFrame();
