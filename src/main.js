@@ -63,7 +63,7 @@ import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
 import { Scheibenfeuer } from './scheibenfeuer.js';
 import { buildStationenweg, clearStationenweg } from './stationenweg.js';
-import { buildSchlittenhang } from './schlitten.js';
+import { buildSchlittenhang, Schlittenzug } from './schlitten.js';
 import { fixFusstunnel, buildFusstunnel, tunnelCamera } from './fusstunnel.js';
 import { buildReitzentrum } from './reitzentrum.js';
 import { buildRewe } from './rewe.js';
@@ -272,7 +272,8 @@ const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der 
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 const stationenweg = buildStationenweg(scene, world, player, pedestrians); // Kreuzweg zum Kalvarienberg: 14 Bildstöcke, Steinkreuz, Passanten erzählen
 pedestrians.push(stationenweg);
-pedestrians.push(buildSchlittenhang(scene, world, rng(1858))); // im Winter rodeln Kinder vom Stationenweg hinunter
+pedestrians.push(buildSchlittenhang(scene, world, rng(1858), { carry, quests, vehicles, player })); // im Winter rodeln Kinder vom Stationenweg hinunter (Schlitten klauen: E)
+const schlittenzug = new Schlittenzug({ scene, world, player, vehicles }); // Schlitten zu Fuß an der Leine ziehen (C)
 await step(0.78, 'Hecken, Mauern, Zäune und Blumen …', 0.88);
 buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
@@ -576,6 +577,7 @@ function updateHud(dt) {
       : multiplayer.footHint(player) || (n ? `E: ${n.name ?? NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');
   }
+  if (!v && schlittenzug.hint()) hud.hint.textContent = [hud.hint.textContent, schlittenzug.hint()].filter(Boolean).join(' · ');
   streetTimer -= dt;
   if (streetTimer <= 0) {
     streetTimer = 0.4;
@@ -727,6 +729,7 @@ function frame() {
   if (player.car) player.pos.set(player.car.x, 0, player.car.z);
   else if (riding()) player.pos.set(riding().car.x, 0, riding().car.z);
   else if (!resting) player.update(dt, editing ? IDLE : sport.noJump ? NOJUMP : input, cam.yaw, world, movers);
+  schlittenzug.update(dt, editing ? IDLE : input); // gezogener Schlitten folgt der Figur
   andacht.update(dt, editing ? IDLE : input, player);
   sport.update(dt, editing ? IDLE : input, player);
   kirche.innen.update(dt, player); // Portaltüren

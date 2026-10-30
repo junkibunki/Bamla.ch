@@ -2,13 +2,15 @@
 // bergab: Hangabtrieb entlang der Kufen, wenig Reibung auf Schnee, viel auf geräumten Straßen, und ohne Schnee (außer im
 // Winter) rutscht er gar nicht. A/D lenken (ein Fuß schleift), S/Leertaste bremsen (beide Füße), W schubst im Stand mit
 // den Händen an (höchstens Schritttempo, nicht bergauf). Steht er schräg am Hang, dreht er sich zur Falllinie.
+// Zu Fuß zieht man ihn mit C an der Leine hinter sich her (Schlittenzug).
 // Dazu im Winter Kinder am Schlittenhang: vom Abzweig am Stationenweg den Feldweg hinunter zur Straße (gut 11 m tiefer,
 // oben flach, in der Mitte steil), danach ziehen sie den Schlitten wieder hinauf.
 import * as THREE from 'three';
-import { KINDS } from './vehicles.js';
+import { KINDS, Vehicle } from './vehicles.js';
 import { buildPerson, animateWalk } from './person.js';
 import { isFeldweg } from './surfaces.js';
 import { jahreszeitJetzt } from './jahreszeit.js';
+import { speechBubble } from './schloss.js';
 
 // Feldweg (OSM) vom Abzweig am Stationenweg zur Straße; OBEN/UNTEN: Anfang und Ende der Abfahrt
 export const HANG = [[-10.4, 579.2], [10.8, 560.7], [26.4, 543.1], [34.6, 536.8], [49, 521.1], [75.2, 504.5]];
@@ -129,9 +131,64 @@ KINDS.schlitten = {
   },
 };
 
+// ---------- Hinter sich herziehen (C) ----------
+const LEINE = 1.9; // m von der Hand bis zur Schlittenspitze
+
+export class Schlittenzug {
+  constructor({ scene, world, player, vehicles }) {
+    Object.assign(this, { world, player, vehicles });
+    this.v = null; // gezogener Schlitten
+    this.seil = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 1), M.seil);
+    this.seil.visible = false;
+    scene.add(this.seil);
+  }
+
+  // gekaufter oder geklauter Schlitten in Griffweite (zu Fuß)
+  near() {
+    const p = this.player;
+    if (p.car) return null;
+    let best = null, bd = 2.4;
+    for (const v of this.vehicles) {
+      const d = v.kind === 'schlitten' && !v.remote ? Math.hypot(v.x - p.pos.x, v.z - p.pos.z) : Infinity;
+      if (d < bd) { bd = d; best = v; }
+    }
+    return best;
+  }
+
+  hint() { return this.v ? 'C: Schlitten loslassen' : this.near() ? 'C: Schlitten ziehen' : ''; }
+
+  // nach player.update: die Figur geht, der Schlitten folgt an der Leine, Spitze voraus
+  update(dt, input) {
+    const p = this.player;
+    if (input.hit('KeyC')) this.v = this.v ? null : this.near();
+    const v = this.v;
+    if (v && (p.car || v.remote || Math.hypot(v.x - p.pos.x, v.z - p.pos.z) > LEINE + 4)) this.v = null; // aufgesessen, Schnellreise
+    this.seil.visible = !!this.v;
+    if (!this.v) return;
+    const arm = p.mesh.armL;
+    arm.rotation.x = 0.45; // linke Hand hinten am Seil
+    const hand = arm.localToWorld(new THREE.Vector3(0, -0.68, 0));
+    const dx = hand.x - v.x, dz = hand.z - v.z, d = Math.hypot(dx, dz) || 1;
+    v.heading = Math.atan2(dx, dz);
+    if (d > LEINE) { v.x = hand.x - (dx / d) * LEINE; v.z = hand.z - (dz / d) * LEINE; }
+    const c = this.world.collide(v.x, v.z, v.k.r, v.y);
+    if (c) { v.x += c[0]; v.z += c[1]; }
+    v.speed = 0;
+    const tip = new THREE.Vector3(v.x + v.fx * 0.62, (v.y ?? 0) + 0.28, v.z + v.fz * 0.62);
+    this.seil.position.copy(tip).add(hand).multiplyScalar(0.5);
+    this.seil.scale.z = tip.distanceTo(hand);
+    this.seil.lookAt(hand);
+  }
+}
+
 // ---------- Kinder am Schlittenhang (nur im Winter) ----------
+// Wer einem Kind oben oder beim Hochziehen den Schlitten klaut (E), verliert Ansehen; das Kind bleibt schimpfend stehen.
+// Stellt man den Schlitten wieder neben das Kind, nimmt es ihn zurück (ein bisschen Ansehen zurück). Geht man weit weg,
+// bekommt es von den Eltern einen neuen, und der geklaute bleibt einem bis zum Neuladen.
 const KID = 0.58;
 const LAUF = 1.2; // m/s beim Hochziehen
+const NAMEN = ['Lena', 'Jonas', 'Mia'];
+const SCHIMPFEN = ['He! Des isch mii Schlitte!', 'Gib en sofort zrugg!', 'Mamaaa! Ebber het mer de Schlitte gnoh!', 'Sowas macht mer nit!'];
 
 // Weg als Lauflänge s: Punkt, Richtung und Normale (links)
 function strecke(pts) {
@@ -149,23 +206,60 @@ function strecke(pts) {
   return { L, at };
 }
 
-export function buildSchlittenhang(scene, world, rand = Math.random) {
+export function buildSchlittenhang(scene, world, rand, { carry, quests, vehicles, player }) {
   const P = strecke(HANG.slice(1)), H = (x, z) => world.heightAt(x, z);
   const grp = new THREE.Group();
   scene.add(grp);
   const kids = [];  // d: Abstand neben dem Feldweg (links +), damit sie im Schnee fahren
+  const sag = (k, text) => { k.bubble.say(text); k.say = 4; };
+  const schimpf = (k) => sag(k, SCHIMPFEN[Math.floor(rand() * SCHIMPFEN.length)]);
+
+  function klauen(k) {
+    const a = P.at(k.s, k.d), v = new Vehicle(scene, 'schlitten', a.x, a.z, k.sled.rotation.y, k.color);
+    v.name = 'Schlitten';
+    v.y = H(a.x, a.z);
+    vehicles.push(v);
+    k.dieb = v;
+    k.mode = 'beklaut';
+    k.sled.visible = false;
+    animateWalk(k.p, 0, 0);
+    schimpf(k);
+    quests.addAnsehen(-5, `${k.name} den Schlitten geklaut`);
+  }
+  // Schlitten neben das Kind gestellt: zurück; man ist weit weg: einen neuen von den Eltern
+  function wiederDa(k, zurueck) {
+    if (zurueck) {
+      const i = vehicles.indexOf(k.dieb);
+      if (i >= 0) vehicles.splice(i, 1);
+      scene.remove(k.dieb.mesh);
+      sag(k, 'Merci! Aber s nächscht Mol frogsch zerscht, gell.');
+      quests.addAnsehen(3, `${k.name} den Schlitten zurückgegeben`);
+    }
+    k.dieb = null;
+    k.fort = false;
+    k.sled.visible = true;
+    k.mode = k.s > 0 ? 'hoch' : 'warten';
+    k.t = 3;
+  }
+
   for (let i = 0; i < 3; i++) {
     const p = buildPerson(rand, [0xe8322d, 0x2f7fd0, 0xf6c826, 0x47b04b][i]);
     const muetze = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.42), lambert([0x2f7fd0, 0xe8322d, 0xffffff][i]));
     muetze.position.y = 2.12;
     p.add(muetze);
     p.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    const sled = schlitten([HOLZ, 0xc0392b, 0x2e86de][i]);
+    const color = [HOLZ, 0xc0392b, 0x2e86de][i], sled = schlitten(color);
     sled.scale.setScalar(0.8);
     const seat = new THREE.Group();
     sled.add(seat);
-    grp.add(sled, p);
-    kids.push({ p, sled, seat, d: [-3.5, 3, 5.5][i], s: 0, v: 0, mode: 'warten', t: 1 + i * 6 + rand() * 3, ph: 0 });
+    const halter = new THREE.Group(); // Sprechblase in voller Größe über dem Kind
+    grp.add(sled, p, halter);
+    const bubble = speechBubble(halter, NAMEN[i]);
+    bubble.sprite.position.y = 1.9;
+    const k = { name: NAMEN[i], p, sled, seat, halter, bubble, color, d: [-3.5, 3, 5.5][i], s: 0, v: 0, mode: 'warten', t: 1 + i * 6 + rand() * 3, ph: 0, say: 0 };
+    k.spot = carry.spot({ x: 0, z: 0, r: 2, when: () => grp.visible && (k.mode === 'warten' || k.mode === 'hoch'),
+      hint: () => `E: ${k.name} den Schlitten klauen`, act: () => klauen(k) });
+    kids.push(k);
   }
 
   const sitz = (k) => { // Kind auf den Schlitten setzen
@@ -187,6 +281,20 @@ export function buildSchlittenhang(scene, world, rand = Math.random) {
       grp.visible = jahreszeitJetzt() === 'winter';
       if (!grp.visible) return;
       for (const k of kids) {
+        if (k.say > 0 && (k.say -= dt) <= 0) k.bubble.sprite.visible = false;
+        if (k.mode === 'beklaut') {
+          const v = k.dieb, kx = k.p.position.x, kz = k.p.position.z, weg = Math.hypot(player.pos.x - kx, player.pos.z - kz);
+          const dv = Math.hypot(v.x - kx, v.z - kz);
+          if (dv > 6) k.fort = true; // erst weggebracht, dann zählt das Zurückstellen
+          if (k.fort && v !== player.car && dv < 2.5 && weg < 4) wiederDa(k, true);
+          else if (weg > 150) wiederDa(k, false);
+          else {
+            k.p.rotation.y = Math.atan2(player.pos.x - kx, player.pos.z - kz); // schaut dem Dieb hinterher
+            k.p.armR.rotation.x = -2.6 + Math.sin(k.ph += dt * 9) * 0.3;     // droht mit der Faust
+            if (k.say <= 0 && rand() < dt * 0.15) schimpf(k);
+            continue;
+          }
+        }
         if (k.mode === 'warten' && (k.t -= dt) <= 0) { k.mode = 'fahren'; k.v = 0.8; sitz(k); }
         if (k.mode === 'fahren') {
           const a = P.at(k.s, k.d), b = P.at(k.s + 1, k.d), sl = H(b.x, b.z) - H(a.x, a.z);
@@ -204,10 +312,12 @@ export function buildSchlittenhang(scene, world, rand = Math.random) {
         const a = P.at(k.s, k.d), f = P.at(k.s + 0.6, k.d), r = P.at(k.s - 0.6, k.d), hoch = k.mode === 'hoch', sgn = hoch ? -1 : 1;
         k.sled.position.set(a.x, H(a.x, a.z), a.z);
         k.sled.rotation.set(-sgn * Math.atan2(H(f.x, f.z) - H(r.x, r.z), 1.2), a.h + (hoch ? Math.PI : 0), 0, 'YXZ');
+        Object.assign(k.spot, { x: a.x, z: a.z }); // E: klauen, wo der Schlitten gerade ist
         if (k.mode === 'fahren') continue;
         // zu Fuß: zieht den Schlitten 1,4 m hinter sich bergauf (rechte Hand am Seil), oben wartet es daneben
         const q = hoch ? P.at(k.s - 1.4, k.d) : P.at(k.s, k.d + 0.9);
         k.p.position.set(q.x, H(q.x, q.z), q.z);
+        k.halter.position.copy(k.p.position);
         k.p.rotation.y = a.h + (hoch ? Math.PI : -Math.PI / 2);
         animateWalk(k.p, k.ph, hoch ? 0.6 : 0);
         k.p.armR.rotation.x = hoch ? -0.5 : -0.3;

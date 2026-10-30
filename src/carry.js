@@ -217,9 +217,10 @@ export class Carry {
   changed() { this.save(); this.render(); }
 
   // ---------- Orte ----------
-  spot(s) {
-    this.spots.push({ r: 2.2, ...s });
-    return s;
+  spot(s) { // gibt den gespeicherten Ort zurück: x/z lassen sich nachführen (Kinder am Schlittenhang)
+    const o = { r: 2.2, ...s };
+    this.spots.push(o);
+    return o;
   }
   near(player) {
     if (player.car || this.eating > 0) return null;
