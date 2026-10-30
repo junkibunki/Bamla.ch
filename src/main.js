@@ -612,7 +612,7 @@ progress(1, 'Bamlach ist bereit – los geht\'s!');
 const multiplayer = new Multiplayer(scene, world, await playerName);
 chooseSeason(); // im selben Dialog gewählt, vor dem ersten Bild (Shader)
 const jahreszeit = new Jahreszeit({ scene, hemi, sun, renderer, vehicles }); // Licht, Regen/Schnee, freier Himmel
-const scheibenfeuer = new Scheibenfeuer(scene, world, { cam, camera, quests, jahreszeit, name: () => multiplayer.name }); // nur im Winter: Fasnachtsfeuer, Scheibenschlagen
+const scheibenfeuer = new Scheibenfeuer(scene, world, { cam, camera, quests, carry, jahreszeit, name: () => multiplayer.name }); // nur im Winter: Fasnachtsfeuer, Scheibenschlagen
 sport.games.push(scheibenfeuer);
 sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen

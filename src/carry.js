@@ -124,6 +124,15 @@ Object.assign(ITEMS, {
   } },
 });
 
+// Winter: Zelt am Fasnachtsfeuer (scheibenfeuer.js)
+Object.assign(ITEMS, {
+  punsch: { name: 'Heißer Punsch', icon: '☕', hold: 'hand', eat: 'trinken', build(g) {
+    cyl(g, 0.04, 0.035, 0.09, 0xf2ecd8, 0, 0, 0);                  // Tasse
+    cyl(g, 0.036, 0.036, 0.005, 0x8a1e1e, 0, 0.044, 0);           // Punsch
+    box(g, 0.012, 0.05, 0.02, 0xf2ecd8, 0.045, 0, 0);              // Henkel
+  } },
+});
+
 export const VOUCHERS = {
   freibier: { name: 'Freibier im Storchen', icon: '🎟' },
   freiessen: { name: 'Freiessen beim Metzger', icon: '🎟' },

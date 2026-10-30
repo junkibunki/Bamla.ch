@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { buildPerson, animateWalk } from './person.js';
 import { RideSwing } from './swing.js';
+import { jahreszeitJetzt } from './jahreszeit.js';
 
 // Lokales Achsenkreuz: Ursprung o, u-Achse um a Grad gegen die x-Achse gedreht (Richtung z positiv), v = u um 90° weiter.
 // Eine Gruppe mit rotation.y = rot hat ihre lokale x-Achse entlang u und die lokale z-Achse entlang v.
@@ -23,7 +24,7 @@ const FIRE = frame([-473.8, 214.6], 25);      // Feuerstelle im Kiesrund (OSM am
 const PINGPONG = frame([-464.5, 207.3], -47.4); // Betonplatte nördlich der Hütte
 const SWING = frame([-455.0, 214.2], 115);    // Nestschaukel östlich der Hütte, Querbalken entlang u
 const VOLLEY = frame([-444.8, 220.0], 124);   // OSM-Fläche sport=volleyball, u = lange Seite (19,7 × 9,8 m)
-const BOLZ = frame([-484.5, 193.6], 122.6);   // OSM-Fläche sport=soccer, u = lange Seite (32,3 × 15,9 m)
+export const BOLZ = frame([-484.5, 193.6], 122.6); // OSM-Fläche sport=soccer, u = lange Seite (32,3 × 15,9 m); im Winter Zelt (scheibenfeuer.js)
 // Sandkasten = OSM leisure=playground
 const SANDPIT = [[-469.8, 197], [-469.3, 195.6], [-468.4, 194.9], [-467.4, 194.5], [-466.4, 194.5], [-465.5, 194.8], [-464.6, 195.6],
   [-464.2, 197], [-464.6, 198.2], [-466, 199.7], [-467.6, 201.2], [-468.7, 202.5], [-469.6, 202.5], [-470.5, 202.3], [-471, 201.8],
@@ -855,7 +856,10 @@ export function buildGrillplatz(scene, world) {
       volley.update(dt, onFoot ? VOLLEY.toUV(pp.x, pp.z) : null);
       const fu = onFoot ? BOLZ.toUV(pp.x, pp.z) : null;
       const fv = [vel[0] * BOLZ.U[0] + vel[1] * BOLZ.U[1], vel[0] * BOLZ.V[0] + vel[1] * BOLZ.V[1]];
-      football.update(dt, fu, fv);
+      const winter = jahreszeitJetzt() === 'winter'; // im Winter bolzt niemand, auf dem Platz steht das Zelt am Fasnachtsfeuer
+      football.mesh.visible = !winter;
+      for (const k of football.kids) k.mesh.visible = !winter;
+      if (!winter) football.update(dt, fu, fv);
     },
   };
 }

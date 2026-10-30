@@ -8,15 +8,17 @@
 // die Glut, E am Bock: A/D zielen, W/S Abschusswinkel, Leertaste halten (Kraft pendelt) und loslassen. Die Kamera
 // fliegt mit. Frankreich beginnt in der Mitte des Restrheins, gut 600 m westlich und 60 m tiefer
 // (Aufgabe quests/scheibenschlagen.js); Wind aus Osten trägt die Scheibe weiter, Westwind bremst sie.
+// Auf dem Bolzplatz nebenan steht ein Zelt mit Grillwürsten und heißem Punsch (E/R), dort bolzt im Winter niemand.
 import * as THREE from 'three';
 import { buildPerson } from './person.js';
 import { speechBubble } from './schloss.js';
 import { canvasTex, mat, box } from './bauteile.js';
 import { wetAt } from './wasser.js';
+import { BOLZ } from './grillplatz.js';
 
-export const FEUER = [-500.5, 166.5];   // Mitte des Feuers auf der kahlen Fläche
-export const STAPEL = [-505.8, 183.2];  // Scheiben und Haselstecken
-export const BOCK = [-511.0, 178.4];    // Mitte des Scheibenbocks an der Hangkante
+export const FEUER = [-501.5, 172.0];   // Mitte des Feuers auf der kahlen Fläche
+export const STAPEL = [-504.5, 199.5];  // Scheiben und Haselstecken, am Südende der Fläche
+export const BOCK = [-511.0, 205.0];    // Mitte des Scheibenbocks an der Hangkante, südlich vom Waldstück (freie Bahn)
 const AIM0 = Math.atan2(-1138 - BOCK[0], 159 - BOCK[1]); // Grundrichtung: zum Restrhein (fast genau West)
 const AIM_MAX = 0.6;                    // so weit lässt sich der Bock drehen
 const G = 9.81;
@@ -112,7 +114,7 @@ function inFrance(world, x, z) {
 }
 
 export class Scheibenfeuer {
-  constructor(scene, world, { cam, camera, quests, jahreszeit, name }) {
+  constructor(scene, world, { cam, camera, quests, carry, jahreszeit, name }) {
     Object.assign(this, { world, cam, camera, quests, jahreszeit, name });
     this.hud = document.getElementById('sport-hud');
     this.g = new THREE.Group();
@@ -131,6 +133,7 @@ export class Scheibenfeuer {
     this.buildBock();
     this.buildStapel();
     this.buildPeople();
+    this.buildZelt(carry);
     this.stick = stick();
     this.stick.visible = false;
     this.v = new THREE.Vector3();
@@ -147,64 +150,71 @@ export class Scheibenfeuer {
     f.position.set(fx, y, fz);
     this.g.add(f);
     // Asche und geschmolzener Schnee rund ums Feuer
-    const ash = new THREE.Mesh(new THREE.CircleGeometry(6.5, 28).rotateX(-Math.PI / 2),
+    const ash = new THREE.Mesh(new THREE.CircleGeometry(8.5, 32).rotateX(-Math.PI / 2),
       noSeason(new THREE.MeshLambertMaterial({ color: 0x3b3430, polygonOffset: true, polygonOffsetFactor: -2 })));
     ash.position.y = 0.04;
-    const wet = new THREE.Mesh(new THREE.RingGeometry(6.4, 10, 32).rotateX(-Math.PI / 2),
+    const wet = new THREE.Mesh(new THREE.RingGeometry(8.4, 13, 36).rotateX(-Math.PI / 2),
       noSeason(new THREE.MeshLambertMaterial({ color: 0x6a5f50, transparent: true, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -1, depthWrite: false })));
     wet.position.y = 0.03;
     f.add(ash, wet);
-    // Holzstoß (3–4 m hoch, knapp 6 m breit): Scheiter und Äste schräg gegen die Mitte, außen schon angekohlt, darunter die Glut
+    // Holzstoß gut 10 m breit und 4–5 m hoch: innen ein Kegel aus langen Scheitern, außen ein Ring aus schräg
+    // angelehnten Stämmen und Reisig, unten ein Haufen Reisig und Glut; außen schon angekohlt
     const char = noSeason(new THREE.MeshLambertMaterial({ color: 0x241a14, emissive: 0x3a1004 }));
     const wood = noSeason(new THREE.MeshLambertMaterial({ color: 0x5a4532, emissive: 0x1a0800 }));
-    const logGeo = new THREE.CylinderGeometry(0.09, 0.13, 1, 6).translate(0, 0.5, 0);
+    const logGeo = new THREE.CylinderGeometry(0.1, 0.15, 1, 6).translate(0, 0.5, 0);
     const r = (i) => (Math.sin(i * 127.1) * 43758.5453) % 1;
-    for (let i = 0; i < 80; i++) {
-      const a = i * 2.39996 + r(i) * 0.3, ring = 1.5 + Math.abs(r(i + 7)) * 1.4, len = 3.4 + Math.abs(r(i + 3)) * 1.4;
-      const log = new THREE.Mesh(logGeo, i % 3 ? char : wood);
-      log.scale.set(1 + Math.abs(r(i + 9)), len, 1 + Math.abs(r(i + 9)));
+    const lean = (i, ring, len, top) => { // Stamm bei ring, oben in Richtung Mitte geneigt, Spitze auf Höhe top
+      const a = i * 2.39996 + r(i) * 0.3, log = new THREE.Mesh(logGeo, i % 3 ? char : wood), s = 1 + Math.abs(r(i + 9)) * 0.8;
+      log.scale.set(s, len, s);
       log.position.set(Math.cos(a) * ring, 0, Math.sin(a) * ring);
       log.rotation.set(0, -a, 0);
-      log.rotateZ(Math.PI / 2 - Math.atan2(len * 0.85, ring)); // oben zur Mitte geneigt
+      log.rotateZ(Math.acos(Math.min(1, top / len))); // oben zur Mitte geneigt
       f.add(log);
-    }
-    for (let i = 0; i < 14; i++) { // umgefallene Scheiter am Rand
-      const a = i * 0.45 + 0.2, log = new THREE.Mesh(logGeo, char);
-      log.scale.set(1.3, 1.8 + Math.abs(r(i + 20)) * 1.2, 1.3);
-      log.position.set(Math.cos(a) * 3.2, 0.12, Math.sin(a) * 3.2);
+    };
+    for (let i = 0; i < 70; i++) lean(i, 1.2 + Math.abs(r(i + 7)) * 1.8, 4.6 + Math.abs(r(i + 3)) * 1.2, 4 + Math.abs(r(i + 5)) * 0.8);
+    for (let i = 70; i < 160; i++) lean(i, 3.2 + Math.abs(r(i + 7)) * 1.8, 3.2 + Math.abs(r(i + 3)) * 1.6, 1.6 + Math.abs(r(i + 5)) * 1.4);
+    const reisig = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), char);
+    reisig.scale.set(4.6, 1.5, 4.6);
+    f.add(reisig);
+    for (let i = 0; i < 22; i++) { // umgefallene Scheiter am Rand
+      const a = i * 0.29 + 0.2, log = new THREE.Mesh(logGeo, char);
+      log.scale.set(1.4, 2 + Math.abs(r(i + 20)) * 1.6, 1.4);
+      log.position.set(Math.cos(a) * (5.2 + Math.abs(r(i + 30))), 0.14, Math.sin(a) * (5.2 + Math.abs(r(i + 30))));
       log.rotation.set(0, -a + 1.2, Math.PI / 2);
       f.add(log);
     }
-    const glut = new THREE.Mesh(new THREE.ConeGeometry(3.1, 0.9, 16, 1), noSeason(new THREE.MeshBasicMaterial({ color: 0xc8400c })));
-    glut.position.y = 0.4;
+    const glut = new THREE.Mesh(new THREE.ConeGeometry(5.3, 1.3, 20, 1), noSeason(new THREE.MeshBasicMaterial({ color: 0xc8400c })));
+    glut.position.y = 0.55;
     f.add(glut);
     this.glut = glut;
-    // Flammen: offene Kegel, additiv, flackern
-    this.flames = [[0xff4a08, 0.5, 2.6, 5.0], [0xff7a18, 0.55, 2.0, 6.2], [0xffb030, 0.6, 1.4, 4.4], [0xff6010, 0.45, 1.7, 5.6],
-      [0xff9a28, 0.5, 1.2, 3.8], [0xffc850, 0.55, 0.8, 3.0], [0xff5a10, 0.45, 1.5, 4.8]].map(([c, o, rr, h], i) => {
+    // Flammen über die ganze Breite: offene Kegel, additiv, flackern; in der Mitte die höchsten
+    const FL = [[0xff4a08, 0.5, 3.6, 7.5, 0], [0xff7a18, 0.55, 2.8, 9.0, 0.6], [0xffb030, 0.6, 2.0, 6.5, 0.4], [0xff6010, 0.45, 2.4, 8.0, 1.2],
+      [0xff9a28, 0.5, 2.0, 5.5, 2.4], [0xffc850, 0.55, 1.3, 4.5, 1.0], [0xff5a10, 0.45, 2.2, 6.0, 2.8], [0xff8a20, 0.5, 1.8, 5.0, 3.2],
+      [0xff6a14, 0.45, 1.9, 4.8, 3.4], [0xffa030, 0.5, 1.5, 4.2, 2.0], [0xff4a08, 0.45, 2.0, 5.2, 3.0], [0xffc050, 0.5, 1.1, 3.6, 3.6]];
+    this.flames = FL.map(([c, o, rr, h, d], i) => {
       const m = new THREE.Mesh(new THREE.ConeGeometry(rr, h, 10, 1, true).translate(0, h / 2, 0), additive(c, o));
-      m.position.set(Math.cos(i * 2.1) * 0.8, 0.5, Math.sin(i * 2.1) * 0.8);
+      m.position.set(Math.cos(i * 2.4) * d, 0.6, Math.sin(i * 2.4) * d);
       f.add(m);
       return m;
     });
     const dot = dotTex();
     this.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: 0xff7a30, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-    this.halo.scale.set(15, 15, 1);
-    this.halo.position.y = 3;
+    this.halo.scale.set(26, 20, 1);
+    this.halo.position.y = 4.5;
     // Schein auf dem Schnee
-    this.shine = new THREE.Mesh(new THREE.CircleGeometry(14, 28).rotateX(-Math.PI / 2),
+    this.shine = new THREE.Mesh(new THREE.CircleGeometry(22, 32).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ map: dot, color: 0xff6a20, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.shine.position.y = 0.08;
     f.add(this.halo, this.shine);
-    this.smoke = Array.from({ length: 12 }, (_, i) => {
+    this.smoke = Array.from({ length: 16 }, (_, i) => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: 0x707070, transparent: true, opacity: 0, depthWrite: false }));
-      s.age = i / 12;
+      s.age = i / 16;
       f.add(s);
       return s;
     });
     this.level = 1; // Löschwasser (Feuerwehr) drückt das Feuer herunter, nach einer Minute brennt es wieder
     this.outFor = 0;
-    this.obst = this.obstacle(fx, fz, 3.1, 3.5);
+    this.obst = this.obstacle(fx, fz, 5.4, 4.5);
   }
 
   buildBock() {
@@ -258,7 +268,7 @@ export class Scheibenfeuer {
     this.people = [];
     const angs = [0.4, 1.0, 1.6, 2.3, 4.0, 4.7, 5.4];
     angs.forEach((a, i) => {
-      const m = buildPerson(rnd), r = 7.0 + rnd() * 1.2;
+      const m = buildPerson(rnd), r = 10 + rnd() * 1.5;
       const x = FEUER[0] + Math.cos(a) * r, z = FEUER[1] + Math.sin(a) * r;
       m.position.set(x, this.H(x, z), z);
       m.rotation.y = Math.atan2(FEUER[0] - x, FEUER[1] - z);
@@ -273,6 +283,88 @@ export class Scheibenfeuer {
     this.talkT = 3;
   }
 
+  // Zelt auf dem Bolzplatz, Front zum Feuer: Theke, Grill mit Würsten, Punschtopf, Lichterkette, Verkäuferin
+  buildZelt(carry) {
+    const g = new THREE.Group(), [zx, zz] = BOLZ.P(-6, 4);
+    g.position.set(zx, this.H(zx, zz), zz);
+    g.rotation.y = BOLZ.rot; // lokal x entlang u, +z (vorne) entlang v Richtung Feuer
+    const white = mat(0xf2f2ee), red = mat(0xb8262b), metal = mat(0x9aa0a6), wood = mat(0x8a6a48);
+    for (const [px, pz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) box(g, 0.06, 2.5, 0.06, metal, px, 1.25, pz);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.0, 4, 1).rotateY(Math.PI / 4), red);
+    roof.position.y = 3.0;
+    g.add(roof);
+    box(g, 3.0, 2.5, 0.03, white, 0, 1.25, -1.5);  // Rückwand und Seiten, vorne offen
+    box(g, 0.03, 2.5, 3.0, white, -1.5, 1.25, 0);
+    box(g, 0.03, 2.5, 3.0, white, 1.5, 1.25, 0);
+    const sign = noSeason(new THREE.MeshLambertMaterial({ map: canvasTex(512, 64, (c, w, h) => {
+      for (let i = 0; i < 16; i++) { c.fillStyle = i % 2 ? '#b8262b' : '#f2f2ee'; c.fillRect((i * w) / 16, 0, w / 16, 10); }
+      c.fillStyle = '#f2f2ee'; c.fillRect(0, 10, w, h - 10);
+      c.fillStyle = '#7a1a1a'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.fillText('Würscht & Punsch', w / 2, 52);
+    }) }));
+    box(g, 3.04, 0.36, 0.03, sign, 0, 2.32, 1.52);
+    box(g, 2.6, 1.0, 0.5, wood, 0, 0.5, 1.1);       // Theke
+    box(g, 2.7, 0.05, 0.6, mat(0xa58560), 0, 1.02, 1.1);
+    // Grill mit Glut und Würsten, Punschtopf mit Dampf
+    box(g, 0.8, 0.8, 0.45, mat(0x2a2a2a), -0.75, 0.4, 0.3);
+    box(g, 0.74, 0.04, 0.4, noSeason(new THREE.MeshBasicMaterial({ color: 0xd8501a })), -0.75, 0.81, 0.3);
+    for (let i = 0; i < 6; i++) {
+      const w = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.16, 3, 6), mat(0x8a3a1c));
+      w.rotation.z = Math.PI / 2;
+      w.position.set(-0.75 + (i % 3 - 1) * 0.22, 0.86, 0.3 + (i < 3 ? -0.08 : 0.08));
+      g.add(w);
+    }
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.2, 0.36, 12), metal);
+    pot.position.set(0.75, 1.23, 1.05);
+    g.add(pot);
+    for (let i = 0; i < 4; i++) box(g, 0.08, 0.1, 0.08, mat(0xf2ecd8), 0.25 + i * 0.12, 1.1, 1.2); // Tassen
+    const dot = dotTex();
+    this.dampf = Array.from({ length: 5 }, (_, i) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: 0xf2f2f2, transparent: true, opacity: 0, depthWrite: false }));
+      s.age = i / 5;
+      s.base = new THREE.Vector3(i % 2 ? 0.75 : -0.75, i % 2 ? 1.45 : 0.95, i % 2 ? 1.05 : 0.3);
+      g.add(s);
+      return s;
+    });
+    // Lichterkette vorne
+    const bulb = new THREE.MeshBasicMaterial({ color: 0xffd27a });
+    for (let i = 0; i <= 12; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), bulb);
+      b.position.set(-1.5 + (i * 3) / 12, 2.1 - Math.sin((i / 12) * Math.PI) * 0.12, 1.56);
+      g.add(b);
+    }
+    let seed = 99;
+    const v = buildPerson(() => ((seed = (seed * 16807) % 2147483647) / 2147483647), 0x2a5a8a);
+    v.position.set(0, 0, 0.35);
+    v.armL.rotation.x = v.armR.rotation.x = -0.4;
+    g.add(v);
+    this.vendor = { m: v, bubble: speechBubble(v, 'Gerda'), near: false, t: 0 };
+    this.g.add(g);
+    this.zeltObst = this.obstacle(zx, zz, 1.6, 2.7);
+    const [sx, sz] = BOLZ.P(-6, 6.3); // vor der Theke
+    const sell = (id, price, done) => { if (carry.buy(id, price, 'Gerda')) this.vendorSay(done); };
+    carry.spot({
+      x: sx, z: sz, r: 2.2, when: () => this.on,
+      hint: () => 'E: Grillwurst im Weckle (3,50 €) · R: Heißer Punsch (2,50 €)',
+      act: () => sell('grillwurst', 3.5, 'Mit Senf? Lon\'s der schmecke!'),
+      alt: () => sell('punsch', 2.5, 'Vorsicht, heiß! Des wärmt vo inne.'),
+    });
+  }
+
+  vendorSay(text) { this.vendor.bubble.say(text); this.vendor.t = 5; }
+
+  zelt(dt, player) {
+    const v = this.vendor, near = this.near(player, BOLZ.P(-6, 5), 7);
+    if (near && !v.near) this.vendorSay('E Wurscht im Weckle oder e heiße Punsch? Bi dere Kälti!');
+    v.near = near;
+    if (v.t > 0 && (v.t -= dt) <= 0) v.bubble.sprite.visible = false;
+    for (const s of this.dampf) {
+      s.age = (s.age + dt / 3) % 1;
+      s.position.copy(s.base).y += s.age * 1.2;
+      s.scale.setScalar(0.15 + s.age * 0.5);
+      s.material.opacity = 0.35 * Math.min(1, s.age * 5) * (1 - s.age);
+    }
+  }
+
   obstacle(x, z, r, h) {
     const ring = Array.from({ length: 10 }, (_, i) => [x + Math.cos(i * 0.628) * r, z + Math.sin(i * 0.628) * r]);
     this.world.addObstacle(ring, h);
@@ -285,7 +377,7 @@ export class Scheibenfeuer {
     if (on === this.on) return on;
     this.on = on;
     this.g.visible = on;
-    for (const o of [this.obst, this.bockObst, this.stapelObst]) this.world.heights[o.i] = on ? o.h : -1e9;
+    for (const o of [this.obst, this.bockObst, this.stapelObst, this.zeltObst]) this.world.heights[o.i] = on ? o.h : -1e9;
     if (!on) { this.drop(); for (const d of this.discs) d.mesh.removeFromParent(); this.discs = []; this.jahreszeit?.setNacht(0); }
     return on;
   }
@@ -293,7 +385,7 @@ export class Scheibenfeuer {
   // ---------- Spiel ----------
   get busy() { return !!this.mode; }
   near(player, [x, z], r) { return Math.hypot(player.pos.x - x, player.pos.z - z) < r; }
-  nearFire(player) { return this.near(player, FEUER, 6.5); }
+  nearFire(player) { return this.near(player, FEUER, 9); }
 
   hint(player) {
     if (!this.on || player.car) return '';
@@ -482,6 +574,7 @@ export class Scheibenfeuer {
     });
     this.npc(dt, player);
     this.chatter(dt, player);
+    this.zelt(dt, player);
     if (this.mode) this.pose(dt, input, player);
     this.sparks.update(dt);
   }
@@ -502,7 +595,7 @@ export class Scheibenfeuer {
 
   updateFire(dt) {
     const t = (this.ft = (this.ft ?? 0) + dt), p = this.fire.position;
-    const wet = wetAt(p.x, p.y + 1, p.z, 3);
+    const wet = wetAt(p.x, p.y + 1.5, p.z, 5);
     if (wet) { this.level = Math.max(0, this.level - wet * 0.01 * dt); this.outFor = 0; this.steam = 3; }
     else if (this.level < 1 && (this.outFor += dt) > 60) this.level = Math.min(1, this.level + dt * 0.1);
     this.steam = Math.max(0, (this.steam || 0) - dt);
@@ -517,15 +610,15 @@ export class Scheibenfeuer {
     const n = this.jahreszeit?.nacht ?? 0; // nachts leuchtet der Schein auf dem Schnee stärker
     this.halo.material.opacity = (0.42 + Math.sin(t * 9) * 0.05 + Math.sin(t * 13.3) * 0.04) * L;
     this.shine.material.opacity = (0.3 + Math.sin(t * 7) * 0.03) * L * (1 + 1.3 * n);
-    if (Math.random() < dt * 60 * L) {
-      const a = Math.random() * 6.28, r = Math.random() * 2;
-      this.sparks.emit(p.x + Math.cos(a) * r, p.y + 1.5 + Math.random() * 3, p.z + Math.sin(a) * r, 0.4, 3 + Math.random() * 3, 0.2, 1.5, 2.2);
+    for (let i = 0; i < 2; i++) if (Math.random() < dt * 60 * L) {
+      const a = Math.random() * 6.28, r = Math.random() * 3.5;
+      this.sparks.emit(p.x + Math.cos(a) * r, p.y + 2 + Math.random() * 5, p.z + Math.sin(a) * r, 0.4, 3 + Math.random() * 3, 0.2, 1.5, 2.2);
     }
     for (const s of this.smoke) {
       s.age = (s.age + dt / 9) % 1;
       const a = s.age;
-      s.position.set(Math.sin(a * 4 + t * 0.2) * 0.8 + a * 6, 4.5 + a * 16, a * 2.5); // Ostwind treibt den Rauch Richtung Rhein
-      s.scale.setScalar(2 + a * 8);
+      s.position.set(Math.sin(a * 4 + t * 0.2) * 1.5 + a * 8, 7 + a * 22, a * 3); // Ostwind treibt den Rauch Richtung Rhein
+      s.scale.setScalar(4 + a * 12);
       s.material.opacity = (L > 0.02 || this.steam > 0 ? 0.3 : 0.06) * Math.min(1, a * 6) * (1 - a);
       s.material.color.setHex(this.steam > 0 ? 0xe8ecef : 0x707070);
     }
@@ -535,7 +628,7 @@ export class Scheibenfeuer {
   pose(dt, input, player) {
     const m = player.mesh;
     if (this.mode === 'heat') {
-      const a = this.heatA, x = FEUER[0] + Math.sin(a) * 4.1, z = FEUER[1] + Math.cos(a) * 4.1;
+      const a = this.heatA, x = FEUER[0] + Math.sin(a) * 6.3, z = FEUER[1] + Math.cos(a) * 6.3;
       this.place(player, x, z, a + Math.PI);
       m.armL.rotation.set(-1.15, 0, 0.25); m.armR.rotation.set(-1.15, 0, -0.25);
       this.stick.rotation.set(-0.35, 0, 0.25);
