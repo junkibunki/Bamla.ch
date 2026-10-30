@@ -14,9 +14,10 @@ import * as THREE from 'three';
 const STORE = 'bamla.jahreszeit';
 
 // sky: Himmel und Nebel, hemi: [Himmel, Boden, Stärke], sun: [Farbe, Stärke], sonne: Versatz der Sonne zur Kamera
-// (Höhe = Sonnenstand), wetter: Niederschlag ('regen' | 'schnee'), trueb: Himmel bei Niederschlag
+// (Höhe = Sonnenstand), wetter: Niederschlag ('regen' | 'schnee'), trueb: Himmel bei Niederschlag,
+// aus: nicht wählbar (Frühling, bis es Aufgaben dafür gibt; gemerkte Wahl und ?jahreszeit= fallen auf Sommer zurück)
 export const JAHRESZEITEN = {
-  fruehling: { name: 'Frühling', icon: '🌸', code: 1, sky: 0xa6d3f4, fogNear: 100, hemi: [0xe8f5ff, 0x7d9a52, 1.15], sun: [0xfff8ea, 2.05], sonne: [80, 150, 50] },
+  fruehling: { name: 'Frühling', icon: '🌸', code: 1, aus: true, sky: 0xa6d3f4, fogNear: 100, hemi: [0xe8f5ff, 0x7d9a52, 1.15], sun: [0xfff8ea, 2.05], sonne: [80, 150, 50] },
   sommer: { name: 'Sommer', icon: '☀️', code: 0, sky: 0x9cc7e8, fogNear: 90, hemi: [0xdfefff, 0x6b7a4a, 1.1], sun: [0xfff2dd, 2.0], sonne: [80, 150, 50] },
   herbst: { name: 'Herbst', icon: '🍂', code: 2, sky: 0xc9d3d8, fogNear: 70, hemi: [0xf2e2c6, 0x6e5a36, 1.0], sun: [0xffc47a, 2.15], sonne: [120, 95, 60],
     wetter: 'regen', trueb: 0x8e98a0 },
@@ -40,7 +41,7 @@ const radios = [...document.querySelectorAll('#join input[name=jahreszeit]')];
 
 // Jahreszeit merken und gelten lassen (Shader, Sonnenstand)
 function setCurrent(key) {
-  current = JAHRESZEITEN[key] ? key : 'sommer';
+  current = JAHRESZEITEN[key] && !JAHRESZEITEN[key].aus ? key : 'sommer';
   try { localStorage.setItem(STORE, current); } catch { /* privater Modus */ }
   SONNE.splice(0, 3, ...JAHRESZEITEN[current].sonne);
   for (const r of radios) r.checked = r.value === current;
@@ -325,7 +326,7 @@ export class Jahreszeit {
   // Wechsel ohne Neuladen (Dorfpass): alle Shader neu bauen, parallel im Hintergrund. Bis sie fertig sind, bleibt das
   // letzte Bild stehen (main.js zeichnet nicht, solange busy), sonst stünde das Spiel beim ersten Mal einige Sekunden.
   set(key) {
-    if (!JAHRESZEITEN[key] || key === this.key) return;
+    if (!JAHRESZEITEN[key] || JAHRESZEITEN[key].aus || key === this.key) return;
     setCurrent(key);
     this.use(key);
     recompile();
@@ -339,6 +340,7 @@ export class Jahreszeit {
     box.append(el('b', null, 'Jahreszeit'));
     const row = el('div');
     for (const [key, d] of Object.entries(JAHRESZEITEN)) {
+      if (d.aus) continue;
       const b = el('button', key === this.key ? 'on' : '', `${d.icon} ${d.name}`);
       b.addEventListener('click', () => this.set(key));
       row.append(b);

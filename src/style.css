@@ -53,7 +53,7 @@ canvas { display: block; }
 #join input:focus { outline: 2px solid #ffd400; outline-offset: 1px; }
 /* Jahreszeit im Namensdialog (src/jahreszeit.js) */
 #join .label { font-size: 15px; opacity: .85; }
-#join .seasons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+#join .seasons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 #join .seasons label { opacity: 1; cursor: pointer; }
 #join .seasons input { position: absolute; opacity: 0; pointer-events: none; }
 #join .seasons span {
