@@ -853,13 +853,14 @@ export function buildGrillplatz(scene, world) {
       const pp = player.pos, onFoot = !player.car && !swing.rider && pp.y < 0.5;
       const vel = [(pp.x - last.x) / Math.max(dt, 1e-3), (pp.z - last.z) / Math.max(dt, 1e-3)];
       last.copy(pp);
+      // im Winter spielt niemand Volleyball oder bolzt, auf dem Bolzplatz steht das Zelt am Fasnachtsfeuer
+      const winter = jahreszeitJetzt() === 'winter';
+      for (const m of [volley.mesh, football.mesh, ...volley.players.map((p) => p.mesh), ...football.kids.map((k) => k.mesh)]) m.visible = !winter;
+      if (winter) return;
       volley.update(dt, onFoot ? VOLLEY.toUV(pp.x, pp.z) : null);
       const fu = onFoot ? BOLZ.toUV(pp.x, pp.z) : null;
       const fv = [vel[0] * BOLZ.U[0] + vel[1] * BOLZ.U[1], vel[0] * BOLZ.V[0] + vel[1] * BOLZ.V[1]];
-      const winter = jahreszeitJetzt() === 'winter'; // im Winter bolzt niemand, auf dem Platz steht das Zelt am Fasnachtsfeuer
-      football.mesh.visible = !winter;
-      for (const k of football.kids) k.mesh.visible = !winter;
-      if (!winter) football.update(dt, fu, fv);
+      football.update(dt, fu, fv);
     },
   };
 }
