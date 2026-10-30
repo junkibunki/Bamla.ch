@@ -57,6 +57,7 @@ Umgesetzt in `src/quests.js`: Aufgaben hängen an Aushängen in der Welt (gelbes
 | 42 | Bad-Bellingen-Kenner:in | Kurpark, Thermen, Rewe, Wendeschleife, Rheinstraße und Rathaus besuchen. | alle sechs Orte besucht | erledigt |
 | 43 | Kurkonzert | Beim Kurkonzert im Kurpark das Badnerlied ganz anhören und danach mitklatschen (Belohnung: Musikverein-Uniform). | ganz zugehört und im Applaus geklatscht (E) | erledigt |
 | 44 | Hoch hinaus | Mit dem Aufzug an der Rheintreppe vom Kurpark hinauffahren und über den Steg zum Rathaus gehen. | oben am Rathaus angekommen | erledigt |
+| 46 | Am Stationenweg Schlittenfahren | Im Winter am Abzweig des Stationenwegs auf den Schlitten und den verschneiten Feldweg hinunter bis zur Straße rodeln (Titel Schlittenflitzer:in). | oben aufgesessen und unten an der Straße angekommen | erledigt |
 
 ## Belohnungen
 

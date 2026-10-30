@@ -35,6 +35,8 @@ const matches = (road) => (p) => (p.name ? road.name === p.name : road.type === 
 export const pavedWay = (road) => PAVED_WAYS.find(matches(road));
 export const isPavedWay = (road) => !!pavedWay(road);
 export const isUnpavedWay = (road) => UNPAVED_WAYS.some(matches(road));
+// Feld- und Waldwege plus die unbefestigten Ausnahmen: im Winter nicht geräumt (world.js, schlitten.js)
+export const isFeldweg = (road) => road.type === 'track' || isUnpavedWay(road);
 
 // Einfahrten und Parkplatzgassen bekommen ihren Belag aus der Pflastermaske.
 export const MASK_DECIDES = ['driveway', 'parking_aisle'];

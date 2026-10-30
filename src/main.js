@@ -62,6 +62,7 @@ import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
 import { buildStationenweg, clearStationenweg } from './stationenweg.js';
+import { buildSchlittenhang } from './schlitten.js';
 import { fixFusstunnel, buildFusstunnel, tunnelCamera } from './fusstunnel.js';
 import { buildReitzentrum } from './reitzentrum.js';
 import { buildRewe } from './rewe.js';
@@ -98,7 +99,7 @@ const TRACTOR_COLORS = [0x2f8a3a, 0x3b9c3f, 0xc0392b, 0x2f8a3a, 0x1f5fa8, 0xd354
 const BIKE_COLORS = [0x2c3e50, 0xc0392b, 0x16a085, 0xecf0f1, 0x8e44ad];
 const MOTO_COLORS = [0x1a1a1a, 0xc0392b, 0xe67e22, 0x2e86de, 0x27ae60, 0xbdc3c7];
 const NAMES = { car: 'Auto', tractor: 'Traktor', bike: 'Fahrrad', trike: 'Dreirad', moto: 'Motorrad', quad: 'Quad', golfcart: 'Golfcart', forklift: 'Gabelstapler', excavator: 'Minibagger', horse: 'Pferd', ecar: 'Elektroauto', truck: 'LKW', van: 'Kühltransporter', firetruck: 'Feuerwehrauto', ruderboot: 'Ruderboot', panzer: 'Panzer',
-  sportwagen: 'Sportwagen', fendt: 'Fendt', maehdrescher: 'Mähdrescher', bagger: 'Bagger', roller: 'Cityroller' }; // Fuhrpark: v.name statt der Art
+  sportwagen: 'Sportwagen', fendt: 'Fendt', maehdrescher: 'Mähdrescher', bagger: 'Bagger', roller: 'Cityroller', schlitten: 'Schlitten' }; // Fuhrpark: v.name statt der Art
 
 // ---------- Renderer, Szene, Licht ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -270,6 +271,7 @@ const andacht = new Andacht(scene, world, kirche.innen); // Beten/Singen in der 
 pedestrians.push(buildSchloss(scene, world, player)); // Schloss Rheinweiler (Pflegeheim): Garten, Streichelzoo, Bewohnerin
 const stationenweg = buildStationenweg(scene, world, player, pedestrians); // Kreuzweg zum Kalvarienberg: 14 Bildstöcke, Steinkreuz, Passanten erzählen
 pedestrians.push(stationenweg);
+pedestrians.push(buildSchlittenhang(scene, world, rng(1858))); // im Winter rodeln Kinder vom Stationenweg hinunter
 await step(0.78, 'Hecken, Mauern, Zäune und Blumen …', 0.88);
 buildStrassengruen(scene, world); // Hecken, Mauern, Zäune, Sträucher, Blumen am Straßenrand (nach allen Gebäuden und Mauern)
 
@@ -568,7 +570,7 @@ function updateHud(dt) {
   else if (ecar.near(player) && ecar.hint()) hud.hint.textContent = ecar.hint();
   else {
     const n = nearestVehicle();
-    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' || n?.kind === 'roller' ? 'nehmen' : n?.mesh.rider && n.kind !== 'panzer' ? 'aufsteigen' : 'einsteigen';
+    const verb = n?.kind === 'bike' || n?.kind === 'trike' || n?.kind === 'horse' || n?.kind === 'ruderboot' || n?.kind === 'roller' || n?.kind === 'schlitten' ? 'nehmen' : n?.mesh.rider && n.kind !== 'panzer' ? 'aufsteigen' : 'einsteigen';
     hud.hint.textContent = bus.canBoard(player) ? bus.footHint(player) : railway.canBoard(player) ? railway.footHint(player)
       : multiplayer.footHint(player) || (n ? `E: ${n.name ?? NAMES[n.kind]} ${n.npc ? (n.kind === 'trike' ? 'wegnehmen' : 'übernehmen') : verb}` : bus.footHint(player) || railway.footHint(player));
     if (schnellreise.hint(player)) hud.hint.textContent = [hud.hint.textContent, schnellreise.hint(player)].filter(Boolean).join(' · ');

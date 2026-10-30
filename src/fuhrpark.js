@@ -1,14 +1,16 @@
 // Fuhrpark: mit dem Lohn aus den Aufträgen Fahrzeuge kaufen (Dorfpass, J). Gekauftes steht neben einem, bleibt stehen,
 // wo man es abstellt (auch nach dem Neuladen), und lässt sich im Dorfpass jederzeit neben sich herholen. Mitspieler:innen
-// sehen es, solange man damit fährt (multiplayer.js schickt Art und Lackfarbe). Modelle: fuhrpark-modelle.js.
+// sehen es, solange man damit fährt (multiplayer.js schickt Art und Lackfarbe). Modelle: fuhrpark-modelle.js, Schlitten: schlitten.js.
 import { Vehicle, KINDS } from './vehicles.js';
 import { HAFLINGER } from './pferd.js';
 import { euro } from './carry.js';
 import { FENDT_GRUEN, MD_GRUEN, BAGGER_GELB, SETUP } from './fuhrpark-modelle.js';
+import { HOLZ } from './schlitten.js';
 
 const STORE = 'bamla.fuhrpark';
 // Preise: ein Auftrag bringt 5–13 €, der Roller ist nach ein paar Fahrten drin, der Mähdrescher ein langes Ziel
 export const ANGEBOT = [
+  { id: 'schlitten', kind: 'schlitten', name: 'Schlitten', icon: '🛷', preis: 15, color: HOLZ, text: 'Davoser aus Eschenholz – rutscht nur bergab und nur im Schnee' },
   { id: 'roller', kind: 'roller', name: 'Cityroller', icon: '🛴', preis: 25, color: 0x2e86de, text: 'klappbar, leise, gut 20 km/h' },
   { id: 'haflinger', kind: 'horse', name: 'Haflinger', icon: '🐴', preis: 150, color: HAFLINGER.coat, text: 'Fuchs mit heller Mähne, gutmütig und trittsicher' },
   { id: 'fendt', kind: 'fendt', name: 'Fendt 724 Vario', icon: '🚜', preis: 300, color: FENDT_GRUEN, text: 'stufenlos, fast doppelt so schnell wie die alten Traktoren im Dorf' },

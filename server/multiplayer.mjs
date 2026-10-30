@@ -16,7 +16,7 @@ import { WebSocketServer } from 'ws';
 const PATH = '/mp';
 const TICK = 100; // ms zwischen zwei Rundsendungen
 const MAX_PLAYERS = 64;
-const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck', 'horse', 'trike', 'sportwagen', 'fendt', 'maehdrescher', 'bagger', 'roller'];
+const VEHICLES = ['car', 'ecar', 'tractor', 'bike', 'moto', 'quad', 'golfcart', 'forklift', 'excavator', 'truck', 'van', 'firetruck', 'horse', 'trike', 'sportwagen', 'fendt', 'maehdrescher', 'bagger', 'roller', 'schlitten'];
 const OUTFITS = ['helm', 'schuerze', 'golfmuetze', 'motorradjacke', 'schaerpe', 'bademantel', 'kappe', 'sonnenbrille', 'saunatuch', 'schiebermuetze', 'uniform', 'geldscheine', 'sack']; // Kleidung (src/person.js)
 const HORNS = ['hupe', 'storch', 'glocke', 'martinshorn', 'piepser', 'aufguss', 'quak']; // Hupen (src/belohnungen.js)
 const ZIEL = 50;        // Lieferungen aller Spieler bis zum Feuerwerk über dem Rhein

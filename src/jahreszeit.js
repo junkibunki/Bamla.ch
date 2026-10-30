@@ -29,6 +29,7 @@ export const JAHRESZEITEN = {
 export const SONNE = [...JAHRESZEITEN.sommer.sonne];
 
 let current = null; // Schlüssel aus JAHRESZEITEN, gesetzt nach dem Namensdialog
+export const jahreszeitJetzt = () => current ?? 'sommer'; // für Module ohne Zugriff auf game.jahreszeit (Schlitten)
 
 // Auswahl im Namensdialog vorbelegen: ?jahreszeit=… vor der letzten Wahl
 const radios = [...document.querySelectorAll('#join input[name=jahreszeit]')];

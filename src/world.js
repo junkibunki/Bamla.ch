@@ -29,7 +29,7 @@ import { KPP_PAVED } from './kurparkplatz-site.js';
 import { TUNNEL_PAVED, carveFusstunnel } from './fusstunnel.js';
 import { LEODEGAR_PAVED, carveLeodegar } from './leodegar-site.js';
 import { paintVineyards, buildVineRows } from './vineyards.js';
-import { pavedWay, isUnpavedWay, MASK_DECIDES } from './surfaces.js';
+import { pavedWay, isUnpavedWay, isFeldweg, MASK_DECIDES } from './surfaces.js';
 import { surfaceAt, samplesAlong } from './paving.js';
 import { buildStreetside, toHex } from './streetside.js';
 import { paintGolf } from './golf-ground.js';
@@ -442,7 +442,7 @@ export class World {
   }
 
   buildRoads() {
-    const out = { pos: [], col: [], idx: [] };
+    const out = { pos: [], col: [], idx: [] }, feld = { pos: [], col: [], idx: [] }; // feld: unbefestigte Wege
     const paving = this.data.paving;
     this.paverRibbons = { pos: [], col: [], idx: [] }; // Pflastergassen/-einfahrten, Mesh baut streetside.js
     for (const r of this.data.roads) {
@@ -454,7 +454,7 @@ export class World {
       if (r.ownMesh || r.bored) continue; // Stufenweg und Röhre baut fusstunnel.js
       const h = this.wayHeight(r);
       if (sf && (pw || sf.paved)) { this.ribbon(r.pts, w, s.y, toHex(pw?.color || sf.color), this.paverRibbons, h); continue; }
-      this.ribbon(r.pts, w, s.y, s.color, out, h);
+      this.ribbon(r.pts, w, s.y, s.color, isFeldweg(r) ? feld : out, h);
     }
     for (const w of this.data.waterways) if (!w.rhein) this.ribbon(w.pts, w.type === 'river' ? 20 : 3, 0.21, 0x4f8fc0, out); // Rhein: rhein.js
 
@@ -476,6 +476,7 @@ export class World {
       }
     }
     this.meshFromRibbons(out).material.userData.geraeumt = true; // im Winter geräumt (jahreszeit.js)
+    this.meshFromRibbons(feld); // Feld- und Waldwege räumt keiner: im Winter verschneit (Schlittenhang, schlitten.js)
   }
 
   buildRails() {
