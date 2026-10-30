@@ -21,8 +21,9 @@ export const JAHRESZEITEN = {
   sommer: { name: 'Sommer', icon: '☀️', code: 0, sky: 0x9cc7e8, fogNear: 90, hemi: [0xdfefff, 0x6b7a4a, 1.1], sun: [0xfff2dd, 2.0], sonne: [80, 150, 50] },
   herbst: { name: 'Herbst', icon: '🍂', code: 2, sky: 0xc9d3d8, fogNear: 70, hemi: [0xf2e2c6, 0x6e5a36, 1.0], sun: [0xffc47a, 2.15], sonne: [120, 95, 60],
     wetter: 'regen', trueb: 0x8e98a0 },
-  winter: { name: 'Winter', icon: '❄️', code: 3, sky: 0xc6d2dd, fogNear: 60, hemi: [0xe6eeff, 0x9aa4ae, 1.05], sun: [0xfff1e2, 1.35], sonne: [130, 80, 70],
-    wetter: 'schnee', trueb: 0xb4bcc6 },
+  // Winter gedämpft und warm: graublauer Himmel, tiefe goldene Sonne
+  winter: { name: 'Winter', icon: '❄️', code: 3, sky: 0xa9b5c4, fogNear: 55, hemi: [0xdde4f2, 0x8a929e, 0.92], sun: [0xffdcb8, 1.15], sonne: [130, 80, 70],
+    wetter: 'schnee', trueb: 0x9aa3ae },
 };
 
 // Sonnenversatz für main.js und postkarten.js (vor dem Dialog: Sommer)
@@ -288,6 +289,9 @@ class Niederschlag {
 }
 
 // ---------- Jahreszeit in der Szene ----------
+// Nacht (setNacht, z. B. am Fasnachtsfeuer): dunkelblauer Himmel und Nebel, schwaches bläuliches Mondlicht
+const NACHT = { sky: new THREE.Color(0x1c2538), hemi: new THREE.Color(0x3a4670), sun: new THREE.Color(0x8a9ac8) };
+
 export class Jahreszeit {
   // nach chooseSeason(): Licht setzen, Wetter und Tiefenkarte anlegen
   constructor({ scene, hemi, sun, renderer, vehicles }) {
@@ -300,6 +304,7 @@ export class Jahreszeit {
     this.snowMap = null;  // erst angelegt, wenn Herbst oder Winter dran ist
     this.precips = {};    // Regen und Schnee, je einmal angelegt
     this.onChange = null; // (key) nach einem Wechsel, main.js: Aufgaben
+    this.nacht = 0;       // 0 = Tag … 1 = Nacht
     this.use(current || 'sommer');
   }
 
@@ -356,15 +361,22 @@ export class Jahreszeit {
     this.left = this.on ? 150 : 240;
   }
 
+  // Dämmerung bis Nacht (0 … 1), z. B. je näher man dem Fasnachtsfeuer kommt (scheibenfeuer.js)
+  setNacht(n) {
+    if (Math.abs(n - this.nacht) < 0.002 && (n > 0 || !this.nacht)) return;
+    this.nacht = n;
+    this.applyLight();
+  }
+
   applyLight() {
-    const w = this.level, d = this.def, { scene, hemi, sun } = this;
-    scene.background.copy(this.sky).lerp(this.trueb, w);
+    const w = this.level, n = this.nacht, d = this.def, { scene, hemi, sun } = this;
+    scene.background.copy(this.sky).lerp(this.trueb, w).lerp(NACHT.sky, n);
     scene.fog.color.copy(scene.background);
-    scene.fog.near = d.fogNear * (1 - 0.45 * w);
-    hemi.color.copy(this.hemiSky).lerp(this.trueb, w * 0.5);
-    hemi.intensity = d.hemi[2] * (1 - 0.12 * w);
-    sun.color.set(d.sun[0]);
-    sun.intensity = d.sun[1] * (1 - 0.6 * w);
+    scene.fog.near = d.fogNear * (1 - 0.45 * w) * (1 - 0.4 * n);
+    hemi.color.copy(this.hemiSky).lerp(this.trueb, w * 0.5).lerp(NACHT.hemi, n);
+    hemi.intensity = d.hemi[2] * (1 - 0.12 * w) * (1 - 0.7 * n);
+    sun.color.set(d.sun[0]).lerp(NACHT.sun, n);
+    sun.intensity = d.sun[1] * (1 - 0.6 * w) * (1 - 0.85 * n);
     U.seasonWet.value = d.wetter === 'regen' ? w : 0;
   }
 

@@ -61,6 +61,7 @@ import { Carry } from './carry.js';
 import { buildBackofen } from './backofen.js';
 import { buildLaeden } from './laeden.js';
 import { Sport } from './sport.js';
+import { Scheibenfeuer } from './scheibenfeuer.js';
 import { buildStationenweg, clearStationenweg } from './stationenweg.js';
 import { buildSchlittenhang } from './schlitten.js';
 import { fixFusstunnel, buildFusstunnel, tunnelCamera } from './fusstunnel.js';
@@ -609,6 +610,8 @@ progress(1, 'Bamlach ist bereit – los geht\'s!');
 const multiplayer = new Multiplayer(scene, world, await playerName);
 chooseSeason(); // im selben Dialog gewählt, vor dem ersten Bild (Shader)
 const jahreszeit = new Jahreszeit({ scene, hemi, sun, renderer, vehicles }); // Licht, Regen/Schnee, freier Himmel
+const scheibenfeuer = new Scheibenfeuer(scene, world, { cam, camera, quests, jahreszeit, name: () => multiplayer.name }); // nur im Winter: Fasnachtsfeuer, Scheibenschlagen
+sport.games.push(scheibenfeuer);
 sport.connect(multiplayer);
 multiplayer.shared = sharedVehicles; // Fahrzeuge der anderen: mein Exemplar fährt mit und bleibt nach dem Aussteigen stehen
 multiplayer.onTakeover = takeOver;
@@ -643,7 +646,7 @@ function headTop() {
 }
 const NOJUMP = { down: (...c) => input.down(...c), hit: (c) => c !== 'Space' && input.hit(c), axis: (a, b) => input.axis(a, b) }; // Tennis: Leertaste schlägt
 
-window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel, jahreszeit }; // zum Debuggen in der Konsole
+window.game = { chat, renderer, scene, blitzer, sun, bahnhof, bahnhofBB, baracke, drunk, grillplatz, kneipp, reit, player, camera, vehicles, pedestrians, world, cam, railway, bus, ecar, camping, golf, kienzler, gaertnerei, editor, touch, multiplayer, andacht, quests, schnellreise, musikpavillon, input, kirche, storchen, tennis, schule, feuerwehr, minimap, carry, museum, sport, backofen, fusstunnel, jahreszeit, scheibenfeuer }; // zum Debuggen in der Konsole
 quests.start(window.game);
 const fuhrpark = window.game.fuhrpark = new Fuhrpark({ scene, world, player, vehicles, carry, quests }); // gekaufte Fahrzeuge (Dorfpass, J)
 quests.passSections.push((p, el) => jahreszeit.renderPass(p, el)); // Jahreszeit ohne Neuladen wechseln
